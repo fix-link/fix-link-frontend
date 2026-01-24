@@ -5,17 +5,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: "#2A7BE4",
-        "background-light": "#f5f8ff",
-        "background-dark": "#111121",
-        "text-light": "#333333",
-        "text-dark": "#f5f8ff",
-        "card-light": "#ffffff",
-        "card-dark": "#1a1a2e",
-        "subtle-light": "#646487",
-        "subtle-dark": "#a0a0c0",
-        "border-light": "#dcdce5",
-        "border-dark": "#33334d",
+        "primary": "#0d93f2",
+        "background-light": "#f0f5fa",
+        "background-dark": "#101b22",
+        "accent-gold": "#FFC107",
+        "text-light": "#111518",
+        "text-dark": "#f5f7f8",
+        "subtext-light": "#60798a",
+        "subtext-dark": "#a0b1c0",
+        "surface-light": "#ffffff",
+        "surface-dark": "#1a2833",
+        "border-light": "#dbe1e6",
+        "border-dark": "#2a3b47"
       },
       fontFamily: {
         display: ["Manrope", "sans-serif"],

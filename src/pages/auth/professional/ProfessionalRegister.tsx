@@ -5,6 +5,9 @@ import ErrorMessage from "../../../components/ErrorMessage";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 import SuccessMessage from "../../../components/SuccessMessage";
 import LocationInput from "../../../components/LocationInput";
+import PasswordStrength from "../../../components/PasswordStrength";
+import { validatePassword } from "../../../utils/validation";
+import PhoneInput from "../../../components/PhoneInput";
 
 const ProfessionalRegister = () => {
   const navigate = useNavigate();
@@ -20,7 +23,8 @@ const ProfessionalRegister = () => {
   }
 
   const [form, setForm] = useState({
-    fullName: "",
+    firstName: "",
+    lastName: "",
     phone: "",
     gender: "",
     dateOfBirth: "",
@@ -60,26 +64,40 @@ const ProfessionalRegister = () => {
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
+    setError(null);
     const target = e.target;
+
     if (target instanceof HTMLInputElement) {
       const { name, value, type, files } = target;
+
       if (type === "file" && files && files.length > 0) {
-        switch (name) {
-          case "profilePhoto":
-            setProfilePhoto(files[0]);
-            break;
-          case "nationalIdFront":
-            setNationalIdFront(files[0]);
-            break;
-          case "nationalIdBack":
-            setNationalIdBack(files[0]);
-            break;
-          case "cvFile":
-            setCvFile(files[0]);
-            break;
-          case "selfPicture":
-            setSelfPicture(files[0]);
-            break;
+        const file = files[0];
+        const validImageTypes = ["image/jpeg", "image/png", "image/jpg"];
+        const validDocTypes = [
+          "application/pdf",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ];
+
+        // Handle CV separately
+        if (name === "cvFile") {
+          if (!validDocTypes.includes(file.type) && !file.name.endsWith(".docx")) {
+            setError("CV must be a PDF or DOCX file");
+            return;
+          }
+          setCvFile(file);
+        } else {
+          // All other files are images
+          if (!validImageTypes.includes(file.type)) {
+            setError(`Please upload a valid image (PNG or JPG) for ${name}`);
+            return;
+          }
+
+          switch (name) {
+            case "profilePhoto": setProfilePhoto(file); break;
+            case "nationalIdFront": setNationalIdFront(file); break;
+            case "nationalIdBack": setNationalIdBack(file); break;
+            case "selfPicture": setSelfPicture(file); break;
+          }
         }
       } else {
         setForm({ ...form, [name]: value });
@@ -125,7 +143,8 @@ const ProfessionalRegister = () => {
 
     // Required fields
     const requiredFields = [
-      "fullName",
+      "firstName",
+      "lastName",
       "phone",
       "gender",
       "dateOfBirth",
@@ -177,6 +196,17 @@ const ProfessionalRegister = () => {
       return;
     }
 
+    const { isValid, errors } = validatePassword(form.password, {
+      firstName: form.firstName,
+      lastName: form.lastName,
+      email: email
+    });
+
+    if (!isValid) {
+      setError(errors[0]); // Show the first validation error
+      return;
+    }
+
     const bioWordCount = form.shortBio.trim().split(/\s+/).length;
     if (bioWordCount > 150) {
       setError("Short Bio cannot exceed 150 words");
@@ -192,10 +222,15 @@ const ProfessionalRegister = () => {
         email,
         finNumber,
       });
-      setSuccess(response.message);
-      setTimeout(() => {
-        navigate("/signup/pending-approval");
-      }, 1500);
+      // if (response.status === "ACTIVE") {
+      //   login(response.token, response.user); // Auto-login if backend approves immediately
+      //   setTimeout(() => navigate("/professional/home"), 1500);
+      // } else {
+      //   setTimeout(() => navigate("/signup/pending-approval"), 1500);
+      // }
+
+      // Standard Flow: Verify Email First
+      setTimeout(() => navigate("/signup/verify", { state: { email } }), 1500);
     } catch (err: any) {
       setError(err.message || "Submission failed");
     } finally {
@@ -238,11 +273,22 @@ const ProfessionalRegister = () => {
             <h2 className="text-xl font-bold border-b pb-3">A. Personal Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <label className="flex flex-col">
-                <span className="font-medium pb-1">Full Name *</span>
+                <span className="font-medium pb-1">First Name *</span>
                 <input
                   type="text"
-                  name="fullName"
-                  value={form.fullName}
+                  name="firstName"
+                  value={form.firstName}
+                  onChange={handleChange}
+                  className="form-input h-12"
+                  required
+                />
+              </label>
+              <label className="flex flex-col">
+                <span className="font-medium pb-1">Last Name *</span>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={form.lastName}
                   onChange={handleChange}
                   className="form-input h-12"
                   required
@@ -257,19 +303,15 @@ const ProfessionalRegister = () => {
 
               <label className="flex flex-col">
                 <span className="font-medium pb-1">Phone Number *</span>
-                <input
-                  type="tel"
-                  name="phone"
+                <PhoneInput
                   value={form.phone}
-                  onChange={handleChange}
-                  className="form-input h-12"
-                  required
+                  onChange={(val) => setForm({ ...form, phone: val })}
                 />
               </label>
 
               <label className="flex flex-col">
                 <span className="font-medium pb-1">Profile Photo *</span>
-                <input type="file" name="profilePhoto" onChange={handleChange} className="form-input" required />
+                <input type="file" name="profilePhoto" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
               </label>
 
               <label className="flex flex-col relative">
@@ -291,6 +333,15 @@ const ProfessionalRegister = () => {
                     {showPassword ? "visibility_off" : "visibility"}
                   </span>
                 </button>
+
+                <PasswordStrength
+                  password={form.password}
+                  userData={{
+                    firstName: form.firstName,
+                    lastName: form.lastName,
+                    email: email
+                  }}
+                />
               </label>
 
               <label className="flex flex-col relative">
@@ -533,19 +584,19 @@ const ProfessionalRegister = () => {
               </label>
               <label className="flex flex-col">
                 <span className="font-medium pb-1">National ID (Front) *</span>
-                <input type="file" name="nationalIdFront" onChange={handleChange} className="form-input" required />
+                <input type="file" name="nationalIdFront" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
               </label>
               <label className="flex flex-col">
                 <span className="font-medium pb-1">National ID (Back) *</span>
-                <input type="file" name="nationalIdBack" onChange={handleChange} className="form-input" required />
+                <input type="file" name="nationalIdBack" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
               </label>
               <label className="flex flex-col">
                 <span className="font-medium pb-1">CV / Resume *</span>
-                <input type="file" name="cvFile" onChange={handleChange} className="form-input" required />
+                <input type="file" name="cvFile" onChange={handleChange} className="form-input" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
               </label>
               <label className="flex flex-col md:col-span-2">
                 <span className="font-medium pb-1">Picture of Yourself *</span>
-                <input type="file" name="selfPicture" onChange={handleChange} className="form-input" required />
+                <input type="file" name="selfPicture" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
               </label>
             </div>
           </section>

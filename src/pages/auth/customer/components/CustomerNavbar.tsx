@@ -33,18 +33,24 @@ const CustomerNavbar = () => {
       </div>
 
       <div className="flex items-center gap-6 text-sm font-medium">
-        <a className="hidden md:flex hover:text-primary cursor-pointer transition-colors">Dashboard</a>
-        <a className="hidden md:flex hover:text-primary cursor-pointer transition-colors">Bookings</a>
+        <a className="hidden md:flex items-center gap-2 hover:text-primary cursor-pointer transition-colors">
+          <span className="material-symbols-outlined text-xl">grid_view</span>
+          <span>Dashboard</span>
+        </a>
+        <a className="hidden md:flex items-center gap-2 hover:text-primary cursor-pointer transition-colors">
+          <span className="material-symbols-outlined text-xl">calendar_month</span>
+          <span>Bookings</span>
+        </a>
 
         <button>
-          <span className="material-icons-round text-xl">
-            chat_bubble_outline
+          <span className="material-symbols-outlined text-2xl">
+            chat_bubble
           </span>
         </button>
 
         <button className="relative">
-          <span className="material-icons-round text-xl">
-            notifications_none
+          <span className="material-symbols-outlined text-2xl">
+            notifications
           </span>
           <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full" />
         </button>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { verifyOtp, sendOtp } from "../../api/auth.api";
+import { verifyOtp, resendOtp } from "../../api/auth.api";
 import ErrorMessage from "../../components/ErrorMessage";
 import LoadingSpinner from "../../components/LoadingSpinner";
 
@@ -60,8 +60,10 @@ const VerifyEmail = () => {
     setError(null);
 
     try {
-      await verifyOtp(code); // optionally pass email if backend needs it
-      navigate("/signup/role", { state: { email } });
+      await verifyOtp(email, code); // ✅ NOW PASSING EMAIL
+
+      // Success! Go to Login
+      navigate("/login", { replace: true });
     } catch (err: any) {
       setError(err.message || "Invalid OTP");
     } finally {
@@ -72,8 +74,9 @@ const VerifyEmail = () => {
   const handleResend = async () => {
     if (!email) return;
     try {
-      await sendOtp(email);
+      await resendOtp(email);
       setTimeLeft(30);
+      setError(null); // Clear previous errors
     } catch (err: any) {
       setError(err.message || "Failed to resend OTP");
     }
@@ -111,11 +114,10 @@ const VerifyEmail = () => {
         <button
           onClick={handleResend}
           disabled={timeLeft > 0}
-          className={`text-sm font-semibold mb-4 ${
-            timeLeft > 0
-              ? "text-gray-400 cursor-not-allowed"
-              : "text-primary"
-          }`}
+          className={`text-sm font-semibold mb-4 ${timeLeft > 0
+            ? "text-gray-400 cursor-not-allowed"
+            : "text-primary"
+            }`}
         >
           Resend OTP
         </button>

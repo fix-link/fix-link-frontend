@@ -1,4 +1,15 @@
+import axios from "axios";
 import type { Role, User } from "../types/auth.types";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+// Create axios instance
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 /**
  * Simulate backend delay
@@ -12,7 +23,9 @@ const fakeDelay = (ms: number) =>
 export const sendOtp = async (email: string) => {
   await fakeDelay(1000);
 
-  if (!email.includes("@")) {
+  // Basic email regex
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
     throw new Error("Please enter a valid email address");
   }
 
@@ -25,17 +38,45 @@ export const sendOtp = async (email: string) => {
 /**
  * Verify OTP
  */
-export const verifyOtp = async (otp: string) => {
-  await fakeDelay(1000);
+export const verifyOtp = async (email: string, otp: string) => {
+  try {
+    const response = await api.post("/accounts/users/verify-email/", {
+      email: email,
+      otp: otp,
+    });
 
-  if (otp !== "123456") {
-    throw new Error("Invalid verification code");
+    return {
+      success: true,
+      message: response.data.message || "Email verified successfully",
+    };
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.detail ||
+      error.response?.data?.error ||
+      "Invalid verification code"
+    );
   }
+};
 
-  return {
-    success: true,
-    emailVerified: true, // In real backend, this might return a temp token
-  };
+/**
+ * Resend OTP (Real)
+ */
+export const resendOtp = async (email: string) => {
+  try {
+    const response = await api.post("/accounts/users/resend-email-otp/", {
+      email: email,
+    });
+    return {
+      success: true,
+      message: response.data.message || "OTP sent successfully",
+    };
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.detail ||
+      error.response?.data?.error ||
+      "Failed to resend OTP"
+    );
+  }
 };
 
 /**
@@ -45,78 +86,109 @@ export const registerUser = async (
   role: Role,
   formData: Record<string, any>
 ) => {
-  await fakeDelay(1500);
+  try {
+    if (!formData.email) {
+      throw new Error("Email is missing from registration data");
+    }
 
-  if (!formData.fullName) {
-    throw new Error("Full name is required");
+    // 2. Generate Username (from email)
+    const username = formData.email.split("@")[0] + Math.floor(Math.random() * 1000);
+
+    // 3. Prepare Payload matching Backend Spec
+    const payload = {
+      username: username,
+      email: formData.email,
+      password: formData.password,
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      role: role,
+      // Note: Extra fields like 'phone', 'location' might be ignored by /users/register/
+      // Need clarify if we should PATCH specific profile endpoint later.
+    };
+
+    const response = await api.post("/accounts/users/register/", payload);
+
+    // Normalize user object
+    const apiUser = response.data.user;
+    const user: User = {
+      id: apiUser.id,
+      name: apiUser.first_name + " " + apiUser.last_name || apiUser.username,
+      email: apiUser.email,
+      role: apiUser.role,
+      status:
+        apiUser.role === "professional" && !apiUser.is_verified_professional
+          ? "PENDING_APPROVAL"
+          : "ACTIVE",
+      profilePhoto: "https://i.pravatar.cc/150",
+    };
+
+    return {
+      success: true,
+      message: "Account created successfully",
+      token: response.data.access,
+      user: user,
+    };
+  } catch (error: any) {
+    console.error("Registration Error Details:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+    });
+
+    // Extract the most specific error message
+    let errorMessage = "Registration failed";
+
+    if (error.response?.data) {
+      const data = error.response.data;
+      if (data.detail) errorMessage = data.detail;
+      else if (data.email) errorMessage = `Email: ${data.email[0]}`;
+      else if (data.username) errorMessage = `Username: ${data.username[0]}`;
+      else if (data.password) errorMessage = `Password: ${data.password[0]}`;
+      else if (data.first_name) errorMessage = `First Name: ${data.first_name[0]}`;
+      else if (data.last_name) errorMessage = `Last Name: ${data.last_name[0]}`;
+      else if (typeof data === 'string') errorMessage = data;
+    } else if (error.request) {
+      errorMessage = "No response from server. Check your internet or VPN.";
+    } else {
+      errorMessage = error.message;
+    }
+
+    throw new Error(errorMessage);
   }
-
-  if (!formData.password) {
-    throw new Error("Password is required");
-  }
-
-  // MOCK: Simulate "User already exists"
-  if (formData.email?.includes("exist")) {
-    throw new Error("User with this email already exists");
-  }
-
-  // MOCK SUCCESS RESPONSE
-  const mockUser: User = {
-    id: Math.random().toString(36).substr(2, 9),
-    name: formData.fullName,
-    email: formData.email || "test@fixlink.com",
-    role: role,
-    status: role === "professional" ? "PENDING_APPROVAL" : "ACTIVE",
-    profilePhoto: "https://i.pravatar.cc/150",
-  };
-
-  return {
-    success: true,
-    status: role === "professional" ? "PENDING_APPROVAL" : "ACTIVE",
-    message:
-      role === "professional"
-        ? "Your application is under review. We’ll notify you by email."
-        : "Account created successfully",
-    token: "mock-jwt-token-xyz-123", // Return fake token
-    user: mockUser,
-  };
 };
 
 /**
- * Login User (MOCK)
+ * Login User
  */
 export const loginUser = async (email: string, password: string) => {
-  await fakeDelay(1500);
+  try {
+    const response = await api.post("/accounts/users/login/", {
+      email: email, // Changed from 'login' to 'email' based on error
+      password: password,
+    });
 
-  if (!email || !password) {
-    throw new Error("Please enter email and password");
+    const apiUser = response.data.user;
+    const user: User = {
+      id: apiUser.id,
+      name: apiUser.first_name ? `${apiUser.first_name} ${apiUser.last_name}` : apiUser.username,
+      email: apiUser.email,
+      role: apiUser.role,
+      status:
+        apiUser.role === "professional" && !apiUser.is_verified_professional
+          ? "PENDING_APPROVAL"
+          : "ACTIVE",
+      profilePhoto: "https://i.pravatar.cc/150",
+    };
+
+    return {
+      success: true,
+      token: response.data.access,
+      user: user,
+    };
+
+  } catch (error: any) {
+    throw new Error(error.response?.data?.detail || "Invalid credentials");
   }
-
-  if (password.length < 6) {
-    throw new Error("Invalid password");
-  }
-
-  // Determine role based on email (for demo purposes)
-  // If email has 'pro' OR 'pending', treat as professional
-  const role: Role = (email.includes("pro") || email.includes("pending")) ? "professional" : "customer";
-
-  // Simulating pending status for testing
-  const status = email.includes("pending") ? "PENDING_APPROVAL" : "ACTIVE";
-
-  const mockUser: User = {
-    id: "user-123",
-    name: email.split("@")[0],
-    email: email,
-    role: role,
-    status: status,
-    profilePhoto: "https://i.pravatar.cc/150",
-  };
-
-  return {
-    success: true,
-    token: "mock-jwt-token-xyz-123",
-    user: mockUser,
-  };
 };
 
 /**
@@ -125,7 +197,12 @@ export const loginUser = async (email: string, password: string) => {
 export const forgotPassword = async (email: string) => {
   await fakeDelay(1000);
   console.log(`Sending reset password email to ${email}`);
-  if (!email) throw new Error("Email is required");
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new Error("Please enter a valid email address");
+  }
+
   return { success: true, message: "Reset link sent" };
 };
 

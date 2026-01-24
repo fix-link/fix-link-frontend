@@ -2,6 +2,7 @@ import ProfessionalCard, { type Professional } from "./ProfessionalCard";
 
 const professionals: Professional[] = [
   {
+    id: 1,
     name: "Abebe Kebede",
     role: "Electrician",
     rating: 4.9,
@@ -10,6 +11,7 @@ const professionals: Professional[] = [
     image: "https://randomuser.me/api/portraits/men/1.jpg",
   },
   {
+    id: 2,
     name: "Mulugeta Tesfaye",
     role: "Plumber",
     rating: 4.8,
@@ -27,8 +29,8 @@ const TopProfessionals: React.FC = () => {
       <p className="text-gray-500 mb-8">Top-rated and verified experts near you</p>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {professionals.map((pro, index) => (
-          <ProfessionalCard key={index} pro={pro} />
+        {professionals.map((pro) => (
+          <ProfessionalCard key={pro.id} pro={pro} />
         ))}
       </div>
     </main>
