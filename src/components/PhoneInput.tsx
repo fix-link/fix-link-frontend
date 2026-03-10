@@ -64,6 +64,8 @@ const PhoneInput: React.FC<PhoneInputProps> = ({ value, onChange, error }) => {
 
                 {/* Numeric Input */}
                 <input
+                    id="phone"
+                    name="phone"
                     type="tel"
                     value={phoneNumber}
                     onChange={handleNumberChange}

@@ -44,6 +44,8 @@ const LocationInput = ({ value, onSelect, className, icon }: Props) => {
         </div>
       )}
       <input
+        id="location"
+        name="location"
         value={query}
         onFocus={() => setShow(true)}
         onChange={(e) => {

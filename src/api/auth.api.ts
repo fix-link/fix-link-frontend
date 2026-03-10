@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { Role, User } from "../types/auth.types";
 
-const API_URL = (import.meta.env.VITE_API_URL || "https://auction-sao-talks-recreation.trycloudflare.com").replace(/\/$/, "");
+const API_URL = (import.meta.env.VITE_API_URL || "https://fix-link-5332f899c079.herokuapp.com").replace(/\/$/, "") + "/api";
 
 // Create axios instance
 export const api = axios.create({
@@ -59,14 +59,21 @@ const parseError = (error: any): string => {
     }
 
     // 3. Handle standard DRF field errors (errors in root object)
-    const errorEntries = Object.entries(data);
-    if (errorEntries.length > 0) {
-      return errorEntries
-        .map(([field, msg]) => {
-          if (field === "non_field_errors") return Array.isArray(msg) ? msg[0] : msg;
-          return `${field}: ${Array.isArray(msg) ? msg[0] : msg}`;
-        })
-        .join(" | ");
+    if (typeof data === "object" && data !== null) {
+      const errorEntries = Object.entries(data);
+      if (errorEntries.length > 0) {
+        return errorEntries
+          .map(([field, msg]) => {
+            if (field === "non_field_errors") return Array.isArray(msg) ? msg[0] : msg;
+            return `${field}: ${Array.isArray(msg) ? msg[0] : msg}`;
+          })
+          .join(" | ");
+      }
+    } else if (typeof data === "string") {
+      if (data.includes("Server Error") || data.includes("500")) {
+        return "500 Internal Server Error. Please check backend server configuration or restart your local server.";
+      }
+      return "An unexpected format error occurred.";
     }
   }
   return "Something went wrong. Please try again.";
@@ -77,36 +84,45 @@ const parseError = (error: any): string => {
  */
 export const registerUser = async (role: Role, formData: Record<string, any>) => {
   try {
-    const payload = {
+    const isProfessional = role === "professional";
+
+    const commonPayload = {
       username: formData.email.split("@")[0] + Math.floor(Math.random() * 1000),
       email: formData.email,
       password: formData.password,
       first_name: formData.firstName,
       last_name: formData.lastName,
-      phonenumber: formData.phone,
-      role: role,
-      // Pass other fields only if they exist
-      ...(formData.serviceCategory && {
-        profession: formData.serviceCategory // Send the selected category name as profession
-      }),
-      ...(formData.gender && { gender: formData.gender }),
-      ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
-      ...(formData.yearsOfExperience && { years_of_experience: Number(formData.yearsOfExperience) }),
-      ...(formData.shortBio && { bio: formData.shortBio }),
-      ...(formData.location && { location: formData.location }),
-      ...(formData.city && { city: formData.city }),
-      ...(formData.subcity && { subcity: formData.subcity }),
-      ...(formData.houseNumber && { house_number: formData.houseNumber }),
-      ...(formData.payoutMethod && { preferred_payout_method: formData.payoutMethod }),
-      ...(formData.accountNumber && { payout_account_number: formData.accountNumber }),
-      ...(formData.licenseNumber && { license_number: formData.licenseNumber }),
-      // Service categories as array of UUIDs
-      ...(formData.serviceCategory && { service_categories: [formData.serviceCategory] }),
     };
 
-    const endpoint = role === "professional"
-      ? "/accounts/users/register-professional/"
-      : "/accounts/users/register/";
+    let payload: any;
+
+    if (isProfessional) {
+      payload = {
+        ...commonPayload,
+        profession: formData.serviceCategory, // Required
+        years_of_experience: Number(formData.yearsOfExperience) || 0, // Required
+        ...(formData.gender && { gender: formData.gender }),
+        ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
+        ...(formData.shortBio && { bio: formData.shortBio }),
+        ...(formData.city && { city: formData.city }),
+        ...(formData.subcity && { subcity: formData.subcity }),
+        ...(formData.houseNumber && { house_number: formData.houseNumber }),
+        ...(formData.payoutMethod && { preferred_payout_method: formData.payoutMethod }),
+        ...(formData.accountNumber && { payout_account_number: formData.accountNumber }),
+        ...(formData.serviceCategory && { service_categories: [formData.serviceCategory] }),
+      };
+    } else {
+      payload = {
+        ...commonPayload,
+        phonenumber: formData.phone,
+        role: role,
+        ...(formData.gender && { gender: formData.gender }),
+      };
+    }
+
+    const endpoint = isProfessional
+      ? "/users/register-professional/"
+      : "/users/register/";
 
     const response = await api.post(endpoint, payload);
     return {
@@ -125,7 +141,7 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
  */
 export const loginUser = async (email: string, password: string) => {
   try {
-    const response = await api.post("/accounts/users/login/", {
+    const response = await api.post("/users/login/", {
       email: email,
       password: password,
     });
@@ -157,7 +173,7 @@ export const updateUserProfile = async (id: string, data: Partial<User>) => {
     // Remove null/undefined to avoid overwriting with empty
     Object.keys(apiData).forEach(key => (apiData as any)[key] === undefined && delete (apiData as any)[key]);
 
-    const response = await api.patch(`/accounts/users/${id}/`, apiData);
+    const response = await api.patch(`/users/${id}/`, apiData);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.detail || "Failed to update profile");
@@ -168,7 +184,7 @@ export const updateUserProfile = async (id: string, data: Partial<User>) => {
  * Verify Email OTP
  */
 export const verifyOtp = async (email: string, otp: string) => {
-  const response = await api.post("/accounts/users/verify-email/", { email, otp });
+  const response = await api.post("/users/verify-email/", { email, otp });
   return response.data;
 };
 
@@ -176,7 +192,7 @@ export const verifyOtp = async (email: string, otp: string) => {
  * Resend Email OTP
  */
 export const resendOtp = async (email: string) => {
-  const response = await api.post("/accounts/users/resend-email-otp/", { email });
+  const response = await api.post("/users/resend-email-otp/", { email });
   return response.data;
 };
 
@@ -184,7 +200,7 @@ export const resendOtp = async (email: string) => {
  * Forgot Password
  */
 export const forgotPassword = async (email: string) => {
-  const response = await api.post("/accounts/users/forgot-password/", { email });
+  const response = await api.post("/users/forgot-password/", { email });
   return response.data;
 };
 
@@ -192,7 +208,7 @@ export const forgotPassword = async (email: string) => {
  * Reset Password
  */
 export const resetPassword = async (email: string, otp: string, new_password: string) => {
-  const response = await api.post("/accounts/users/reset-password/", { email, otp, new_password });
+  const response = await api.post("/users/reset-password/", { email, otp, new_password });
   return response.data;
 };
 

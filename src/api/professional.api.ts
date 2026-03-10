@@ -9,6 +9,6 @@ export const getProfessionalDashboard = async () => {
 };
 
 export const getProfessionalDetails = async () => {
-  const response = await api.get("/accounts/users/professional-detail/");
+  const response = await api.get("/users/professional-detail/");
   return response.data;
 };
