@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { useMockService } from "../../../../context/MockServiceContext";
 import { getServiceCategories } from "../../../../api/jobs.api";
 
 const LOCATIONS = [
@@ -19,7 +18,6 @@ const LOCATIONS = [
 
 const CustomerNavbar = () => {
   const { user, logout } = useAuth();
-  const { notifications, markNotificationAsRead } = useMockService();
   const navigate = useNavigate();
 
   // Search State
@@ -30,7 +28,9 @@ const CustomerNavbar = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
 
-  const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === user?.name) && !n.isRead);
+  // TODO: Implement backend notifications
+  const notifications: any[] = [];
+  const unreadNotifications: any[] = [];
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -200,7 +200,6 @@ const CustomerNavbar = () => {
                       key={n.id}
                       className={`px-4 py-3 border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}
                       onClick={() => {
-                        markNotificationAsRead(n.id);
                         setShowNotifications(false);
                         navigate(`/customer/messages/1`);
                       }}

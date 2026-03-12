@@ -1,30 +1,18 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CustomerNavbar from './components/CustomerNavbar';
-import { useMockService } from '../../../context/MockServiceContext';
-import { useAuth } from '../../../context/AuthContext';
-import { useEffect } from 'react';
 
 const CustomerMessages = () => {
-    const { user } = useAuth();
-    const { requests, notifications, markNotificationAsRead } = useMockService();
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // Find all requests for this customer
-    const userRequests = requests.filter(req => req.customerId === user?.id || req.customerId === "mock-customer-id" || !user);
+    // TODO: Fetch real jobs/requests from the backend
+    const notifications: any[] = [];
+    const userRequests: any[] = []; // Temporary empty state
 
     // Get active request from URL or default to latest
     const requestId = searchParams.get('requestId');
-    const activeRequest = userRequests.find(req => req.id === requestId) || userRequests[0];
+    const activeRequest: any | undefined = undefined; // Temporarily undefined until real backend is wired up
     const activeRequestId = activeRequest?.id;
-
-    // Auto-mark notifications for this request as read
-    useEffect(() => {
-        if (activeRequestId) {
-            const relatedNotifications = notifications.filter(n => n.requestId === activeRequestId && !n.isRead);
-            relatedNotifications.forEach(n => markNotificationAsRead(n.id));
-        }
-    }, [activeRequestId, notifications, markNotificationAsRead]);
 
     const handleSelectRequest = (id: string) => {
         setSearchParams({ requestId: id });

@@ -8,6 +8,7 @@ import Header from '../professional/components/Header';
 import { useAuth } from '../../../context/AuthContext';
 import LocationInput from '../../../components/LocationInput';
 import { getUserDetails, updateUserProfile } from '../../../api/auth.api';
+import { getServiceCategories } from '../../../api/jobs.api';
 
 const ProfessionalProfile = () => {
     const { id } = useParams();
@@ -22,12 +23,11 @@ const ProfessionalProfile = () => {
     const [isPreviewMode, setIsPreviewMode] = useState(false);
 
     const handleChat = () => {
-        if (isProView) return;
         navigate('/customer/messages/1');
     };
 
     const handleEstimateRequest = () => {
-        if (isProView) return;
+        console.log('Opening estimate modal, isEstimateModalOpen will be true');
         setIsEstimateModalOpen(true);
     };
 
@@ -113,8 +113,21 @@ const ProfessionalProfile = () => {
                     // Store ratings and reviews if available (fallback to 0)
                     setProfileRating(fetchedUser.average_rating || fetchedUser.rating || 0);
                     setProfileReviewsCount(fetchedUser.total_jobs_completed || fetchedUser.reviews_count || 0);
-                    // Store service/profession UUID for estimate modal
-                    setProfileServiceId(fetchedUser.profession || undefined);
+                    // Fetch service categories to find the correct UUID for the createJob API
+                    // The profession field is a profession UUID, NOT a service category UUID
+                    try {
+                        const categories = await getServiceCategories();
+                        const catList = Array.isArray(categories) ? categories : (categories?.results || []);
+                        const profName = (fetchedUser.profession_name || '').toLowerCase().trim();
+                        const matched = catList.find((cat: any) =>
+                            cat.name?.toLowerCase().trim() === profName
+                        );
+                        console.log("ProfessionalProfile: profession_name:", fetchedUser.profession_name, "| matched service category:", matched);
+                        setProfileServiceId(matched?.id || undefined);
+                    } catch (catErr) {
+                        console.warn("ProfessionalProfile: Could not fetch service categories, estimate may fail:", catErr);
+                        setProfileServiceId(undefined);
+                    }
 
                 } catch (error) {
                     console.error("Failed to fetch professional details:", error);

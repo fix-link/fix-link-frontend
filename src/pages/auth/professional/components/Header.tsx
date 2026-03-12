@@ -1,21 +1,14 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../context/AuthContext";
-import { useMockService } from "../../../../context/MockServiceContext";
 
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
-    const { notifications, markNotificationAsRead } = useMockService();
     const navigate = useNavigate();
     const [showNotifications, setShowNotifications] = useState(false);
 
-    const isProView = window.location.pathname.includes('/professional');
-    const unreadNotifications = notifications.filter((n: any) => {
-        const isMatch = (n.userId === user?.id || n.userId === user?.name || isProView);
-        // Pros should see "new_request" and "new_message", but not "request_accepted"
-        const isProcessable = isProView ? (n.type === 'new_request' || n.type === 'new_message') : true;
-        return isMatch && isProcessable && !n.isRead;
-    });
+    // TODO: Implement real backend notifications
+    const unreadNotifications: any[] = [];
 
     const handleLogout = () => {
         logout();
@@ -64,36 +57,7 @@ const Header: React.FC = () => {
                                 <span className="text-xs text-primary font-medium">{unreadNotifications.length} New</span>
                             </div>
                             <div className="max-h-80 overflow-y-auto">
-                                {notifications.filter((n: any) => {
-                                    const isMatch = (n.userId === user?.id || n.userId === user?.name || isProView);
-                                    const isProcessable = isProView ? n.type === 'new_request' : true;
-                                    return isMatch && isProcessable;
-                                }).length === 0 ? (
-                                    <div className="px-4 py-8 text-center text-gray-500 text-sm">No notifications yet</div>
-                                ) : (
-                                    notifications.filter((n: any) => {
-                                        const isMatch = (n.userId === user?.id || n.userId === user?.name || isProView);
-                                        const isProcessable = isProView ? n.type === 'new_request' : true;
-                                        return isMatch && isProcessable;
-                                    }).map((n: any) => (
-                                        <div
-                                            key={n.id}
-                                            className={`px-4 py-3 border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}
-                                            onClick={() => {
-                                                markNotificationAsRead(n.id);
-                                                setShowNotifications(false);
-                                                // Link to messages with specific request ID
-                                                navigate(`/professional/messages?requestId=${n.requestId}`);
-                                            }}
-                                        >
-                                            <p className={`text-sm ${!n.isRead ? 'font-bold' : 'font-medium'}`}>{n.message}</p>
-                                            <div className="flex justify-between items-center mt-1">
-                                                <span className="text-[10px] text-gray-400">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                <span className="text-[10px] text-primary font-bold">View Request →</span>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
+                                <div className="px-4 py-8 text-center text-gray-500 text-sm">No notifications yet</div>
                             </div>
                         </div>
                     )}

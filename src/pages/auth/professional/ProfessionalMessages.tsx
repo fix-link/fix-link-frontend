@@ -2,36 +2,20 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import { useMockService } from '../../../context/MockServiceContext';
 import { useAuth } from '../../../context/AuthContext';
-import { useEffect } from 'react';
 
 const ProfessionalMessages = () => {
-    const { user } = useAuth();
-    const { requests, updateRequestStatus, notifications, markNotificationAsRead } = useMockService();
+    const { } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const isProView = window.location.pathname.includes('/professional');
-
-    // All possible requests for this pro
-    const professionalRequests = requests.filter(req =>
-        req.professionalId === user?.name ||
-        req.professionalId === user?.id ||
-        isProView
-    );
+    // TODO: Fetch real jobs/requests from the backend
+    const notifications: any[] = [];
+    const professionalRequests: any[] = []; // Temporary empty state
 
     // Get the active request from search params, or default to first one
     const requestId = searchParams.get('requestId');
-    const activeRequest = professionalRequests.find(req => req.id === requestId) || professionalRequests[0];
+    const activeRequest: any | undefined = undefined; // Temporarily undefined until real backend is wired up
     const activeRequestId = activeRequest?.id;
-
-    // Auto-mark notifications for this request as read
-    useEffect(() => {
-        if (activeRequestId) {
-            const relatedNotifications = notifications.filter(n => n.requestId === activeRequestId && !n.isRead);
-            relatedNotifications.forEach(n => markNotificationAsRead(n.id));
-        }
-    }, [activeRequestId, notifications, markNotificationAsRead]);
 
     const [messageInput, setMessageInput] = useState("");
     const [showStatus, setShowStatus] = useState(false);
@@ -41,15 +25,11 @@ const ProfessionalMessages = () => {
     };
 
     const handleAccept = async () => {
-        if (activeRequest) {
-            await updateRequestStatus(activeRequest.id, 'accepted');
-        }
+        // TODO: Update request status via API
     };
 
     const handleDecline = async () => {
-        if (activeRequest) {
-            await updateRequestStatus(activeRequest.id, 'declined');
-        }
+        // TODO: Update request status via API
     };
 
     return (
@@ -235,7 +215,7 @@ const ProfessionalMessages = () => {
 
                                             {activeRequest.photos?.length > 0 && (
                                                 <div className="flex gap-2 overflow-x-auto py-1 custom-scrollbar">
-                                                    {activeRequest.photos.map((p, i) => (
+                                                    {activeRequest.photos.map((p: string, i: number) => (
                                                         <img key={i} src={p} alt="" className="size-20 rounded-xl object-cover border-2 border-white dark:border-slate-800 shadow-sm hover:scale-105 transition-transform" />
                                                     ))}
                                                 </div>

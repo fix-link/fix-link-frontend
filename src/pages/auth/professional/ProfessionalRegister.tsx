@@ -173,6 +173,8 @@ const ProfessionalRegister = () => {
       await registerUser("professional", {
         ...form,
         email,
+        profilePhoto,  // Pass the File object for profile picture upload
+        cvFile,        // Pass the File object for CV upload
       });
       // if (response.status === "ACTIVE") {
       //   login(response.token, response.user); // Auto-login if backend approves immediately

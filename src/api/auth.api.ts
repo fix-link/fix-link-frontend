@@ -32,9 +32,10 @@ api.interceptors.response.use(
       localStorage.removeItem("refresh_token");
       localStorage.removeItem("user");
 
-      // Force reload to clear state and redirect via App routes if they guard
-      // Only do this if we're not already on the login page to avoid loops
-      if (!window.location.pathname.includes("/login")) {
+      // Only redirect to login if not already on an auth page
+      const path = window.location.pathname;
+      const isAuthPage = path.includes("/login") || path.includes("/signup") || path.includes("/register") || path.includes("/verify");
+      if (!isAuthPage) {
         window.location.href = "/login";
       }
     }
@@ -87,8 +88,48 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
   try {
     const isProfessional = role === "professional";
 
+    const endpoint = isProfessional
+      ? "/users/register-professional/"
+      : "/users/register/";
+
+    // Use FormData if a file is present (profile photo / cv)
+    const hasFile = formData.profilePhoto instanceof File || formData.cvFile instanceof File;
+
+    if (hasFile && isProfessional) {
+      const fd = new FormData();
+      fd.append("username", formData.email);
+      fd.append("email", formData.email);
+      fd.append("password", formData.password);
+      fd.append("first_name", formData.firstName);
+      fd.append("last_name", formData.lastName);
+      fd.append("profession", formData.serviceCategory);
+      fd.append("years_of_experience", String(Number(formData.yearsOfExperience) || 0));
+      if (formData.gender) fd.append("gender", formData.gender);
+      if (formData.dateOfBirth) fd.append("date_of_birth", formData.dateOfBirth);
+      if (formData.shortBio) fd.append("bio", formData.shortBio);
+      if (formData.city) fd.append("city", formData.city);
+      if (formData.subcity) fd.append("subcity", formData.subcity);
+      if (formData.houseNumber) fd.append("house_number", formData.houseNumber);
+      if (formData.payoutMethod) fd.append("preferred_payout_method", formData.payoutMethod);
+      if (formData.accountNumber) fd.append("payout_account_number", formData.accountNumber);
+      if (formData.serviceCategory) fd.append("service_categories", formData.serviceCategory);
+      // Attach files
+      if (formData.profilePhoto instanceof File) fd.append("profile_picture", formData.profilePhoto);
+      if (formData.cvFile instanceof File) fd.append("cv_file", formData.cvFile);
+
+      const response = await api.post(endpoint, fd);
+      // Note: Do NOT set Content-Type here — axios auto-sets multipart/form-data with the correct boundary
+      return {
+        success: true,
+        user: response.data.user,
+        access: response.data.access,
+        refresh: response.data.refresh,
+      };
+    }
+
+    // JSON fallback (no files)
     const commonPayload = {
-      username: formData.email, // Use email as username for consistency
+      username: formData.email,
       email: formData.email,
       password: formData.password,
       first_name: formData.firstName,
@@ -96,12 +137,11 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
     };
 
     let payload: any;
-
     if (isProfessional) {
       payload = {
         ...commonPayload,
-        profession: formData.serviceCategory, // Required
-        years_of_experience: Number(formData.yearsOfExperience) || 0, // Required
+        profession: formData.serviceCategory,
+        years_of_experience: Number(formData.yearsOfExperience) || 0,
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
         ...(formData.shortBio && { bio: formData.shortBio }),
@@ -120,10 +160,6 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
         ...(formData.gender && { gender: formData.gender }),
       };
     }
-
-    const endpoint = isProfessional
-      ? "/users/register-professional/"
-      : "/users/register/";
 
     const response = await api.post(endpoint, payload);
     return {

@@ -1,16 +1,9 @@
-import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useMockService } from "../../../../context/MockServiceContext";
 import { useAuth } from "../../../../context/AuthContext";
 
 const Sidebar: React.FC = () => {
-    const { notifications } = useMockService();
-    const { user, logout } = useAuth();
+    const { logout } = useAuth();
     const navigate = useNavigate();
-    const isProView = window.location.pathname.includes('/professional');
-    const unreadMessagesCount = notifications.filter(n =>
-        (n.userId === user?.id || n.userId === user?.name || isProView) && !n.isRead
-    ).length; // Mock logic: show counts in Pro View for all notifications during dev phase
 
     return (
         <aside className="fixed z-20 h-full w-64 flex-col bg-primary p-4 text-white/80 hidden lg:flex">
@@ -44,11 +37,6 @@ const Sidebar: React.FC = () => {
                             {item.icon}
                         </span>
                         <p className="text-sm font-medium flex-1">{item.label}</p>
-                        {item.label === "Messages" && unreadMessagesCount > 0 && (
-                            <span className="flex size-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-primary">
-                                {unreadMessagesCount}
-                            </span>
-                        )}
                     </NavLink>
                 ))}
             </nav>
