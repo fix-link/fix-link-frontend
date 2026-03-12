@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import CustomerNavbar from "./components/CustomerNavbar";
 import ProfessionalCard from "./components/ProfessionalCard";
 import CustomerFooter from "./components/CustomerFooter";
 import FiltersSidebar from "./components/FiltersSidebar";
+import { getProfessionals, getServiceCategories } from "../../../api/jobs.api";
 
 const SearchResults = () => {
     const location = useLocation();
 
     // Parse query params to show in header title
     const queryParams = new URLSearchParams(location.search);
-    const serviceQuery = queryParams.get("service") || "Plumbing";
-    const locationQuery = queryParams.get("location") || "Addis Ababa";
+    const serviceQuery = (queryParams.get("service") || "").toLowerCase();
+    const locationQuery = (queryParams.get("location") || "").toLowerCase();
+
+    const [professionals, setProfessionals] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
 
     // Filter State
     const [priceMin, setPriceMin] = useState<number>(0);
@@ -24,90 +28,72 @@ const SearchResults = () => {
     const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
     const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
-    // Mock Data for Professionals with extended fields
-    const professionals = [
-        {
-            id: 1,
-            name: "Alem Tadesse",
-            role: "Plumber",
-            rating: 4.9,
-            quote: "Fast, reliable, and affordable plumbing solutions for your home.",
-            price: 350,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDlBd9E1G_iPXhVaUxUuidOCftDDUxHN5qWBaync__SWk7v86IBDaTdr6auZG42AJmEnUHUqOewxtFaZsSnwz6Vsx94afWJ8d6mERKfTvzxPNHKeWyvE5Dv31p1cD2-tDCKR7c-5lzK1oIxmaPde31dSd7dex7LtjoQarwSklKPoi3OntQ430EQMcMwue_6c7VKrW-HXF0eKXJ0IOapZvd9uKtjNUCFaXDs2OSi1DlHOLXifpqrO7Lk_-_kemAnsDiCDaejYPKNjg",
-            verified: true,
-            experience: "Senior",
-            availability: "Today",
-            languages: ["English", "Amharic"]
-        },
-        {
-            id: 2,
-            name: "Hanna Bekele",
-            role: "Plumber",
-            rating: 4.8,
-            quote: "Your satisfaction is my priority. Quality work guaranteed.",
-            price: 2600,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBa9iHjZpzWLPC8u-A7S2RSavE0HQBdYeA3wH7UYLVajk3rItsphm-DXE2re9U5SrCu8oUXnPJWS6rEwxexM1QqSL3ofVpA7QaSpImmcO5_fEgwqVVDt66CdiCTNP__Xg4rANfp-iX7BDRydHAGxl91O2geZSyTMNqa4HPaEZuw9heeEmEdb2Lmv4vjpHuA4vhz9XCm_iKExNc7F89ebCUl218n6lNKia9IboPKFVzpY2imVemz7HUzyKrZEGs7Vb6aPHsX-yXPUw",
-            verified: true,
-            experience: "Mid-level",
-            availability: "This Week",
-            languages: ["Amharic"]
-        },
-        {
-            id: 3,
-            name: "Yonas Gebru",
-            role: "Plumber",
-            rating: 4.7,
-            quote: "Expert in residential and commercial plumbing repairs.",
-            price: 3000,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAMIMxpBKQ0-FNnKsA0P73VqmoE8zC-MJX6dTlQcLS2wesZ_BEjXM0sSDTum3K1A8rkm8bW3jXXgomo6XB0j62LG0YwbAHV2ylF3YV2tMLmarowJfzIyCJKTfxy-L1DpbX96OaCA7z4nLeT2lFNBWkdzmaOytnaMCDVDvIoEfDBfRqKcHtJhb9iNEWnHHpDzyJIvwP6RGyDga1T2xuwWPprB2tIIjcubNSLTdWEEskJpi0Y1-jyF8vqeCknGKip8yEtMhKLfvxKwQ",
-            verified: false,
-            experience: "Junior",
-            availability: "Today",
-            languages: ["English", "Amharic", "Oromiffa"]
-        },
-        {
-            id: 4,
-            name: "Sofia Assefa",
-            role: "Plumber",
-            rating: 5.0,
-            quote: "Emergency services available 24/7. Your trusted expert.",
-            price: 500,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuB2gz4gk-NChYKVBFkr0CYBK3mkRD5TB769MjJqCNj8jdTnDATiYS3uXdrHReW9O1EGqwNhy4kSfID1yCIojfOCvtynG1krVP_QQHEsOMWMWX1T1uAvBZ-md9hrTx617QSPNIXgj1mOnkru17svM4A_pt8ppnV0p2wMUs_gm_KZYfEsicteqhkvp_j2eLh8Kih3dJmmGBcF7IrLWNUe51KrgBARF6xh0jQybqBVL8G2gLWyOimRzmyqGsEs2UDWSUPAFUzORitNNg",
-            verified: true,
-            experience: "Senior",
-            availability: "Today",
-            languages: ["English"]
-        },
-        {
-            id: 5,
-            name: "Daniel Lemma",
-            role: "Plumber",
-            rating: 4.9,
-            quote: "10+ years of experience in fixing complex pipe issues.",
-            price: 450,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBCYjFhA0fA2HdjJiTmJe9A5bEnx8p_WEXh9xGU0Sp-gPiexSdvnfui4Pjuzt-D802BQVrX-8koZNCMgXMi3xmz24lDW33EMEHVnO3R72hofd90shho7lX5J6VPzVDOMYCyj7Cd9sbgL1N1CzarcRjex8aDp1g86CUJX-3IpTi5I9o29gL2DXo9B84_KORzWkcGEBSUH4arhsoEaH_maZ9-wysOOytFbIBVJf21iv6gtf--SFX2yluxpVviDSo_qlsoZM237RTgQg",
-            verified: false,
-            experience: "Senior",
-            availability: "This Week",
-            languages: ["Amharic", "Tigrinya"]
-        },
-        {
-            id: 6,
-            name: "Sara Mekonnen",
-            role: "Plumber",
-            rating: 4.8,
-            quote: "Clean, efficient work for modern homes and businesses.",
-            price: 3800,
-            image: "https://lh3.googleusercontent.com/aida-public/AB6AXuAKhN0TyumIKZj7RYPgHFZ890eiZQDdkctTrs4kVPprPwq7v65YvqmboKGT5yrB6d_HqKwi8OJayJvy3faoHHgipM36bRop7GCr296KtmZpkMKAXElF6gdq8JWAmdPdbsh9cat2iQ0CfxCsa11f5Q73MgDBF_Bp3oxkExbOic5lqs-mgitrq48z8y40wN_pZRSlvxUMnx8Quj_cAKJd6HqORGW6zFFrnM796GleQpbEpmT0UJE85G1OOVgPhW4QaVvZmWcqh4-qSw",
-            verified: true,
-            experience: "Mid-level",
-            availability: "Today",
-            languages: ["English", "Amharic"]
-        }
-    ];
+    useEffect(() => {
+        Promise.all([getProfessionals(), getServiceCategories()])
+            .then(([userData, categoriesData]) => {
+                const categoryMap: Record<string, string> = {};
+                if (Array.isArray(categoriesData)) {
+                    categoriesData.forEach((cat: any) => {
+                        categoryMap[cat.id] = cat.name;
+                    });
+                }
+
+                let fetched = [];
+                if (Array.isArray(userData)) fetched = userData;
+                else if (userData?.results) fetched = userData.results;
+                else fetched = userData?.professionals || userData?.data || [];
+
+                const defaultAvatar = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'><rect width='150' height='150' fill='%23e2e8f0'/><circle cx='75' cy='58' r='30' fill='%2394a3b8'/><ellipse cx='75' cy='130' rx='50' ry='35' fill='%2394a3b8'/></svg>`;
+                const getImageUrl = (path: string) => {
+                    if (!path) return defaultAvatar;
+                    if (path.startsWith('http')) return path;
+                    const cleanPath = path.startsWith('/') ? path : `/${path}`;
+                    return `${(import.meta.env.VITE_API_URL || 'https://fix-link-5332f899c079.herokuapp.com').replace(/\/$/, '')}${cleanPath}`;
+                };
+
+                const mapped = fetched
+                    .filter((u: any) => u.role === 'professional' || u.is_professional || u.user?.role === 'professional')
+                    .map((prof: any) => {
+                        const ud = prof.user || {};
+                        const roleName = categoryMap[prof.profession || ud.profession] || 'Professional';
+                        
+                        // Map location dynamically
+                        const city = prof.city || ud.city || '';
+                        const area = prof.subcity || ud.subcity || prof.neighborhood || ud.neighborhood || '';
+                        const locationString = city && area ? `${city}, ${area}` : city || area || 'Addis Ababa';
+
+                        return {
+                            id: prof.id || prof.user_id || ud.id,
+                            name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || "Anonymous Professional",
+                            role: roleName,
+                            rating: prof.average_rating || prof.rating || 0,
+                            reviews: prof.total_jobs_completed || prof.reviews_count || 0,
+                            price: prof.hourly_rate || 0,
+                            verified: prof.is_verified_professional || false,
+                            image: getImageUrl(prof.profile_picture || ud.profile_picture),
+                            location: locationString,
+                            experience: prof.years_of_experience > 5 ? "Senior" : prof.years_of_experience > 2 ? "Mid-level" : "Junior",
+                            availability: "Today",
+                            languages: ["Amharic", "English"]
+                        };
+                    });
+
+                // Filter by service query if present
+                const filteredByService = serviceQuery 
+                    ? mapped.filter((p: any) => p.role.toLowerCase().includes(serviceQuery) || p.name.toLowerCase().includes(serviceQuery))
+                    : mapped;
+
+                setProfessionals(filteredByService);
+                setLoading(false);
+            })
+            .catch(err => {
+                console.error("Search fetch error:", err);
+                setLoading(false);
+            });
+    }, [serviceQuery]);
 
     // Filter Logic
-    const filteredProfessionals = professionals.filter(pro => {
+    const filteredProfessionals = professionals.filter((pro: any) => {
         const matchesPrice = pro.price >= priceMin && pro.price <= priceMax;
         const matchesRating = pro.rating >= selectedRating;
         const matchesVerified = verifiedOnly ? pro.verified : true;
@@ -120,7 +106,7 @@ const SearchResults = () => {
 
         const matchesAvailability = selectedAvailability.length === 0 || selectedAvailability.includes(pro.availability);
 
-        const matchesLanguage = selectedLanguages.length === 0 || pro.languages.some(lang => selectedLanguages.includes(lang));
+        const matchesLanguage = selectedLanguages.length === 0 || pro.languages.some((lang: string) => selectedLanguages.includes(lang));
 
         return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesAvailability && matchesLanguage;
     });
@@ -135,7 +121,16 @@ const SearchResults = () => {
         setSelectedLanguages([]);
     };
 
-
+    if (loading) {
+        return (
+            <div className="flex h-screen w-screen items-center justify-center bg-background-light dark:bg-background-dark">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-primary"></div>
+                    <p className="font-bold text-text-secondary">Searching Professionals...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden bg-background-light dark:bg-background-dark font-display">
@@ -144,7 +139,7 @@ const SearchResults = () => {
             <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-10">
                 <div className="flex flex-wrap justify-between gap-4 mb-8">
                     <p className="text-text-primary dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">
-                        Professionals for '{serviceQuery}' in '{locationQuery}'
+                        Professionals for '{serviceQuery || 'All Services'}' in '{locationQuery || 'Addis Ababa'}'
                     </p>
                     <p className="text-text-secondary dark:text-gray-400 self-end mb-1">
                         Showing {filteredProfessionals.length} Result{filteredProfessionals.length !== 1 && 's'}
@@ -190,21 +185,11 @@ const SearchResults = () => {
                             </div>
                         )}
 
-                        {/* Pagination (Mock) */}
-                        <nav aria-label="Pagination" className="mt-10 flex items-center justify-center gap-2">
-                            <button className="flex h-10 w-10 items-center justify-center rounded-lg text-text-secondary dark:text-gray-400 bg-white dark:bg-background-dark shadow-card hover:bg-background-light dark:hover:bg-white/10">
-                                <span className="material-symbols-outlined">chevron_left</span>
-                            </button>
-                            <button className="flex h-10 w-10 items-center justify-center rounded-lg text-white bg-primary shadow-card">1</button>
-                            <button className="flex h-10 w-10 items-center justify-center rounded-lg text-text-secondary dark:text-gray-400 bg-white dark:bg-background-dark shadow-card hover:bg-background-light dark:hover:bg-white/10">2</button>
-                            {/* ... more pages ... */}
-                            <button className="flex h-10 w-10 items-center justify-center rounded-lg text-text-secondary dark:text-gray-400 bg-white dark:bg-background-dark shadow-card hover:bg-background-light dark:hover:bg-white/10">
-                                <span className="material-symbols-outlined">chevron_right</span>
-                            </button>
-                        </nav>
+                        {/* Pagination - Temporarily hidden as results are few */}
                     </div>
                 </div>
             </main>
+
 
             <CustomerFooter />
         </div>

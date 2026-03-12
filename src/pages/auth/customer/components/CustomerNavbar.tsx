@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { useMockService } from "../../../../context/MockServiceContext";
+import { getServiceCategories } from "../../../../api/jobs.api";
 
 const LOCATIONS = [
   "Addis Ababa",
@@ -24,11 +25,25 @@ const CustomerNavbar = () => {
   // Search State
   const [location, setLocation] = useState("Addis Ababa");
   const [service, setService] = useState("All Services");
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
 
   const unreadNotifications = notifications.filter(n => (n.userId === user?.id || n.userId === user?.name) && !n.isRead);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const data = await getServiceCategories();
+        console.log("CustomerNavbar: Fetched categories:", data);
+        setCategories(data);
+      } catch (err) {
+        console.error("Failed to fetch categories:", err);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -90,10 +105,9 @@ const CustomerNavbar = () => {
               className="w-full bg-transparent border-none focus:ring-0 text-xs font-semibold py-1 pl-4 pr-8 text-slate-700 dark:text-slate-300 cursor-pointer appearance-none"
             >
               <option>All Services</option>
-              <option>Plumbing</option>
-              <option>Electrical</option>
-              <option>Cleaning</option>
-              <option>Handyman</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.name}>{cat.name}</option>
+              ))}
             </select>
             <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-base">expand_more</span>
           </div>

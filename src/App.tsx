@@ -16,10 +16,12 @@ import ForgotPassword from "./pages/auth/login/ForgotPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
 import AccountSettings from "./pages/auth/customer/AccountSettings";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Home Page */}
         <Route path="/" element={<Home />} />

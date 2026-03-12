@@ -22,12 +22,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const token = localStorage.getItem("access_token");
         const savedUser = localStorage.getItem("user");
 
+        console.log("AuthContext: Checking for saved session...", { hasToken: !!token, hasUser: !!savedUser });
+
         if (token && savedUser) {
             try {
-                setUser(JSON.parse(savedUser));
+                const user = JSON.parse(savedUser);
+                console.log("AuthContext: Restoring session for", user.email);
+                setUser(user);
                 setIsAuthenticated(true);
             } catch (e) {
-                console.error("Failed to parse saved user", e);
+                console.error("AuthContext: Failed to parse saved user", e);
                 logout();
             }
         }

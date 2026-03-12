@@ -8,6 +8,7 @@ export type Professional = {
   reviews?: number;
   price: number;
   image: string;
+  location?: string;
   quote?: string;
   verified?: boolean;
 };
@@ -42,6 +43,13 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
         {pro.name}
       </h3>
       <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{pro.role}</p>
+      
+      {pro.location && (
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1 flex items-center justify-center gap-1">
+          <span className="material-symbols-outlined text-xs">location_on</span>
+          {pro.location}
+        </p>
+      )}
 
       <div className="flex items-center gap-1 text-amber-500 text-xs mb-2">
         <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -54,7 +62,7 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
       </div>
 
       {pro.verified && (
-        <div className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-primary dark:bg-blue-900/30 dark:text-blue-300 mb-3 border border-blue-100 dark:border-blue-800">
+        <div className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-primary dark:bg-blue-900/30 dark:text-blue-300 mb-2 border border-blue-100 dark:border-blue-800">
           <span className="material-symbols-outlined text-[14px] mr-1">verified</span> Trusted
         </div>
       )}

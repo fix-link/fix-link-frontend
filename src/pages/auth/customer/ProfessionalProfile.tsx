@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import CustomerNavbar from './components/CustomerNavbar';
 import CustomerFooter from './components/CustomerFooter';
 import RequestEstimateModal from './components/RequestEstimateModal';
@@ -7,10 +7,13 @@ import Sidebar from '../professional/components/Sidebar';
 import Header from '../professional/components/Header';
 import { useAuth } from '../../../context/AuthContext';
 import LocationInput from '../../../components/LocationInput';
+import { getUserDetails, updateUserProfile } from '../../../api/auth.api';
 
 const ProfessionalProfile = () => {
+    const { id } = useParams();
     const navigate = useNavigate();
     const { user, updateUser } = useAuth();
+    const [isLoading, setIsLoading] = useState(!window.location.pathname.startsWith('/professional'));
     const [isEstimateModalOpen, setIsEstimateModalOpen] = useState(false);
 
     // Check if we are in professional management mode
@@ -26,6 +29,11 @@ const ProfessionalProfile = () => {
     const handleEstimateRequest = () => {
         if (isProView) return;
         setIsEstimateModalOpen(true);
+    };
+
+    const togglePreview = () => {
+        setIsPreviewMode(!isPreviewMode);
+        setIsEditing(false);
     };
 
 
@@ -58,92 +66,127 @@ const ProfessionalProfile = () => {
     const [profileLanguages, setProfileLanguages] = useState<string[]>([]);
     const [profilePortfolio, setProfilePortfolio] = useState<{ img: string; title: string }[]>([]);
     const [availableDays, setAvailableDays] = useState<number[]>([1, 6]);
+    const [profileRating, setProfileRating] = useState(0);
+    const [profileReviewsCount, setProfileReviewsCount] = useState(0);
+    const [profileServiceId, setProfileServiceId] = useState<string | undefined>(undefined);
 
     // Use effect to initialize or update data
     useEffect(() => {
-        if (isProView && user) {
-            setProfileName(user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.name || "Jane Doe");
-            setProfileRole(user.profession || "Certified Master Electrician");
-            setProfileAbout(user.bio || "With over 12 years of experience...");
-            setProfileSkills(user.skills || "Residential Wiring, Commercial Systems, Smart Home Setup");
-            setProfileExperience(user.years_of_experience?.toString() || "12");
-            setProfileLocation(user.city && user.subcity ? `${user.city}, ${user.subcity}` : "Addis Ababa, Bole");
-            setProfileLanguages(user.languages || ["Amharic (Native)", "English (Fluent)"]);
-            setProfilePortfolio(user.portfolio || [
-                { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400", title: "Kitchen Illumination" },
-                { img: "https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80&w=400", title: "Main Panel Upgrade" }
-            ]);
-        } else if (!isProView) {
-            // Customer view: use mock professional data
-            setProfileName("Jane Doe");
-            setProfileRole("Certified Master Electrician");
-            setProfileAbout("With over 12 years of experience serving the Addis Ababa metropolitan area, I specialize in high-end residential wiring, commercial energy systems, and modern smart home integrations.");
-            setProfileSkills("Residential Wiring, Commercial Systems, Smart Home Setup");
-            setProfileExperience("12");
-            setProfileLocation("Addis Ababa, Bole");
-            setProfileLanguages(["Amharic (Native)", "English (Fluent)"]);
-            setProfilePortfolio([
-                { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400", title: "Kitchen Illumination" },
-                { img: "https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80&w=400", title: "Main Panel Upgrade" }
-            ]);
-        }
-    }, [isProView, user]);
+        const fetchProfileData = async () => {
+            if (isProView && user) {
+                setProfileName(user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user.name || "Jane Doe");
+                setProfileRole(user.profession || "Certified Master Electrician");
+                setProfileAbout(user.bio || "With over 12 years of experience...");
+                setProfileSkills(user.skills || "Residential Wiring, Commercial Systems, Smart Home Setup");
+                setProfileExperience(user.years_of_experience?.toString() || "12");
+                setProfileLocation(user.city && user.subcity ? `${user.city}, ${user.subcity}` : "Addis Ababa, Bole");
+                setProfileLanguages(user.languages || ["Amharic (Native)", "English (Fluent)"]);
+                setProfilePortfolio(user.portfolio || [
+                    { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400", title: "Kitchen Illumination" },
+                    { img: "https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80&w=400", title: "Main Panel Upgrade" }
+                ]);
+                setIsLoading(false);
+            } else if (!isProView && id) {
+                try {
+                    console.log(`ProfessionalProfile: Fetching data for professional ID: ${id}`);
+                    const fetchedUser = await getUserDetails(id);
+                    console.log("ProfessionalProfile: Fetched user data:", fetchedUser);
+
+                    const name = fetchedUser.first_name ? `${fetchedUser.first_name} ${fetchedUser.last_name || ''}`.trim() : fetchedUser.username || "Anonymous Professional";
+                    setProfileName(name);
+                    setProfileRole(fetchedUser.profession_name || fetchedUser.profession || "Professional Specialist");
+                    setProfileAbout(fetchedUser.bio || `With extensive experience in ${fetchedUser.profession_name || fetchedUser.profession || 'their field'}, ${name.split(' ')[0]} provides high-quality service.`);
+                    setProfileSkills(fetchedUser.skills || "");
+                    setProfileExperience(fetchedUser.years_of_experience?.toString() || "0");
+                    
+                    // Map location dynamically
+                    const city = fetchedUser.city || '';
+                    const area = fetchedUser.subcity || fetchedUser.neighborhood || '';
+                    setProfileLocation(city && area ? `${city}, ${area}` : city || area || "Addis Ababa");
+                    
+                    setProfileLanguages(fetchedUser.languages || ["Amharic", "English"]);
+                    setProfilePortfolio(fetchedUser.portfolio || [
+                        { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400", title: "Showcase Project 1" },
+                        { img: "https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80&w=400", title: "Showcase Project 2" }
+                    ]);
+                    
+                    // Store ratings and reviews if available (fallback to 0)
+                    setProfileRating(fetchedUser.average_rating || fetchedUser.rating || 0);
+                    setProfileReviewsCount(fetchedUser.total_jobs_completed || fetchedUser.reviews_count || 0);
+                    // Store service/profession UUID for estimate modal
+                    setProfileServiceId(fetchedUser.profession || undefined);
+
+                } catch (error) {
+                    console.error("Failed to fetch professional details:", error);
+                } finally {
+                    setIsLoading(false);
+                }
+            } else {
+                setIsLoading(false);
+            }
+        };
+
+        fetchProfileData();
+    }, [isProView, user, id]);
 
     const handleSave = async () => {
         if (isProView) {
-            const [city, subcity] = profileLocation.split(',').map(s => s.trim());
             try {
-                await updateUser({
-                    first_name: profileName.split(' ')[0],
-                    last_name: profileName.split(' ').slice(1).join(' '),
-                    profession: profileRole,
+                const updated = await updateUserProfile(user!.id, {
                     bio: profileAbout,
-                    skills: profileSkills,
-                    years_of_experience: parseInt(profileExperience),
-                    city: city || profileLocation,
-                    subcity: subcity || "",
-                    languages: profileLanguages,
-                    portfolio: profilePortfolio
-                } as any);
-            } catch (error) {
-                console.error("Failed to save profile:", error);
+                    profession: profileRole,
+                    years_of_experience: Number(profileExperience),
+                    city: profileLocation.split(',')[0].trim(),
+                    subcity: profileLocation.split(',')[1]?.trim() || ''
+                });
+                updateUser(updated);
+                setIsEditing(false);
+            } catch (err) {
+                console.error("Save failed:", err);
             }
         }
-        setIsEditing(false);
     };
 
-    const togglePreview = () => {
-        setIsPreviewMode(!isPreviewMode);
-        setIsEditing(false);
+    // Helper to format image URLs
+    const defaultAvatar = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'><rect width='150' height='150' fill='%23e2e8f0'/><circle cx='75' cy='58' r='30' fill='%2394a3b8'/><ellipse cx='75' cy='130' rx='50' ry='35' fill='%2394a3b8'/></svg>`;
+    const getImageUrl = (path: string | undefined) => {
+        if (!path) return defaultAvatar;
+        if (path.startsWith('http')) return path;
+        const cleanPath = path.startsWith('/') ? path : `/${path}`;
+        return `${(import.meta.env.VITE_API_URL || 'https://fix-link-5332f899c079.herokuapp.com').replace(/\/$/, '')}${cleanPath}`;
     };
 
-    // Mock Data (In a real app, this would come from an API based on the ID)
+    // Simplified professional data object for UI components
     const professional = {
-        name: "Jane Doe",
-        role: "Certified Master Electrician",
-        verified: true,
-        rating: 4.9,
-        reviewsCount: 128,
-        experience: "12+ years experience",
-        location: "Addis Ababa, Ethiopia",
+        name: profileName,
+        role: profileRole,
+        verified: true, // We assume verified if they appear on dashboard for now
+        rating: profileRating,
+        reviewsCount: profileReviewsCount,
+        experience: `${profileExperience}+ years experience`,
+        location: profileLocation,
         coverImage: "https://lh3.googleusercontent.com/aida-public/AB6AXuCVqLxahM8mBBENqzv_93ZaZeNL1f0E4OzaxyeOFzKw3OmNbp_zAyVx3JtjzUkCcPITJYiDapRmZtn_EutJF9SyzhnQ47oEkrtpf_jkjYABsBbV2tyj8e9WaqpeNQBOKuU9gk8fPtFDxKzEmVI1H1HYd1VtpX_XZnxZV8jzd8tGafsAt9maXvNzTDR8sbsW1KfEJQ-3aQeOKZar1jTjMwaVQsT8m4MKp1md-ihGBr36VqI7SnxPjsrNrGTqY0ua9N7_QRGDkEMx3Q",
-        profileImage: user?.profilePhoto || "https://lh3.googleusercontent.com/aida-public/AB6AXuAYwFXuI6lt-gjBHoaWhwxkjUA_xtTpRKyIdtnF8EzLIQGK6h5K52FCM_vPalI6IAEHd1eqig6reNGAWT7SZss4x0CKmvpcWzX0zP4y5bpeFKkWnhmD5pOCZLfomXowBI6P9owqtHpG9RY0IRNMi6DHLlwrNE_gxiXizxm24o0xBuAxHw6OgZQJqgXyiFVFXBxEgWMpijasK8ZYkW1g_Zej3BW5jkaQ6aH4rWfd1GRDC3gD25cYAqC6wwpTQuVyDDAd-LsNhyY9TQ",
+        profileImage: getImageUrl(user?.profilePhoto || (user as any)?.profile_picture),
         about: profileAbout,
-        skills: profileSkills.split(',').map((s: string) => s.trim()),
-        languages: ["Amharic (Native)", "English (Fluent)"],
-        portfolio: [
-            { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuD-ICmJzEkJysixT_89xmNvQKp9HwpNkhXJ0VPDeTC2X6qXmxt1ILxzhCareoCQDyQZ1yso7CjO3nhqVq4NY0W-1-qdUYIirqB0KF3SDklgYOopHg9Jh8ZVAZH6BZjwtPI0LFtvULHBMA59WpybL4yUkQqDFYmP20doqEPupcEJ_scNN8ouPLC-QjBfB0qjEc7EsQOVJiqFJiip8rYjfQjFPjKZ6-CxV0RkUoaS4LdbOLP_GMtY04XXJK33P7rGrKAI_oNzEPv9oQ", title: "Kitchen Illumination" },
-            { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuDTa7vavLGz3JU_q8MPADOVQpf2Ho4y_j7y09JmxJKAAIwS9oaEnIXrhKpi6G4QjCrprcNZnJnDDzqnwXm7zboSz3hehqq7l1ra56_OR4jF8NkJiMLtFryRZYaf_nSMLK-4lNrA5Ssj6nu0gzsGBaxnrRi7wXcwlM5hUugpBPvlZiKvinrQzebM7B4i1tM8-BfntU35YpSWtQ-Wt_qrU6vucVr0Gr-DQYBSy0uxl8lWqKK7IsSpzEqFMuoMHFZAqruyt3LahAckGA", title: "Main Panel Upgrade" },
-            { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuAN6DR-9il7FzYttFR3QwEwoTGXJE_-7taTA5yqw6XveIzHw_9f02wrZQWTFKwucTWFF4fRS0ulepPuFXkxz3gJkefjR3qiqqlbvtwhqGnCgJohi89EHrdzRDSoxqz87vBr5ipw44raEh9PrtJrzWpsFR4n_kHjz5IXnnrd9VrWpj7GYfLTPZJ_xuvqfFbRU9RDpBwE5MEUuogd9fDTVUjbsWF_bM2ZWXMrEyrXMossjD99g0ojpeQovc8GV4icOv90yIsar8go6A", title: "Landscape Lighting" },
-            { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuBHZA8vwQ8l5_wzdMVs0Yx_UZG4YsTPr9eEXmpI-Dz1lVEoPHLHw3f9ogp7qJxVU1F6GSkB91iYyjppHvBJkmEmVV7wOleXI8EAkIzZs1NFAHak-ZagbyQVhvNpYufwPbq7Oa6OfrqEPBtiqZSkG0fxEWIzTSWXf7LxELodeqRaRzXzUo6MPaXyyNSr57AC6Xa0OzopGjAHXE6Cj1HDc3qGn2yCCUNWaIGhZ7utof2fz2l1mBs1wHgcbcNMfODPBpv_AJbFqk9--A", title: "Corporate Office Suite" },
-            { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCT6fSz8iR-SotIV_oeMmcaT15hRm7wuQ--3E2Bf2lkLw0cDqqahugmcXBI-euZuDINvNloDC7xbSpEKC6x4NfvJ9vcqXBaRx20gyJ9EVMP6-vq-5aEW5E8JN9aLozwiy5OSZuQOwMr_VpbCT2pQEJOKKH7uwEnqA194upXYjMtANgBqkNEeWROacHtZhztsBZLkY8oaT2RWfwsA71FHh9nqQrUvLTLLyxM7fUawIAjd0kjWpC6qqp52AiKhUSTbsd2gk3ZwRz6tA", title: "Smart EV Charging" },
-            { img: "https://lh3.googleusercontent.com/aida-public/AB6AXuCUE8R2bh2fB9iX9uV0dlG7_GirouqztSeEHZkQTpWHp7rWGz7E7SlTie-W8oOtjrzNJwsVhcF9Hzu3-fDvNaK8Xcobf1t4Lv_vzXw5sZc7aLXKMGDgN647Lo55MjJkehc9xLnngcyzE_3kPYBcJfgYWUl08PaOgr-u86Dxp8aqAsV-PfoM9beVAAkNHOE25bpMhBpupu9Lz4VWVJYumiQs7cIyRqHsw8-E9wZ5DowDWZYSMQQs4OQP3XGMqWDoPswTejxTmqtJ-g", title: "Retail Lighting Design" }
-        ],
+        skills: profileSkills.split(',').map((s: string) => s.trim()).filter(Boolean),
+        languages: profileLanguages,
+        portfolio: profilePortfolio,
         reviews: [
-            { name: "Elias Tesfaye", date: "Oct 12, 2024", rating: 5, content: "Jane was exceptionally professional. She rewired our entire office building in Bole and did it ahead of schedule. Highly recommend her for any commercial work.", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDDKa3eBgX2EeYh5Q75Q2Hbj0WjYe9IsF6t8KEV_eon4ge-xUBSkfEBHSsNHawHOdb8_fds3jx3ExL153TixBekkr3Gz2QpCq4RQ9-FSEUOcNrjf8HbC1zxP0hZNWNoyhndiVgLFPSTUw7O7Lvnru6ec_4UfiadbcECznu62_dPvFQqcAtec45a__4aGi6kJseaX_iFqEC9P2RU8uQ68dB10a1V-aUMlf9-9imF_FaN_zP4LbJDc7icuIUD_qu_ZaTI-EqxsJh-FQ" },
-            { name: "Aster Bekele", date: "Sep 28, 2024", rating: 5, content: "Excellent service. She explained everything clearly before starting and fixed our smart lighting system that three other people couldn't solve. Best electrician in Addis.", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuACoZiPLzz95MnWiTcKwFSDZIsMZdrgjDIRDAIOqrKhbRCGL6qFqAjxRvHPLMkhHDRLtHgIqSwAlAcabY3HJ6Tp2uLQjyed__myy7gGZM4soPbPodDahgHZhXsAx1txGP4Tjv0jV1sdrDTgHkD5r71EUwRTOEkT6lmny6hAzI9b9hHyZ-rm0aXh8W24KqJFLflvC-MXinoXnPwcOPz2JG3stMIbPBiAaSKMMcd0dN8qbqLqsmG7JxoYHmckq-0oVZEa7fj9ew0Jcg" }
+            { name: "Elias Tesfaye", date: "Oct 12, 2024", rating: 5, content: `${profileName.split(' ')[0]} was exceptionally professional. They finished the work ahead of schedule. Highly recommend!`, image: "https://lh3.googleusercontent.com/aida-public/AB6AXuDDKa3eBgX2EeYh5Q75Q2Hbj0WjYe9IsF6t8KEV_eon4ge-xUBSkfEBHSsNHawHOdb8_fds3jx3ExL153TixBekkr3Gz2QpCq4RQ9-FSEUOcNrjf8HbC1zxP0hZNWNoyhndiVgLFPSTUw7O7Lvnru6ec_4UfiadbcECznu62_dPvFQqcAtec45a__4aGi6kJseaX_iFqEC9P2RU8uQ68dB10a1V-aUMlf9-9imF_FaN_zP4LbJDc7icuIUD_qu_ZaTI-EqxsJh-FQ" },
+            { name: "Aster Bekele", date: "Sep 28, 2024", rating: 5, content: "Excellent service. Explained everything clearly before starting. Best in Addis.", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuACoZiPLzz95MnWiTcKwFSDZIsMZdrgjDIRDAIOqrKhbRCGL6qFqAjxRvHPLMkhHDRLtHgIqSwAlAcabY3HJ6Tp2uLQjyed__myy7gGZM4soPbPodDahgHZhXsAx1txGP4Tjv0jV1sdrDTgHkD5r71EUwRTOEkT6lmny6hAzI9b9hHyZ-rm0aXh8W24KqJFLflvC-MXinoXnPwcOPz2JG3stMIbPBiAaSKMMcd0dN8qbqLqsmG7JxoYHmckq-0oVZEa7fj9ew0Jcg" }
         ]
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex h-screen w-screen items-center justify-center bg-background-light dark:bg-background-dark">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-primary"></div>
+                    <p className="font-bold text-text-secondary">Loading Profile...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="relative flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-display text-text-primary dark:text-white">
@@ -534,6 +577,8 @@ const ProfessionalProfile = () => {
                 isOpen={isEstimateModalOpen}
                 onClose={() => setIsEstimateModalOpen(false)}
                 professionalName={professional.name}
+                serviceId={profileServiceId}
+                professionalId={id}
             />
         </div>
     );

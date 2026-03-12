@@ -84,29 +84,11 @@ const ProfessionalRegister = () => {
 
       if (type === "file" && files && files.length > 0) {
         const file = files[0];
-        const validImageTypes = ["image/jpeg", "image/png", "image/jpg"];
-        const validDocTypes = [
-          "application/pdf",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ];
-
-        // Handle CV separately
+        
         if (name === "cvFile") {
-          if (!validDocTypes.includes(file.type) && !file.name.endsWith(".docx")) {
-            setError("CV must be a PDF or DOCX file");
-            return;
-          }
           setCvFile(file);
-        } else {
-          // All other files are images
-          if (!validImageTypes.includes(file.type)) {
-            setError(`Please upload a valid image (PNG or JPG) for ${name}`);
-            return;
-          }
-
-          switch (name) {
-            case "profilePhoto": setProfilePhoto(file); break;
-          }
+        } else if (name === "profilePhoto") {
+          setProfilePhoto(file);
         }
       } else {
         setForm({ ...form, [name]: value });
@@ -134,7 +116,7 @@ const ProfessionalRegister = () => {
     if (loading) return;
     setError(null);
 
-    // Required fields
+    // Required fields (strictly matching the backend schema and form)
     const requiredFields = [
       "firstName",
       "lastName",
@@ -142,21 +124,17 @@ const ProfessionalRegister = () => {
       "gender",
       "dateOfBirth",
       "city",
-      "subcity",
       "serviceCategory",
       "yearsOfExperience",
       "shortBio",
       "password",
       "confirmPassword",
       "location",
-      "payoutMethod",
-      "accountNumber",
-      "licenseNumber",
     ];
 
     for (const field of requiredFields) {
       if (!form[field as keyof typeof form]) {
-        setError("Please fill all required fields");
+        setError(`Please fill all required fields (${field} is missing)`);
         return;
       }
     }

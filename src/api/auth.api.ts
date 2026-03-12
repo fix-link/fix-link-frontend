@@ -14,6 +14,7 @@ export const api = axios.create({
 // Add interceptor to include token if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
+  console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, token ? "With Token" : "No Token");
   // Guard against invalid/expired/undefined token strings
   if (token && token !== "undefined" && token !== "null") {
     config.headers.Authorization = `Bearer ${token}`;
@@ -44,7 +45,7 @@ api.interceptors.response.use(
 /**
  * Helper to parse backend errors
  */
-const parseError = (error: any): string => {
+export const parseError = (error: any): string => {
   if (error.response?.data) {
     const data = error.response.data;
 
@@ -87,7 +88,7 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
     const isProfessional = role === "professional";
 
     const commonPayload = {
-      username: formData.email.split("@")[0] + Math.floor(Math.random() * 1000),
+      username: formData.email, // Use email as username for consistency
       email: formData.email,
       password: formData.password,
       first_name: formData.firstName,
@@ -142,6 +143,7 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
 export const loginUser = async (email: string, password: string) => {
   try {
     const response = await api.post("/users/login/", {
+      username: email, // Backend might expect username
       email: email,
       password: password,
     });
@@ -153,7 +155,20 @@ export const loginUser = async (email: string, password: string) => {
       refresh: response.data.refresh,
     };
   } catch (error: any) {
-    throw new Error(error.response?.data?.detail || error.response?.data?.error || "Invalid credentials");
+    const msg = error.response?.data?.detail || error.response?.data?.error || error.response?.data?.message || "Invalid credentials";
+    throw new Error(msg);
+  }
+};
+
+/**
+ * Get User Details by ID
+ */
+export const getUserDetails = async (id: string) => {
+  try {
+    const response = await api.get(`/users/${id}/`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(parseError(error));
   }
 };
 
@@ -184,16 +199,28 @@ export const updateUserProfile = async (id: string, data: Partial<User>) => {
  * Verify Email OTP
  */
 export const verifyOtp = async (email: string, otp: string) => {
-  const response = await api.post("/users/verify-email/", { email, otp });
-  return response.data;
+  try {
+    const response = await api.post("/users/verify-email/", { email, otp });
+    console.log("OTP Verification Response:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("OTP Verification Error:", error.response?.data);
+    throw new Error(parseError(error));
+  }
 };
 
 /**
  * Resend Email OTP
  */
 export const resendOtp = async (email: string) => {
-  const response = await api.post("/users/resend-email-otp/", { email });
-  return response.data;
+  try {
+    const response = await api.post("/users/resend-email-otp/", { email });
+    console.log("OTP Resend Response:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("OTP Resend Error:", error.response?.data);
+    throw new Error(parseError(error));
+  }
 };
 
 /**

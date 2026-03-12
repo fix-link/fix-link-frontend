@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createJob } from "../../../../api/jobs.api";
-import { useAuth } from "../../../../context/AuthContext";
 
 const LOCATIONS = [
     "Addis Ababa",
@@ -19,10 +18,11 @@ interface RequestEstimateModalProps {
     isOpen: boolean;
     onClose: () => void;
     professionalName: string;
+    serviceId?: string;
+    professionalId?: string | number;
 }
 
-const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onClose, professionalName }) => {
-    const { user } = useAuth();
+const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onClose, professionalName, serviceId }) => {
     const [description, setDescription] = useState("");
     const [preferredDate, setPreferredDate] = useState("");
     const [location, setLocation] = useState("");
@@ -31,6 +31,7 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [showLocations, setShowLocations] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,21 +85,25 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true);
 
         try {
+            const budgetNum = parseFloat(budget.replace(/[^0-9.]/g, ''));
             await createJob({
                 title: description.split('\n')[0].substring(0, 50) || "Job Request",
                 description: description,
-                budget: parseFloat(budget.replace(/[^0-9.]/g, '')),
-                location: location,
-                preferred_date: preferredDate,
-                customer: user?.id,
-                // professional: professionalId // We need the ID, but for now we follow the existing component logic
+                service: serviceId || undefined, // Pass service UUID if available
+                address: location,
+                scheduled_at: preferredDate ? new Date(preferredDate).toISOString() : undefined,
+                budget: isNaN(budgetNum) ? undefined : budgetNum.toString(),
             } as any);
 
             setIsSubmitted(true);
         } catch (err: any) {
-            alert(err.message || "Failed to submit request");
+            const msg = err.message || "Failed to submit request. Please try again.";
+            alert(msg);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -314,10 +319,20 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-[2] bg-primary text-white px-6 py-3.5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-95 transition-all text-sm flex items-center justify-center gap-2"
+                                    disabled={isSubmitting}
+                                    className="flex-[2] bg-primary text-white px-6 py-3.5 rounded-xl font-bold shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-95 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed disabled:scale-100"
                                 >
-                                    <span>Submit Request</span>
-                                    <span className="material-symbols-outlined text-lg">send</span>
+                                    {isSubmitting ? (
+                                        <>
+                                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                                            <span>Sending...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Submit Request</span>
+                                            <span className="material-symbols-outlined text-lg">send</span>
+                                        </>
+                                    )}
                                 </button>
                             </div>
                         </form>
