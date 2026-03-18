@@ -3,26 +3,42 @@ import { useSearchParams } from 'react-router-dom';
 import CustomerNavbar from './components/CustomerNavbar';
 import { useAuth } from '../../../context/AuthContext';
 import { listJobs, updateJobStatus } from '../../../api/jobs.api';
+import { getNotifications, type Notification } from '../../../api/notifications.api';
+import { getImageUrl, getUserDetails } from '../../../api/auth.api';
 
 const CustomerMessages = () => {
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [userRequests, setUserRequests] = useState<any[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [activeUserDetails, setActiveUserDetails] = useState<any>(null);
 
     useEffect(() => {
-        const fetchRequests = async () => {
+        const fetchData = async () => {
             try {
-                const allJobs = await listJobs();
+                const [allJobs, allNotifications] = await Promise.all([
+                    listJobs(),
+                    getNotifications()
+                ]);
+                
                 const myRequests = allJobs.filter((job: any) => 
                     job.customer === user?.id && 
                     job.status !== 'pending'
                 );
+                
+                console.log("CustomerMessages: My Requests:", myRequests);
                 setUserRequests(myRequests);
+                setNotifications(allNotifications);
             } catch (error) {
-                console.error("Error fetching customer requests:", error);
+                console.error("Error fetching customer data:", error);
             }
         };
-        if (user?.id) fetchRequests();
+
+        if (user?.id) {
+            fetchData();
+            const interval = setInterval(fetchData, 30000);
+            return () => clearInterval(interval);
+        }
     }, [user]);
 
     // Get active request from URL or default to first
@@ -30,21 +46,28 @@ const CustomerMessages = () => {
     const activeRequest = userRequests.find(r => r.id === requestId);
     const activeRequestId = activeRequest?.id;
 
-    // TODO: Fetch real notifications
-    const notifications: any[] = [];
+    // Fetch details for active professional if not present (Lazy Hydration)
+    useEffect(() => {
+        const fetchDetails = async () => {
+            if (!activeRequest) {
+                setActiveUserDetails(null);
+                return;
+            }
+            const proId = activeRequest.professional || activeRequest.assigned_to;
+            if (!proId) return;
+            
+            try {
+                const details = await getUserDetails(proId);
+                setActiveUserDetails(details);
+            } catch (err) {
+                console.error("Failed to fetch professional details:", err);
+            }
+        };
+        fetchDetails();
+    }, [activeRequestId]);
 
     const handleSelectRequest = (id: string) => {
         setSearchParams({ requestId: id });
-    };
-
-    const handleApprove = async () => {
-        if (!activeRequestId) return;
-        try {
-            const updated = await updateJobStatus(activeRequestId, 'completed');
-            setUserRequests(prev => prev.map(r => r.id === activeRequestId ? updated : r));
-        } catch (error: any) {
-            alert("Failed to approve: " + error.message);
-        }
     };
 
     const [messageInput, setMessageInput] = useState("");
@@ -75,15 +98,15 @@ const CustomerMessages = () => {
         {
             title: "Job Booked",
             status: getStepStatus(2, activeRequest?.status || 'pending'),
-            actionRequired: activeRequest?.status === 'assigned'
+            actionRequired: activeRequest?.status === 'booked'
         },
         {
-            title: "Job Completed",
+            title: "Work Finished",
             status: getStepStatus(3, activeRequest?.status || 'pending'),
             actionRequired: activeRequest?.status === 'done'
         },
         {
-            title: "Approved & Paid",
+            title: "Paid & Released",
             status: getStepStatus(4, activeRequest?.status || 'pending')
         }
     ];
@@ -106,15 +129,15 @@ const CustomerMessages = () => {
                         </h3>
                         {userRequests.length > 0 && (
                             <div className="flex gap-2">
-                                <span className="bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                    {userRequests.length} Total
-                                </span>
-                                {notifications.filter(n => !n.isRead && n.type === 'request_accepted' && userRequests.some(r => r.id === n.requestId)).length > 0 && (
-                                    <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
-                                        {notifications.filter(n => !n.isRead && n.type === 'request_accepted' && userRequests.some(r => r.id === n.requestId)).length} New
+                                    <span className="bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                        {userRequests.length} Total
                                     </span>
-                                )}
-                            </div>
+                                    {notifications.filter(n => !n.is_read).length > 0 && (
+                                        <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
+                                            {notifications.filter(n => !n.is_read).length} New
+                                        </span>
+                                    )}
+                                </div>
                         )}
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -133,11 +156,14 @@ const CustomerMessages = () => {
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="relative shrink-0">
-                                            <div
-                                                className="size-11 rounded-full bg-cover bg-center border-2 border-white dark:border-slate-700 shadow-sm"
-                                                style={{ backgroundImage: `url('${req.professionalImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100"}')` }}
-                                            />
-                                            {notifications.some(n => n.requestId === req.id && !n.isRead) && (
+                                            <div className="size-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-sm flex items-center justify-center overflow-hidden">
+                                                {req.professional_detail?.profile_picture || req.professional_detail?.profile_photo ? (
+                                                    <img src={getImageUrl(req.professional_detail.profile_picture || req.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="material-symbols-outlined text-slate-400">person</span>
+                                                )}
+                                            </div>
+                                            {notifications.some(n => n.link?.includes(req.id) && !n.is_read) && (
                                                 <div className="absolute -top-1 -right-1 z-20">
                                                     <span className="relative flex h-3 w-3">
                                                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -145,19 +171,24 @@ const CustomerMessages = () => {
                                                     </span>
                                                 </div>
                                             )}
-                                            {req.status === 'accepted' && !notifications.some(n => n.requestId === req.id && !n.isRead) && <div className="absolute -top-0.5 -right-0.5 size-3 bg-green-500 rounded-full border-2 border-white dark:border-slate-900" />}
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <h4 className={`text-sm tracking-tight truncate ${activeRequestId === req.id ? 'font-black text-primary' : 'font-bold'}`}>
-                                                {req.professionalName}
+                                                {(() => {
+                                                    const detail = req.professional_detail;
+                                                    if (!detail) return "Professional";
+                                                    const first = detail.first_name || detail.user?.first_name;
+                                                    const last = detail.last_name || detail.user?.last_name || "";
+                                                    return first ? `${first} ${last}`.trim() : "Professional";
+                                                })()}
                                             </h4>
                                             <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate leading-tight mt-0.5 uppercase font-medium tracking-wide">
-                                                {req.description.substring(0, 20)}...
+                                                {req.description?.substring(0, 20)}...
                                             </p>
                                         </div>
                                         <div className="flex flex-col items-end gap-1.5 shrink-0">
                                             <span className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase">
-                                                {new Date(req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                {(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--"}
                                             </span>
                                             {req.status === 'pending' && <span className="size-2 bg-primary rounded-full animate-pulse" />}
                                         </div>
@@ -195,21 +226,42 @@ const CustomerMessages = () => {
                                         <span className="material-symbols-outlined text-xl">arrow_back</span>
                                     </button>
                                     <div className="relative group cursor-pointer">
-                                        <div
-                                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-12 border-2 border-white dark:border-slate-700 shadow-md transform group-hover:scale-105 transition-transform"
-                                            style={{ backgroundImage: `url('${activeRequest.professionalImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100"}')` }}
-                                        />
+                                        <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-md transform group-hover:scale-105 transition-transform overflow-hidden">
+                                            {activeRequest.professional_detail?.profile_picture || activeRequest.professional_detail?.profile_photo ? (
+                                                <img src={getImageUrl(activeRequest.professional_detail.profile_picture || activeRequest.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="material-symbols-outlined">person</span>
+                                            )}
+                                        </div>
                                         <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm" />
                                     </div>
                                     <div className="flex flex-col gap-0.5">
-                                        <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none">{activeRequest.professionalName}</h3>
+                                        <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none">
+                                            {(() => {
+                                                const detail = activeUserDetails || activeRequest.professional_detail;
+                                                if (!detail) return "Professional";
+                                                const first = detail.first_name || detail.user?.first_name || detail.user_detail?.first_name;
+                                                const last = detail.last_name || detail.user?.last_name || detail.user_detail?.last_name || "";
+                                                return first ? `${first} ${last}`.trim() : "Professional";
+                                            })()}
+                                        </h3>
                                         <div className="flex items-center gap-1.5 opacity-60">
                                             <span className="size-1.5 bg-green-500 rounded-full animate-blink" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest leading-none">Pro Specialist • Online</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest leading-none">
+                                                {activeRequest.status} • Online
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="hidden sm:flex gap-3">
+                                <div className="hidden sm:flex items-center gap-3">
+                                    {(activeRequest.status === 'booked' || activeRequest.status === 'in_progress' || activeRequest.status === 'done' || activeRequest.status === 'completed') && (
+                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 rounded-full border border-primary/20 animate-in fade-in zoom-in">
+                                            <span className="material-symbols-outlined text-sm text-primary">call</span>
+                                            <span className="text-xs font-black text-primary">
+                                                {activeUserDetails?.phone || activeRequest.professional_detail?.phone || "+251 9XX XXX XXX"}
+                                            </span>
+                                        </div>
+                                    )}
                                     <button className="size-10 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all border border-slate-100 dark:border-slate-800">
                                         <span className="material-symbols-outlined text-xl">videocam</span>
                                     </button>
@@ -229,7 +281,7 @@ const CustomerMessages = () => {
                             <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-[size:24px_24px]">
                                 <div className="flex justify-center my-2">
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm">
-                                        Session Started • {new Date(activeRequest.createdAt).toLocaleDateString()}
+                                        Session Started • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "--"}
                                     </span>
                                 </div>
 
@@ -242,7 +294,7 @@ const CustomerMessages = () => {
                                             {activeRequest.description || "Hello! I'd like to request your services for my project."}
                                         </div>
                                         <span className="text-slate-400 text-[9px] font-black uppercase tracking-tighter mr-1">
-                                            Sent • {new Date(activeRequest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            Sent • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--"}
                                         </span>
                                     </div>
                                 </div>
@@ -250,10 +302,13 @@ const CustomerMessages = () => {
                                 {/* Pro Response (Only after Accept) */}
                                 {activeRequest.status !== 'pending' && (
                                     <div className="flex items-end gap-3 max-w-[85%] animate-in fade-in slide-in-from-left-4 duration-500">
-                                        <div
-                                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0 shadow-sm border border-slate-200 dark:border-slate-700"
-                                            style={{ backgroundImage: `url('${activeRequest.professionalImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100"}')` }}
-                                        />
+                                        <div className="size-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                            {activeRequest.professional_detail?.profile_picture || activeRequest.professional_detail?.profile_photo ? (
+                                                <img src={getImageUrl(activeRequest.professional_detail.profile_picture || activeRequest.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="material-symbols-outlined text-xs">person</span>
+                                            )}
+                                        </div>
                                         <div className="flex flex-col gap-1.5">
                                             <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-bl-sm px-4 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700">
                                                 {activeRequest.status === 'accepted' || activeRequest.status === 'assigned'
@@ -365,13 +420,44 @@ const CustomerMessages = () => {
 
                                                     {isCurrent && step.actionRequired && (
                                                         <div className="mt-3 p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-2 animate-in fade-in slide-in-from-top-2">
-                                                            <p className="text-[10px] font-black text-primary leading-snug">The Professional is waiting for you to confirm the booking details.</p>
+                                                            <p className="text-[10px] font-black text-primary leading-snug">
+                                                                {activeRequest.status === 'accepted' ? "Pro accepted! Book now to secure your spot." : "Professional marked as Done. Confirm to release payment."}
+                                                            </p>
+                                                            {activeRequest.status === 'accepted' ? (
                                                                 <button 
-                                                                    onClick={handleApprove}
-                                                                    className="w-full py-1.5 bg-emerald-500 text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-emerald-600 transition-all"
+                                                                    onClick={() => updateJobStatus(activeRequestId, 'booked')}
+                                                                    className="w-full py-2 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:shadow-lg transition-all flex items-center justify-center gap-2"
                                                                 >
-                                                                    Approve & Release Payment
+                                                                    <span className="material-symbols-outlined text-sm">payments</span>
+                                                                    Book & Pay Escrow
                                                                 </button>
+                                                            ) : (
+                                                                <div className="flex flex-col gap-2">
+                                                                    <button 
+                                                                        onClick={() => updateJobStatus(activeRequestId, 'completed')}
+                                                                        className="w-full py-2 bg-emerald-500 text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-emerald-600 transition-all shadow-md"
+                                                                    >
+                                                                        Confirm Completion
+                                                                    </button>
+                                                                    <button 
+                                                                        onClick={() => alert("Re-do request sent.")}
+                                                                        className="w-full py-1.5 bg-slate-100 text-slate-600 text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-slate-200 transition-all"
+                                                                    >
+                                                                        Ask to Re-do
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {isCurrent && activeRequest.status === 'completed' && (
+                                                        <div className="mt-3">
+                                                            <button 
+                                                                onClick={() => alert("Opening Reviews...")}
+                                                                className="w-full py-2 bg-white border border-slate-200 text-text-primary text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm text-amber-400">star</span>
+                                                                Leave a Review
+                                                            </button>
                                                         </div>
                                                     )}
                                                 </div>

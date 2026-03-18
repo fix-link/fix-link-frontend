@@ -4,35 +4,68 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import { useAuth } from '../../../context/AuthContext';
 import { listJobs, updateJobStatus } from '../../../api/jobs.api';
+import { getNotifications, type Notification } from '../../../api/notifications.api';
+import { getImageUrl, getUserDetails } from '../../../api/auth.api';
 
 const ProfessionalMessages = () => {
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [professionalRequests, setProfessionalRequests] = useState<any[]>([]);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [activeUserDetails, setActiveUserDetails] = useState<any>(null);
 
     useEffect(() => {
-        const fetchRequests = async () => {
+        const fetchData = async () => {
             try {
-                const allJobs = await listJobs();
+                const [allJobs, allNotifications] = await Promise.all([
+                    listJobs(),
+                    getNotifications()
+                ]);
+                
                 // Filter jobs assigned to this pro
                 const myRequests = allJobs.filter((job: any) => 
-                    job.assigned_to === user?.id
+                    job.assigned_to === user?.id || job.professional === user?.id
                 );
+                
+                console.log("ProfessionalMessages: My Jobs:", myRequests);
                 setProfessionalRequests(myRequests);
+                setNotifications(allNotifications);
             } catch (error) {
-                console.error("Error fetching pro requests:", error);
+                console.error("Error fetching pro data:", error);
             }
         };
-        if (user?.id) fetchRequests();
-    }, [user]);
 
-    // TODO: Fetch real notifications
-    const notifications: any[] = [];
+        if (user?.id) {
+            fetchData();
+            const interval = setInterval(fetchData, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [user]);
 
     // Get the active request from search params, or default to first one
     const requestId = searchParams.get('requestId') || professionalRequests[0]?.id;
     const activeRequest = professionalRequests.find(r => r.id === requestId);
     const activeRequestId = activeRequest?.id;
+
+    // Fetch details for active user if not present (Lazy Hydration)
+    useEffect(() => {
+        const fetchDetails = async () => {
+            if (!activeRequest) {
+                setActiveUserDetails(null);
+                return;
+            }
+            const customerId = activeRequest.customer;
+            if (!customerId) return;
+            
+            try {
+                const details = await getUserDetails(customerId);
+                setActiveUserDetails(details);
+            } catch (err) {
+                console.error("Failed to fetch customer details:", err);
+            }
+        };
+        fetchDetails();
+    }, [activeRequestId]);
 
     const [messageInput, setMessageInput] = useState("");
     const [showStatus, setShowStatus] = useState(false);
@@ -45,7 +78,11 @@ const ProfessionalMessages = () => {
         if (!activeRequestId) return;
         try {
             const updated = await updateJobStatus(activeRequestId, 'accepted');
-            setProfessionalRequests(prev => prev.map(r => r.id === activeRequestId ? updated : r));
+            console.log("ProfessionalMessages: Accepted Job Response:", updated);
+            // Merge updated status with existing hydrated request to keep details like customer_detail
+            setProfessionalRequests(prev => prev.map(r => 
+                r.id === activeRequestId ? { ...r, ...updated } : r
+            ));
         } catch (error: any) {
             alert("Failed to accept: " + error.message);
         }
@@ -94,9 +131,9 @@ const ProfessionalMessages = () => {
                                     <span className="bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
                                         {professionalRequests.length} Total
                                     </span>
-                                    {notifications.filter(n => !n.isRead && n.type === 'new_request' && professionalRequests.some(r => r.id === n.requestId)).length > 0 && (
+                                    {notifications.filter(n => !n.is_read && (n.message?.toLowerCase().includes('request') || n.message?.toLowerCase().includes('job'))).length > 0 && (
                                         <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
-                                            {notifications.filter(n => !n.isRead && n.type === 'new_request' && professionalRequests.some(r => r.id === n.requestId)).length} New
+                                            {notifications.filter(n => !n.is_read).length} New
                                         </span>
                                     )}
                                 </div>
@@ -117,10 +154,14 @@ const ProfessionalMessages = () => {
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="relative shrink-0">
-                                                <div className="size-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-sm flex items-center justify-center font-black text-slate-400 text-sm">
-                                                    {req.customerName?.charAt(0) || 'C'}
+                                                <div className="size-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-sm flex items-center justify-center overflow-hidden">
+                                                    {req.customer_detail?.profile_picture ? (
+                                                        <img src={getImageUrl(req.customer_detail.profile_picture)} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="material-symbols-outlined text-slate-400">person</span>
+                                                    )}
                                                 </div>
-                                                {notifications.some(n => n.requestId === req.id && !n.isRead) && (
+                                                {notifications.some(n => n.link?.includes(req.id) && !n.is_read) && (
                                                     <div className="absolute -top-1 -right-1 z-20">
                                                         <span className="relative flex h-3 w-3">
                                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -128,20 +169,27 @@ const ProfessionalMessages = () => {
                                                         </span>
                                                     </div>
                                                 )}
-                                                {req.status === 'pending' && !notifications.some(n => n.requestId === req.id && !n.isRead) && <div className="absolute -top-0.5 -right-0.5 size-3 bg-primary rounded-full border-2 border-white dark:border-slate-900 animate-pulse" />}
+                                                {req.status === 'pending' && <div className="absolute -top-0.5 -right-0.5 size-3 bg-primary rounded-full border-2 border-white dark:border-slate-900 animate-pulse" />}
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <h4 className={`text-sm tracking-tight truncate ${activeRequestId === req.id ? 'font-black text-primary' : 'font-bold'}`}>
-                                                    {req.customerName || "Customer"}
+                                                    {(() => {
+                                                        const detail = req.customer_detail;
+                                                        if (!detail) return "Customer";
+                                                        const first = detail.first_name || detail.user?.first_name;
+                                                        const last = detail.last_name || detail.user?.last_name || "";
+                                                        return first ? `${first} ${last}`.trim() : "Customer";
+                                                    })()}
                                                 </h4>
                                                 <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate leading-tight mt-0.5 uppercase font-medium tracking-wide">
-                                                    {req.description.substring(0, 20)}...
+                                                    {req.description?.substring(0, 20)}...
                                                 </p>
                                             </div>
                                             <div className="flex flex-col items-end gap-1.5 shrink-0">
                                                 <span className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase">
-                                                    {new Date(req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                                    {(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--"}
                                                 </span>
+                                                {req.status === 'pending' && <span className="size-2 bg-primary rounded-full animate-pulse" />}
                                             </div>
                                         </div>
                                     </div>
@@ -177,13 +225,25 @@ const ProfessionalMessages = () => {
                                             <span className="material-symbols-outlined text-xl">arrow_back</span>
                                         </button>
                                         <div className="relative group cursor-pointer">
-                                            <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-md">
-                                                {activeRequest.customerName?.charAt(0) || 'C'}
+                                            <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-md overflow-hidden">
+                                                {(activeUserDetails?.profile_picture || activeRequest.customer_detail?.profile_picture) ? (
+                                                    <img src={getImageUrl(activeUserDetails?.profile_picture || activeRequest.customer_detail.profile_picture)} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="material-symbols-outlined">person</span>
+                                                )}
                                             </div>
                                             <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm" />
                                         </div>
                                         <div className="flex flex-col gap-0.5">
-                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none">{activeRequest.customerName || "Customer"}</h3>
+                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none">
+                                                {(() => {
+                                                    const detail = activeUserDetails || activeRequest.customer_detail;
+                                                    if (!detail) return "Customer";
+                                                    const first = detail.first_name || detail.user?.first_name || detail.user_detail?.first_name;
+                                                    const last = detail.last_name || detail.user?.last_name || detail.user_detail?.last_name || "";
+                                                    return first ? `${first} ${last}`.trim() : "Customer";
+                                                })()}
+                                            </h3>
                                             <div className="flex items-center gap-1.5 opacity-60">
                                                 <span className="size-1.5 bg-green-500 rounded-full animate-blink" />
                                                 <span className="text-[10px] font-black uppercase tracking-widest leading-none">Customer • Online</span>
@@ -293,8 +353,8 @@ const ProfessionalMessages = () => {
 
                                     <div className="flex justify-center my-4">
                                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm">
-                                            Chat Initialized • {new Date(activeRequest.createdAt).toLocaleDateString()}
-                                        </span>
+                                        Session Started • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "--"}
+                                    </span>
                                     </div>
 
                                     {/* Inbound Customer Message (Real Description) */}
@@ -304,7 +364,7 @@ const ProfessionalMessages = () => {
                                                 {activeRequest.description || "Hello! I'm interested in your services for my project. Looking forward to your response!"}
                                             </div>
                                             <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter ml-1">
-                                                Received • {new Date(activeRequest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                Received • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--"}
                                             </span>
                                         </div>
                                     </div>
@@ -384,7 +444,7 @@ const ProfessionalMessages = () => {
                                             <span className="material-symbols-outlined text-[10px] font-black">check</span>
                                         </div>
                                         <div>
-                                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">Request Sent</p>
+                                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">Request Received</p>
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Initial Inquiry</p>
                                         </div>
                                     </div>
@@ -394,50 +454,66 @@ const ProfessionalMessages = () => {
                                             {activeRequest?.status !== 'pending' ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
                                         </div>
                                         <div>
-                                            <p className={`text-xs font-black ${activeRequest?.status !== 'pending' ? 'text-green-600' : 'text-slate-500'}`}>Pro Accepted</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Initial Connection</p>
+                                            <p className={`text-xs font-black ${activeRequest?.status !== 'pending' ? 'text-green-600' : 'text-slate-500'}`}>Accepted</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Pro Ready</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-start gap-4 relative z-10">
-                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${activeRequest?.status === 'assigned' || activeRequest?.status === 'done' || activeRequest?.status === 'completed' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                                            {activeRequest?.status === 'assigned' || activeRequest?.status === 'done' || activeRequest?.status === 'completed' ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
+                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${(activeRequest?.status === 'booked' || activeRequest?.status === 'in_progress' || activeRequest?.status === 'done' || activeRequest?.status === 'completed') ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                            {(activeRequest?.status === 'booked' || activeRequest?.status === 'in_progress' || activeRequest?.status === 'done' || activeRequest?.status === 'completed') ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
                                         </div>
                                         <div>
-                                            <p className={`text-xs font-black ${activeRequest?.status === 'assigned' ? 'text-blue-600' : 'text-slate-500'}`}>Job Booked</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Agreement Finalized</p>
+                                            <p className={`text-xs font-black ${(activeRequest?.status === 'booked' || activeRequest?.status === 'in_progress') ? 'text-blue-600' : 'text-slate-500'}`}>Job Booked</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Customer Paid</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-start gap-4 relative z-10">
-                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${activeRequest?.status === 'done' || activeRequest?.status === 'completed' ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                                            {activeRequest?.status === 'done' || activeRequest?.status === 'completed' ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
+                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${(activeRequest?.status === 'done' || activeRequest?.status === 'completed') ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                            {(activeRequest?.status === 'done' || activeRequest?.status === 'completed') ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
                                         </div>
                                         <div>
-                                            <p className={`text-xs font-black ${activeRequest?.status === 'done' ? 'text-emerald-600' : 'text-slate-500'}`}>Job Completed</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Work Finished</p>
+                                            <p className={`text-xs font-black ${activeRequest?.status === 'done' ? 'text-emerald-600' : 'text-slate-500'}`}>Marked Done</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Awaiting Approval</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-start gap-4 relative z-10">
                                         <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${activeRequest?.status === 'completed' ? 'bg-amber-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                                            {activeRequest?.status === 'completed' ? <span className="material-symbols-outlined text-[10px] font-black">paid</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
+                                            {activeRequest?.status === 'completed' ? <span className="material-symbols-outlined text-[10px] font-black">payments</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
                                         </div>
                                         <div>
-                                            <p className={`text-xs font-black ${activeRequest?.status === 'completed' ? 'text-amber-600' : 'text-slate-500'}`}>Approved & Paid</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Payment Released</p>
+                                            <p className={`text-xs font-black ${activeRequest?.status === 'completed' ? 'text-amber-600' : 'text-slate-500'}`}>Verified & Paid</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Funds Released</p>
                                         </div>
                                     </div>
                                 </div>
 
-                                {activeRequest?.status === 'accepted' && (
-                                    <div className="mt-8 p-4 bg-green-500/10 rounded-xl border border-green-500/20 animate-in zoom-in duration-300">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="material-symbols-outlined text-green-600 text-lg">check_circle</span>
-                                            <h5 className="text-[10px] font-black text-green-700 uppercase tracking-widest">Next Step</h5>
+                                {(['booked', 'in_progress'].includes(activeRequest?.status)) && (
+                                    <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 animate-in bounce-in duration-500">
+                                        <h5 className="text-[10px] font-black text-primary uppercase tracking-widest mb-2">Job is Active</h5>
+                                        <p className="text-[10px] text-slate-500 font-bold leading-relaxed mb-4">
+                                            Funds are in Escrow. You can now mark the job as done when finished.
+                                        </p>
+                                        <button 
+                                            onClick={() => updateJobStatus(activeRequestId, 'done')}
+                                            className="w-full py-2.5 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-base">task_alt</span>
+                                            Mark as Completed
+                                        </button>
+                                    </div>
+                                )}
+
+                                {activeRequest?.status === 'completed' && (
+                                    <div className="mt-8 p-4 bg-amber-500/10 rounded-xl border border-amber-500/20 animate-in zoom-in">
+                                        <div className="flex items-center gap-2 mb-2 text-amber-600">
+                                            <span className="material-symbols-outlined text-lg">payments</span>
+                                            <h5 className="text-[10px] font-black uppercase tracking-widest">Payment Released</h5>
                                         </div>
-                                        <p className="text-[10px] text-green-700 font-bold leading-relaxed">
-                                            Customer has been notified. You can now coordinate schedule and final details through the chat.
+                                        <p className="text-[10px] text-amber-700 font-bold leading-relaxed">
+                                            The customer approved the work! Your balance has been updated (+{activeRequest.budget || '1,500'} ETB).
                                         </p>
                                     </div>
                                 )}

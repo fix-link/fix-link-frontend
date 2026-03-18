@@ -26,7 +26,7 @@ const Header: React.FC = () => {
             }
         };
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 60000);
+        const interval = setInterval(fetchNotifications, 30000); 
 
         const handleClickOutside = (event: MouseEvent) => {
             if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
@@ -128,7 +128,13 @@ const Header: React.FC = () => {
                             />
                         </div>
                         <div className="hidden sm:flex flex-col items-start pr-2">
-                            <span className="text-sm font-black text-gray-900 dark:text-white leading-none mb-1">{user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.name || "Member"}</span>
+                            <span className="text-sm font-black text-gray-900 dark:text-white leading-none mb-1">
+                                {(() => {
+                                    const name = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.name || "Member";
+                                    const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+                                    return isUUID(name) ? "Member" : name;
+                                })()}
+                            </span>
                             <span className="text-[10px] uppercase tracking-widest font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded italic">Professional</span>
                         </div>
                         <span className="material-symbols-outlined hidden sm:block text-slate-400 text-lg transition-transform" style={{ transform: showProfileMenu ? 'rotate(180deg)' : 'none' }}>
@@ -140,7 +146,13 @@ const Header: React.FC = () => {
                     {showProfileMenu && (
                         <div className="absolute right-0 top-full mt-3 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
                              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-slate-50/50 dark:bg-slate-900/50 block sm:hidden">
-                                <p className="text-sm font-black text-gray-900 dark:text-white truncate">{user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.name || "Member"}</p>
+                                <p className="text-sm font-black text-gray-900 dark:text-white truncate">
+                                    {(() => {
+                                        const name = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.name || "Member";
+                                        const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+                                        return isUUID(name) ? "Member" : name;
+                                    })()}
+                                </p>
                                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-1">{user?.email}</p>
                             </div>
 
@@ -153,13 +165,6 @@ const Header: React.FC = () => {
                                     <span className="material-symbols-outlined text-xl text-slate-400">settings</span>
                                     Account Setting
                                 </Link>
-                                <button
-                                    onClick={() => { setShowProfileMenu(false); navigate('/professional/home'); }}
-                                    className="w-full flex items-center gap-3 px-5 py-3 text-sm font-bold text-text-primary dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                                >
-                                    <span className="material-symbols-outlined text-xl text-slate-400">dashboard</span>
-                                    Dashboard
-                                </button>
                             </div>
 
                             <div className="border-t border-gray-100 dark:border-gray-700 py-2">

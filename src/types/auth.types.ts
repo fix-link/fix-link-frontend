@@ -21,6 +21,10 @@ export interface User {
   total_jobs_completed?: number;
   created_at?: string;
   updated_at?: string;
+  profile_picture?: string;
+  cover_image?: string;
+  phonenumber?: string;
+  profession_name?: string;
   // Professional specific fields
   skills?: string;
   hourlyRate?: string;
