@@ -8,7 +8,7 @@ import Header from '../professional/components/Header';
 import { useAuth } from '../../../context/AuthContext';
 import LocationInput from '../../../components/LocationInput';
 import { getUserDetails, updateUserProfile } from '../../../api/auth.api';
-import { getServiceCategories } from '../../../api/jobs.api';
+import { getServiceCategories, listJobs } from '../../../api/jobs.api';
 
 const ProfessionalProfile = () => {
     const { id } = useParams();
@@ -22,8 +22,14 @@ const ProfessionalProfile = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [isPreviewMode, setIsPreviewMode] = useState(false);
 
+    const [activeJobId, setActiveJobId] = useState<string | null>(null);
+
     const handleChat = () => {
-        navigate('/customer/messages/1');
+        if (activeJobId) {
+            navigate(`/customer/messages?id=${activeJobId}`);
+        } else {
+            navigate('/customer/messages');
+        }
     };
 
     const handleEstimateRequest = () => {
@@ -69,6 +75,10 @@ const ProfessionalProfile = () => {
     const [profileRating, setProfileRating] = useState(0);
     const [profileReviewsCount, setProfileReviewsCount] = useState(0);
     const [profileServiceId, setProfileServiceId] = useState<string | undefined>(undefined);
+    const [isProfessional, setIsProfessional] = useState(true);
+    const [profilePhone, setProfilePhone] = useState("");
+    const [profileImage, setProfileImage] = useState("");
+    const [hasAcceptedJob, setHasAcceptedJob] = useState(false);
 
     // Use effect to initialize or update data
     useEffect(() => {
@@ -92,6 +102,22 @@ const ProfessionalProfile = () => {
                     const fetchedUser = await getUserDetails(id);
                     console.log("ProfessionalProfile: Fetched user data:", fetchedUser);
 
+                    // REDIRECT: If this is the logged-in user and they are at the customer profile link, 
+                    // go to account settings instead of showing a fake pro-profile of themselves.
+                    if (fetchedUser.id === user?.id && !isProView) {
+                        navigate('/account-settings');
+                        return;
+                    }
+
+                    // SECURITY: If the fetched user is not a professional, we shouldn't show a professional profile layout.
+                    if (fetchedUser.role !== 'professional' && !fetchedUser.is_professional) {
+                        setProfileName(fetchedUser.first_name ? `${fetchedUser.first_name} ${fetchedUser.last_name || ''}`.trim() : fetchedUser.username || "User");
+                        setIsProfessional(false);
+                        setIsLoading(false);
+                        return;
+                    }
+
+                    setIsProfessional(true);
                     const name = fetchedUser.first_name ? `${fetchedUser.first_name} ${fetchedUser.last_name || ''}`.trim() : fetchedUser.username || "Anonymous Professional";
                     setProfileName(name);
                     setProfileRole(fetchedUser.profession_name || fetchedUser.profession || "Professional Specialist");
@@ -103,6 +129,9 @@ const ProfessionalProfile = () => {
                     const city = fetchedUser.city || '';
                     const area = fetchedUser.subcity || fetchedUser.neighborhood || '';
                     setProfileLocation(city && area ? `${city}, ${area}` : city || area || "Addis Ababa");
+                    
+                    setProfilePhone(fetchedUser.phonenumber || fetchedUser.phone || "");
+                    setProfileImage(getImageUrl(fetchedUser.profile_picture || (fetchedUser as any).profilePhoto));
                     
                     setProfileLanguages(fetchedUser.languages || ["Amharic", "English"]);
                     setProfilePortfolio(fetchedUser.portfolio || [
@@ -142,6 +171,30 @@ const ProfessionalProfile = () => {
         fetchProfileData();
     }, [isProView, user, id]);
 
+    // Check if there is an accepted job between this customer and this professional
+    useEffect(() => {
+        const checkJobStatus = async () => {
+            if (!isProView && id && user) {
+                try {
+                    const allJobs = await listJobs();
+                    const acceptedStatuses = ['accepted', 'assigned', 'done', 'completed'];
+                    const jobBetweenUs = allJobs.find((j: any) => 
+                        j.customer === user.id && 
+                        j.professional === id && 
+                        acceptedStatuses.includes(j.status)
+                    );
+                    setHasAcceptedJob(!!jobBetweenUs);
+                    if (jobBetweenUs) {
+                        setActiveJobId(jobBetweenUs.id);
+                    }
+                } catch (err) {
+                    console.error("ProfessionalProfile: Error checking job status:", err);
+                }
+            }
+        };
+        checkJobStatus();
+    }, [id, user, isProView]);
+
     const handleSave = async () => {
         if (isProView) {
             try {
@@ -179,7 +232,8 @@ const ProfessionalProfile = () => {
         experience: `${profileExperience}+ years experience`,
         location: profileLocation,
         coverImage: "https://lh3.googleusercontent.com/aida-public/AB6AXuCVqLxahM8mBBENqzv_93ZaZeNL1f0E4OzaxyeOFzKw3OmNbp_zAyVx3JtjzUkCcPITJYiDapRmZtn_EutJF9SyzhnQ47oEkrtpf_jkjYABsBbV2tyj8e9WaqpeNQBOKuU9gk8fPtFDxKzEmVI1H1HYd1VtpX_XZnxZV8jzd8tGafsAt9maXvNzTDR8sbsW1KfEJQ-3aQeOKZar1jTjMwaVQsT8m4MKp1md-ihGBr36VqI7SnxPjsrNrGTqY0ua9N7_QRGDkEMx3Q",
-        profileImage: getImageUrl(user?.profilePhoto || (user as any)?.profile_picture),
+        profileImage: profileImage || defaultAvatar,
+        phone: profilePhone,
         about: profileAbout,
         skills: profileSkills.split(',').map((s: string) => s.trim()).filter(Boolean),
         languages: profileLanguages,
@@ -189,6 +243,22 @@ const ProfessionalProfile = () => {
             { name: "Aster Bekele", date: "Sep 28, 2024", rating: 5, content: "Excellent service. Explained everything clearly before starting. Best in Addis.", image: "https://lh3.googleusercontent.com/aida-public/AB6AXuACoZiPLzz95MnWiTcKwFSDZIsMZdrgjDIRDAIOqrKhbRCGL6qFqAjxRvHPLMkhHDRLtHgIqSwAlAcabY3HJ6Tp2uLQjyed__myy7gGZM4soPbPodDahgHZhXsAx1txGP4Tjv0jV1sdrDTgHkD5r71EUwRTOEkT6lmny6hAzI9b9hHyZ-rm0aXh8W24KqJFLflvC-MXinoXnPwcOPz2JG3stMIbPBiAaSKMMcd0dN8qbqLqsmG7JxoYHmckq-0oVZEa7fj9ew0Jcg" }
         ]
     };
+
+    if (!isProfessional) {
+        return (
+            <div className="flex h-screen w-full flex-col bg-background-light dark:bg-background-dark">
+                {!isProView ? <CustomerNavbar /> : <Header />}
+                <div className="flex-1 flex flex-col items-center justify-center p-10 text-center">
+                    <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                        <span className="material-symbols-outlined text-4xl text-slate-400">person_off</span>
+                    </div>
+                    <h2 className="text-2xl font-bold text-text-primary dark:text-white mb-2">{profileName}</h2>
+                    <p className="text-text-secondary dark:text-gray-400 max-w-sm">This user is not registered as a service professional. You can only request estimates from verified professionals.</p>
+                    <button onClick={() => navigate(-1)} className="mt-8 px-6 py-2 bg-primary text-white rounded-lg font-bold">Go Back</button>
+                </div>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (
@@ -312,13 +382,15 @@ const ProfessionalProfile = () => {
                                                             >
                                                                 <span>Request Estimate</span>
                                                             </button>
-                                                            <button
-                                                                onClick={handleChat}
-                                                                className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all ${isProView ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-primary hover:border-primary'}`}
-                                                                title={isProView ? "You cannot message yourself" : ""}
-                                                            >
-                                                                <span className="material-symbols-outlined">chat_bubble</span>
-                                                            </button>
+                                                            {hasAcceptedJob && (
+                                                                <button
+                                                                    onClick={handleChat}
+                                                                    className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all ${isProView ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-primary hover:border-primary'}`}
+                                                                    title={isProView ? "You cannot message yourself" : ""}
+                                                                >
+                                                                    <span className="material-symbols-outlined">chat_bubble</span>
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all ${isProView ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-pink-500 hover:border-pink-200'}`}
                                                             >
@@ -411,6 +483,27 @@ const ProfessionalProfile = () => {
                                                         <span key={skill} className="px-4 py-1.5 text-sm rounded-full bg-primary/5 text-primary font-semibold border border-primary/10">{skill}</span>
                                                     ))
                                                 )}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-text-primary dark:text-white">
+                                                <span className="material-symbols-outlined text-primary">contact_phone</span> Contact Info
+                                            </h3>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                                                    <span className="material-symbols-outlined text-text-secondary">call</span>
+                                                    <div>
+                                                        <p className="text-xs text-text-secondary dark:text-gray-500 font-bold uppercase tracking-wider">Phone Number</p>
+                                                        <p className="text-text-primary dark:text-white font-bold">{professional.phone || "Not shared"}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
+                                                    <span className="material-symbols-outlined text-text-secondary">location_on</span>
+                                                    <div>
+                                                        <p className="text-xs text-text-secondary dark:text-gray-500 font-bold uppercase tracking-wider">Base Location</p>
+                                                        <p className="text-text-primary dark:text-white font-bold">{professional.location}</p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                         <div>

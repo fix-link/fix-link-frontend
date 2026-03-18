@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { getServiceCategories } from "../../../../api/jobs.api";
+import { getNotifications, type Notification } from "../../../../api/notifications.api";
+import { getImageUrl } from "../../../../api/auth.api";
 
 const LOCATIONS = [
   "Addis Ababa",
@@ -26,23 +28,40 @@ const CustomerNavbar = () => {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
-  // TODO: Implement backend notifications
-  const notifications: any[] = [];
-  const unreadNotifications: any[] = [];
+  // Notification State
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const unreadNotifications = notifications.filter(n => !n.is_read);
 
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const data = await getServiceCategories();
-        console.log("CustomerNavbar: Fetched categories:", data);
         setCategories(data);
       } catch (err) {
         console.error("Failed to fetch categories:", err);
       }
     };
+
+    const fetchNotifications = async () => {
+        try {
+            const data = await getNotifications();
+            setNotifications(data);
+        } catch (err) {
+            console.error("Failed to fetch notifications:", err);
+        }
+    };
+
     fetchCategories();
+    fetchNotifications();
+    
+    // Refresh notifications every minute
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleLogout = () => {
@@ -68,6 +87,12 @@ const CustomerNavbar = () => {
       if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
         setShowSuggestions(false);
       }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -81,13 +106,6 @@ const CustomerNavbar = () => {
           <span className="text-lg font-bold tracking-tight hidden xl:block text-text-primary dark:text-white">Fix-Link</span>
         </div>
 
-        {/* DEV ONLY ROLE SWITCHER */}
-        <button
-          onClick={() => navigate('/professional/home')}
-          className="px-2 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded border border-amber-200 hover:bg-amber-200 transition-colors hidden md:block"
-        >
-          SWITCH TO PRO (DEV)
-        </button>
       </div>
 
       {/* Search Bar - Keeping the one we added but wrapping it similarly or adjusting if needed. 
@@ -168,11 +186,11 @@ const CustomerNavbar = () => {
           <span className="material-symbols-outlined text-xl">chat_bubble</span>
           <span>Messages</span>
         </Link>
-        <a href="#" className="hidden sm:flex items-center gap-2 text-text-primary dark:text-white hover:text-primary dark:hover:text-primary transition-colors font-semibold px-3 py-2 rounded-lg">
+        <Link to="/customer/bookings" className="hidden sm:flex items-center gap-2 text-text-primary dark:text-white hover:text-primary dark:hover:text-primary transition-colors font-semibold px-3 py-2 rounded-lg">
           <span className="material-symbols-outlined text-xl">calendar_month</span>
           <span>Bookings</span>
-        </a>
-        <div className="relative">
+        </Link>
+        <div className="relative" ref={notificationRef}>
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-transparent text-text-primary dark:text-white hover:bg-background-light dark:hover:bg-white/10 transition-colors relative"
@@ -186,28 +204,34 @@ const CustomerNavbar = () => {
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 top-full mt-2 w-72 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-[60]">
-              <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                <span className="font-bold text-sm text-text-primary dark:text-white">Notifications</span>
-                <span className="text-xs text-primary font-medium">{unreadNotifications.length} New</span>
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2">
+              <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
+                <span className="font-black text-sm text-text-primary dark:text-white">Notifications</span>
+                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{unreadNotifications.length} New</span>
               </div>
-              <div className="max-h-80 overflow-y-auto">
-                {notifications.filter(n => n.userId === user?.id || n.userId === user?.name).length === 0 ? (
-                  <div className="px-4 py-8 text-center text-gray-500 text-sm">No notifications yet</div>
+              <div className="max-h-96 overflow-y-auto custom-scrollbar">
+                {notifications.length === 0 ? (
+                  <div className="px-8 py-12 text-center">
+                    <span className="material-symbols-outlined text-slate-300 text-4xl mb-3">notifications_off</span>
+                    <p className="text-slate-400 text-sm font-medium">Nothing to see here yet</p>
+                  </div>
                 ) : (
-                  notifications.filter(n => n.userId === user?.id || n.userId === user?.name).map(n => (
+                  notifications.map(n => (
                     <div
                       key={n.id}
-                      className={`px-4 py-3 border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${!n.isRead ? 'bg-primary/5' : ''}`}
+                      className={`px-5 py-4 border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${!n.is_read ? 'bg-primary/-[0.02]' : ''}`}
                       onClick={() => {
                         setShowNotifications(false);
-                        navigate(`/customer/messages/1`);
+                        if (n.link) navigate(n.link);
+                        else navigate(`/customer/messages/1`);
                       }}
                     >
-                      <p className={`text-sm ${!n.isRead ? 'font-bold text-text-primary dark:text-white' : 'font-medium text-text-secondary dark:text-gray-400'}`}>{n.message}</p>
-                      <div className="flex justify-between items-center mt-1">
-                        <span className="text-[10px] text-gray-400">{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        <span className="text-[10px] text-primary font-bold">View →</span>
+                      <div className="flex gap-3">
+                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.is_read ? 'bg-primary' : 'bg-transparent'}`}></div>
+                        <div className="flex-1">
+                           <p className={`text-sm leading-snug ${!n.is_read ? 'font-black text-text-primary dark:text-white' : 'font-medium text-text-secondary dark:text-gray-400'}`}>{n.message}</p>
+                           <p className="text-[10px] text-gray-400 mt-1 font-bold">{n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}</p>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -218,48 +242,47 @@ const CustomerNavbar = () => {
         </div>
 
         {/* Profile Dropdown Trigger */}
-        <div className="relative group">
-          <div className="w-10 h-10 rounded-full overflow-hidden border border-border-color cursor-pointer hover:ring-2 hover:ring-primary/30 transition">
+        <div className="relative" ref={profileMenuRef}>
+          <div 
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            className="w-10 h-10 rounded-full overflow-hidden border border-border-color cursor-pointer hover:ring-2 hover:ring-primary/30 transition"
+          >
             <img
               alt="User Profile"
               className="w-full h-full object-cover"
-              src={user?.profilePhoto || "https://i.pravatar.cc/150?img=12"}
+              src={getImageUrl(user?.profilePhoto || (user as any)?.profile_picture) || "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y"}
             />
           </div>
           {/* Dropdown Content */}
-          <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden hidden group-hover:block">
-            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-              <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user?.name || "User"}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
-            </div>
+          {showProfileMenu && (
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-slate-50/50 dark:bg-slate-900/50">
+                <p className="text-sm font-black text-gray-900 dark:text-white truncate">{user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : user?.name || "Member"}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{user?.email}</p>
+              </div>
 
-            <div className="py-1">
-              <Link
-                to={`/customer/profile/${user?.id || 'me'}`}
-                className="flex items-center gap-2 px-4 py-3 text-sm text-text-primary dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                <span className="material-symbols-outlined text-lg">person</span>
-                View Profile
-              </Link>
-              <Link
-                to="/account-settings"
-                className="flex items-center gap-2 px-4 py-3 text-sm text-text-primary dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                <span className="material-symbols-outlined text-lg">settings</span>
-                Account Settings
-              </Link>
-            </div>
+              <div className="py-2">
+                <Link
+                  to="/account-settings"
+                  onClick={() => setShowProfileMenu(false)}
+                  className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-text-primary dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-xl text-slate-400">settings</span>
+                  Account Setting
+                </Link>
 
-            <div className="border-t border-gray-100 dark:border-gray-700 py-1">
-              <button
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-3 text-sm text-red-500 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
-              >
-                <span className="material-symbols-outlined text-lg">logout</span>
-                Sign Out
-              </button>
+                <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
+
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-5 py-3 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-3 transition-colors text-red-500"
+                >
+                  <span className="material-symbols-outlined text-xl">logout</span>
+                  Signout
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </nav>

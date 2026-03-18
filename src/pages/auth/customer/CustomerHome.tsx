@@ -94,6 +94,38 @@ const CustomerHome = () => {
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [sortBy, setSortBy] = useState<string>("recommended");
+
+  // Derived filtered and sorted list
+  const filteredProfessionals = professionals
+    .filter((pro: any) => {
+      const matchesPrice = pro.price >= priceMin && pro.price <= priceMax;
+      const matchesRating = pro.rating >= selectedRating;
+      const matchesVerified = verifiedOnly ? pro.verified : true;
+
+      const matchesExperience = selectedExperience.length === 0 || selectedExperience.some(exp =>
+        (exp === "Junior (1-2 yrs)" && pro.experience === "Junior") ||
+        (exp === "Mid-level (3-5 yrs)" && pro.experience === "Mid-level") ||
+        (exp === "Senior (5+ yrs)" && pro.experience === "Senior")
+      );
+
+      const matchesAvailability = selectedAvailability.length === 0 || (pro.availability && selectedAvailability.includes(pro.availability));
+      const matchesLanguage = selectedLanguages.length === 0 || (pro.languages && pro.languages.some((lang: string) => selectedLanguages.includes(lang)));
+
+      return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesAvailability && matchesLanguage;
+    })
+    .sort((a: any, b: any) => {
+      if (sortBy === "rating") return b.rating - a.rating;
+      if (sortBy === "reviews") return b.reviews - a.reviews;
+      if (sortBy === "price-low") return a.price - b.price;
+      if (sortBy === "price-high") return b.price - a.price;
+      if (sortBy === "experience") {
+        const aVal = a.experience === "Senior" ? 3 : (a.experience === "Mid-level" ? 2 : 1);
+        const bVal = b.experience === "Senior" ? 3 : (b.experience === "Mid-level" ? 2 : 1);
+        return bVal - aVal;
+      }
+      return 0;
+    });
 
   const handleClearAll = () => {
     setPriceMin(0);
@@ -114,7 +146,7 @@ const CustomerHome = () => {
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-text-primary dark:text-white">Professional Services in Addis Ababa</h1>
-            <p className="text-sm text-text-secondary dark:text-gray-400 mt-1">Found {professionals.length} verified professionals ready to help.</p>
+            <p className="text-sm text-text-secondary dark:text-gray-400 mt-1">Found {filteredProfessionals.length} verified professionals ready to help.</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -123,9 +155,22 @@ const CustomerHome = () => {
             >
               <span className="material-symbols-outlined text-lg">tune</span> Filters
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-800 transition">
-              Sort by: Recommended <span className="material-symbols-outlined text-lg">expand_more</span>
-            </button>
+            <div className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition group relative shadow-sm">
+              <span className="material-symbols-outlined text-lg text-slate-500">sort</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-transparent border-none focus:ring-0 text-sm font-bold text-text-primary dark:text-white cursor-pointer p-0 pr-6 appearance-none"
+              >
+                <option value="recommended">Sort by: Recommended</option>
+                <option value="rating">Sort by: Top Rated</option>
+                <option value="reviews">Sort by: Most Jobs</option>
+                <option value="experience">Sort by: Experienced</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+              </select>
+              <span className="material-symbols-outlined absolute right-3 text-slate-400 pointer-events-none text-lg">expand_more</span>
+            </div>
           </div>
         </div>
 
@@ -171,7 +216,7 @@ const CustomerHome = () => {
               </div>
             ) : (
               <div className={`grid grid-cols-1 sm:grid-cols-2 ${showFilters ? 'lg:grid-cols-3 xl:grid-cols-4' : 'lg:grid-cols-4 xl:grid-cols-4'} 2xl:grid-cols-4 gap-6`}>
-                {professionals.map((pro) => (
+                {filteredProfessionals.map((pro) => (
                   <ProfessionalCard key={pro.id} pro={pro} />
                 ))}
               </div>

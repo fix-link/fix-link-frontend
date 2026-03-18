@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { createJob } from "../../../../api/jobs.api";
+import { createJob, assignProfessional } from "../../../../api/jobs.api";
 
 const LOCATIONS = [
     "Addis Ababa",
@@ -22,7 +22,7 @@ interface RequestEstimateModalProps {
     professionalId?: string | number;
 }
 
-const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onClose, professionalName, serviceId }) => {
+const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onClose, professionalName, serviceId, professionalId }) => {
     const [description, setDescription] = useState("");
     const [preferredDate, setPreferredDate] = useState("");
     const [location, setLocation] = useState("");
@@ -89,14 +89,21 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
 
         try {
             const budgetNum = parseFloat(budget.replace(/[^0-9.]/g, ''));
-            await createJob({
+            
+            // Step 1: Create the Job (assigned_to is read-only here)
+            const newJob = await createJob({
                 title: description.split('\n')[0].substring(0, 50) || "Job Request",
                 description: description,
-                service: serviceId || undefined, // Pass service UUID if available
+                service: serviceId || undefined, 
                 address: location,
                 scheduled_at: preferredDate ? new Date(preferredDate).toISOString() : undefined,
                 budget: isNaN(budgetNum) ? undefined : budgetNum.toString(),
             } as any);
+
+            // Step 2: Assign the Professional via PATCH
+            if (newJob?.id && professionalId) {
+                await assignProfessional(newJob.id, professionalId.toString());
+            }
 
             setIsSubmitted(true);
         } catch (err: any) {

@@ -1,20 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import { useAuth } from '../../../context/AuthContext';
+import { listJobs, updateJobStatus } from '../../../api/jobs.api';
 
 const ProfessionalMessages = () => {
-    const { } = useAuth();
+    const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
+    const [professionalRequests, setProfessionalRequests] = useState<any[]>([]);
 
-    // TODO: Fetch real jobs/requests from the backend
+    useEffect(() => {
+        const fetchRequests = async () => {
+            try {
+                const allJobs = await listJobs();
+                // Filter jobs assigned to this pro
+                const myRequests = allJobs.filter((job: any) => 
+                    job.assigned_to === user?.id
+                );
+                setProfessionalRequests(myRequests);
+            } catch (error) {
+                console.error("Error fetching pro requests:", error);
+            }
+        };
+        if (user?.id) fetchRequests();
+    }, [user]);
+
+    // TODO: Fetch real notifications
     const notifications: any[] = [];
-    const professionalRequests: any[] = []; // Temporary empty state
 
     // Get the active request from search params, or default to first one
-    const requestId = searchParams.get('requestId');
-    const activeRequest: any | undefined = undefined; // Temporarily undefined until real backend is wired up
+    const requestId = searchParams.get('requestId') || professionalRequests[0]?.id;
+    const activeRequest = professionalRequests.find(r => r.id === requestId);
     const activeRequestId = activeRequest?.id;
 
     const [messageInput, setMessageInput] = useState("");
@@ -25,11 +42,33 @@ const ProfessionalMessages = () => {
     };
 
     const handleAccept = async () => {
-        // TODO: Update request status via API
+        if (!activeRequestId) return;
+        try {
+            const updated = await updateJobStatus(activeRequestId, 'accepted');
+            setProfessionalRequests(prev => prev.map(r => r.id === activeRequestId ? updated : r));
+        } catch (error: any) {
+            alert("Failed to accept: " + error.message);
+        }
+    };
+
+    const handleMarkDone = async () => {
+        if (!activeRequestId) return;
+        try {
+            const updated = await updateJobStatus(activeRequestId, 'done');
+            setProfessionalRequests(prev => prev.map(r => r.id === activeRequestId ? updated : r));
+        } catch (error: any) {
+            alert("Failed to mark as done: " + error.message);
+        }
     };
 
     const handleDecline = async () => {
-        // TODO: Update request status via API
+        if (!activeRequestId) return;
+        try {
+            const updated = await updateJobStatus(activeRequestId, 'cancelled');
+            setProfessionalRequests(prev => prev.map(r => r.id === activeRequestId ? updated : r));
+        } catch (error: any) {
+            alert("Failed to decline: " + error.message);
+        }
     };
 
     return (
@@ -221,8 +260,7 @@ const ProfessionalMessages = () => {
                                                 </div>
                                             )}
                                         </div>
-
-                                        {activeRequest.status === 'pending' ? (
+                                         {activeRequest.status === 'pending' ? (
                                             <div className="flex gap-3 pt-2">
                                                 <button
                                                     onClick={handleAccept}
@@ -237,12 +275,20 @@ const ProfessionalMessages = () => {
                                                     Decline
                                                 </button>
                                             </div>
+                                        ) : activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'in_progress' ? (
+                                            <button
+                                                onClick={handleMarkDone}
+                                                className="w-full py-3 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-200 dark:shadow-none hover:bg-emerald-600 active:scale-95"
+                                            >
+                                                Mark as Job Done
+                                            </button>
                                         ) : (
-                                            <div className={`py-3 text-center rounded-xl text-xs font-black uppercase tracking-[0.2em] ${activeRequest.status === 'accepted' ? 'bg-green-500/10 text-green-600 border border-green-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20'
+                                            <div className={`py-3 text-center rounded-xl text-xs font-black uppercase tracking-[0.2em] ${activeRequest.status === 'completed' ? 'bg-green-500/10 text-green-600 border border-green-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20'
                                                 }`}>
                                                 Status: {activeRequest.status}
                                             </div>
                                         )}
+
                                     </div>
 
                                     <div className="flex justify-center my-4">
@@ -251,14 +297,35 @@ const ProfessionalMessages = () => {
                                         </span>
                                     </div>
 
+                                    {/* Inbound Customer Message (Real Description) */}
                                     <div className="flex justify-start animate-in fade-in slide-in-from-left-4">
-                                        <div className="flex flex-col gap-1.5">
-                                            <div className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl rounded-bl-none px-4 py-3 text-sm font-medium shadow-sm border border-slate-100 dark:border-slate-700 max-w-sm">
-                                                Hello! I'm interested in your services for my project. Looking forward to your response!
+                                        <div className="flex flex-col gap-1.5 max-w-[85%]">
+                                            <div className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl rounded-bl-none px-4 py-3 text-sm font-medium shadow-sm border border-slate-100 dark:border-slate-700">
+                                                {activeRequest.description || "Hello! I'm interested in your services for my project. Looking forward to your response!"}
                                             </div>
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter ml-1">Received • {new Date(activeRequest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter ml-1">
+                                                Received • {new Date(activeRequest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
                                         </div>
                                     </div>
+
+                                    {/* Pro Response (Sent after Accept) */}
+                                    {activeRequest.status !== 'pending' && (
+                                        <div className="flex justify-end animate-in fade-in slide-in-from-right-4">
+                                            <div className="flex flex-col items-end gap-1.5 max-w-[85%]">
+                                                <div className="bg-primary text-white rounded-2xl rounded-br-none px-4 py-3 text-sm font-medium shadow-lg shadow-primary/20 border border-primary/20">
+                                                    {activeRequest.status === 'accepted' || activeRequest.status === 'assigned'
+                                                        ? "I've reviewed your request and accepted the project! Let's get started."
+                                                        : activeRequest.status === 'done'
+                                                        ? "I've marked the job as completed. Please review and release payment."
+                                                        : "Status updated to: " + activeRequest.status}
+                                                </div>
+                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mr-1">
+                                                    Sent • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Chat Input Area */}
@@ -311,31 +378,54 @@ const ProfessionalMessages = () => {
                                 <div className="space-y-8 relative">
                                     <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-slate-100 dark:bg-slate-800" />
 
+                                    {/* Timeline Steps */}
                                     <div className="flex items-start gap-4 relative z-10">
                                         <div className="size-4 rounded-full bg-green-500 flex items-center justify-center text-white ring-4 ring-white dark:ring-slate-900 shadow-sm">
                                             <span className="material-symbols-outlined text-[10px] font-black">check</span>
                                         </div>
                                         <div>
-                                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">Request Validated</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Verified by Hub</p>
+                                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">Request Sent</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Initial Inquiry</p>
                                         </div>
                                     </div>
 
                                     <div className="flex items-start gap-4 relative z-10">
-                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${activeRequest?.status === 'accepted' ? 'bg-green-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                                            {activeRequest?.status === 'accepted' ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
+                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${activeRequest?.status !== 'pending' ? 'bg-green-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                            {activeRequest?.status !== 'pending' ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
                                         </div>
                                         <div>
-                                            <p className={`text-xs font-black ${activeRequest?.status === 'accepted' ? 'text-green-600' : 'text-slate-500'}`}>Proposal Accepted</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{activeRequest?.status === 'accepted' ? 'Ready for Booking' : 'Waiting on Pro'}</p>
+                                            <p className={`text-xs font-black ${activeRequest?.status !== 'pending' ? 'text-green-600' : 'text-slate-500'}`}>Pro Accepted</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Initial Connection</p>
                                         </div>
                                     </div>
 
-                                    <div className="flex items-start gap-4 relative z-10 opacity-30">
-                                        <div className="size-4 rounded-full bg-slate-100 dark:bg-slate-800 ring-4 ring-white dark:ring-slate-900" />
+                                    <div className="flex items-start gap-4 relative z-10">
+                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${activeRequest?.status === 'assigned' || activeRequest?.status === 'done' || activeRequest?.status === 'completed' ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                            {activeRequest?.status === 'assigned' || activeRequest?.status === 'done' || activeRequest?.status === 'completed' ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
+                                        </div>
                                         <div>
-                                            <p className="text-xs font-black">Payment Released</p>
-                                            <p className="text-[10px] font-bold uppercase tracking-tighter">Locked in Escrow</p>
+                                            <p className={`text-xs font-black ${activeRequest?.status === 'assigned' ? 'text-blue-600' : 'text-slate-500'}`}>Job Booked</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Agreement Finalized</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-4 relative z-10">
+                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${activeRequest?.status === 'done' || activeRequest?.status === 'completed' ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                            {activeRequest?.status === 'done' || activeRequest?.status === 'completed' ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
+                                        </div>
+                                        <div>
+                                            <p className={`text-xs font-black ${activeRequest?.status === 'done' ? 'text-emerald-600' : 'text-slate-500'}`}>Job Completed</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Work Finished</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-4 relative z-10">
+                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${activeRequest?.status === 'completed' ? 'bg-amber-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
+                                            {activeRequest?.status === 'completed' ? <span className="material-symbols-outlined text-[10px] font-black">paid</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
+                                        </div>
+                                        <div>
+                                            <p className={`text-xs font-black ${activeRequest?.status === 'completed' ? 'text-amber-600' : 'text-slate-500'}`}>Approved & Paid</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Payment Released</p>
                                         </div>
                                     </div>
                                 </div>

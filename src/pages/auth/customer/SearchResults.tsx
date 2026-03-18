@@ -27,6 +27,7 @@ const SearchResults = () => {
     // New Filters
     const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
     const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+    const [sortBy, setSortBy] = useState<string>("recommended");
 
     useEffect(() => {
         Promise.all([getProfessionals(), getServiceCategories()])
@@ -109,6 +110,22 @@ const SearchResults = () => {
         const matchesLanguage = selectedLanguages.length === 0 || pro.languages.some((lang: string) => selectedLanguages.includes(lang));
 
         return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesAvailability && matchesLanguage;
+    }).sort((a: any, b: any) => {
+        if (sortBy === "rating") return b.rating - a.rating;
+        if (sortBy === "reviews") return b.reviews - a.reviews;
+        if (sortBy === "price-low") return a.price - b.price;
+        if (sortBy === "price-high") return b.price - a.price;
+        if (sortBy === "experience") {
+            const expOrder: Record<string, number> = { "Senior": 3, "Mid-level": 2, "Junior": 1 };
+            return (expOrder[b.experience] || 0) - (expOrder[a.experience] || 0);
+        }
+        if (sortBy === "nearby" && locationQuery) {
+            const aMatch = a.location.toLowerCase().includes(locationQuery);
+            const bMatch = b.location.toLowerCase().includes(locationQuery);
+            if (aMatch && !bMatch) return -1;
+            if (!aMatch && bMatch) return 1;
+        }
+        return 0;
     });
 
     const handleClearAll = () => {
@@ -141,9 +158,28 @@ const SearchResults = () => {
                     <p className="text-text-primary dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">
                         Professionals for '{serviceQuery || 'All Services'}' in '{locationQuery || 'Addis Ababa'}'
                     </p>
-                    <p className="text-text-secondary dark:text-gray-400 self-end mb-1">
-                        Showing {filteredProfessionals.length} Result{filteredProfessionals.length !== 1 && 's'}
-                    </p>
+                    <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3 self-end mb-1">
+                        <div className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition group relative shadow-sm">
+                            <span className="material-symbols-outlined text-lg text-slate-500">sort</span>
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="bg-transparent border-none focus:ring-0 text-sm font-bold text-text-primary dark:text-white cursor-pointer p-0 pr-6 appearance-none"
+                            >
+                                <option value="recommended">Sort by: Recommended</option>
+                                <option value="rating">Sort by: Top Rated</option>
+                                <option value="reviews">Sort by: Most Jobs</option>
+                                <option value="experience">Sort by: Experienced</option>
+                                {locationQuery && <option value="nearby">Sort by: Nearby</option>}
+                                <option value="price-low">Price: Low to High</option>
+                                <option value="price-high">Price: High to Low</option>
+                            </select>
+                            <span className="material-symbols-outlined absolute right-3 text-slate-400 pointer-events-none text-lg">expand_more</span>
+                        </div>
+                        <p className="text-text-secondary dark:text-gray-400 text-sm font-medium">
+                            {filteredProfessionals.length} professional{filteredProfessionals.length !== 1 && 's'} found
+                        </p>
+                    </div>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8">

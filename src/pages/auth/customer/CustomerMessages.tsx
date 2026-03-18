@@ -1,45 +1,90 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import CustomerNavbar from './components/CustomerNavbar';
+import { useAuth } from '../../../context/AuthContext';
+import { listJobs, updateJobStatus } from '../../../api/jobs.api';
 
 const CustomerMessages = () => {
+    const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
+    const [userRequests, setUserRequests] = useState<any[]>([]);
 
-    // TODO: Fetch real jobs/requests from the backend
-    const notifications: any[] = [];
-    const userRequests: any[] = []; // Temporary empty state
+    useEffect(() => {
+        const fetchRequests = async () => {
+            try {
+                const allJobs = await listJobs();
+                const myRequests = allJobs.filter((job: any) => 
+                    job.customer === user?.id && 
+                    job.status !== 'pending'
+                );
+                setUserRequests(myRequests);
+            } catch (error) {
+                console.error("Error fetching customer requests:", error);
+            }
+        };
+        if (user?.id) fetchRequests();
+    }, [user]);
 
-    // Get active request from URL or default to latest
-    const requestId = searchParams.get('requestId');
-    const activeRequest: any | undefined = undefined; // Temporarily undefined until real backend is wired up
+    // Get active request from URL or default to first
+    const requestId = searchParams.get('requestId') || userRequests[0]?.id;
+    const activeRequest = userRequests.find(r => r.id === requestId);
     const activeRequestId = activeRequest?.id;
+
+    // TODO: Fetch real notifications
+    const notifications: any[] = [];
 
     const handleSelectRequest = (id: string) => {
         setSearchParams({ requestId: id });
     };
 
+    const handleApprove = async () => {
+        if (!activeRequestId) return;
+        try {
+            const updated = await updateJobStatus(activeRequestId, 'completed');
+            setUserRequests(prev => prev.map(r => r.id === activeRequestId ? updated : r));
+        } catch (error: any) {
+            alert("Failed to approve: " + error.message);
+        }
+    };
+
     const [messageInput, setMessageInput] = useState("");
     const [showStatus, setShowStatus] = useState(false);
+
+    const getStepStatus = (stepIndex: number, jobStatus: string) => {
+        const s = jobStatus.toLowerCase();
+        // Updated stages: pending -> accepted -> assigned/booked -> done -> completed
+        const statuses = ['pending', 'accepted', 'assigned', 'done', 'completed'];
+        const currentIndex = statuses.indexOf(s);
+        
+        if (currentIndex > stepIndex) return "completed";
+        if (currentIndex === stepIndex) return "current";
+        return "upcoming";
+    };
 
     const jobSteps = [
         {
             title: "Request Sent",
-            date: activeRequest?.createdAt ? new Date(activeRequest.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--",
-            status: "completed" as const
+            date: activeRequest?.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--",
+            status: getStepStatus(0, activeRequest?.status || 'pending')
         },
         {
-            title: "Request Accepted",
-            date: activeRequest?.status === 'accepted' ? "Today" : "",
-            status: activeRequest?.status === 'accepted' ? "completed" as const : "current" as const
-        },
-        {
-            title: "Booking & Payment",
-            status: activeRequest?.status === 'accepted' ? "current" as const : "upcoming" as const,
+            title: "Pro Accepted",
+            status: getStepStatus(1, activeRequest?.status || 'pending'),
             actionRequired: activeRequest?.status === 'accepted'
         },
         {
+            title: "Job Booked",
+            status: getStepStatus(2, activeRequest?.status || 'pending'),
+            actionRequired: activeRequest?.status === 'assigned'
+        },
+        {
             title: "Job Completed",
-            status: "upcoming" as const
+            status: getStepStatus(3, activeRequest?.status || 'pending'),
+            actionRequired: activeRequest?.status === 'done'
+        },
+        {
+            title: "Approved & Paid",
+            status: getStepStatus(4, activeRequest?.status || 'pending')
         }
     ];
 
@@ -75,8 +120,9 @@ const CustomerMessages = () => {
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
                         {userRequests.length === 0 ? (
                             <div className="p-10 text-center space-y-3 opacity-40">
-                                <span className="material-symbols-outlined text-4xl block">inbox_customize</span>
-                                <p className="text-xs font-bold leading-relaxed">No conversations yet.<br />Request an estimate to start chatting!</p>
+                                <span className="material-symbols-outlined text-4xl block">forum</span>
+                                <p className="text-xs font-black uppercase tracking-widest">No conversation yet</p>
+                                <p className="text-[10px] font-bold leading-relaxed">Pending requests will appear here once accepted.</p>
                             </div>
                         ) : (
                             userRequests.map(req => (
@@ -189,21 +235,39 @@ const CustomerMessages = () => {
 
 
 
-                                {/* Pro Intro Message */}
-                                <div className="flex items-end gap-3 max-w-[85%] animate-in fade-in slide-in-from-left-4 duration-500">
-                                    <div
-                                        className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0 shadow-sm border border-slate-200 dark:border-slate-700"
-                                        style={{ backgroundImage: `url('${activeRequest.professionalImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100"}')` }}
-                                    />
-                                    <div className="flex flex-col gap-1.5">
-                                        <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-bl-sm px-4 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700">
-                                            {activeRequest.status === 'accepted'
-                                                ? `Hello! I've reviewed your request for "${activeRequest.description.substring(0, 30)}..." and I'm happy to help. I've accepted the project!`
-                                                : "Hello! I'm currently reviewing your estimate request. I'll get back to you with a quote very soon."}
+                                {/* Customer Initial Message (Real Description) */}
+                                <div className="flex justify-end animate-in fade-in slide-in-from-right-4">
+                                    <div className="flex flex-col items-end gap-1.5 max-w-[85%]">
+                                        <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-br-sm px-4 py-3 bg-primary text-white shadow-lg shadow-primary/20">
+                                            {activeRequest.description || "Hello! I'd like to request your services for my project."}
                                         </div>
-                                        <span className="text-slate-400 text-[9px] font-black uppercase tracking-tighter ml-1">10:15 AM</span>
+                                        <span className="text-slate-400 text-[9px] font-black uppercase tracking-tighter mr-1">
+                                            Sent • {new Date(activeRequest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
                                     </div>
                                 </div>
+
+                                {/* Pro Response (Only after Accept) */}
+                                {activeRequest.status !== 'pending' && (
+                                    <div className="flex items-end gap-3 max-w-[85%] animate-in fade-in slide-in-from-left-4 duration-500">
+                                        <div
+                                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-8 shrink-0 shadow-sm border border-slate-200 dark:border-slate-700"
+                                            style={{ backgroundImage: `url('${activeRequest.professionalImage || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100"}')` }}
+                                        />
+                                        <div className="flex flex-col gap-1.5">
+                                            <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-bl-sm px-4 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700">
+                                                {activeRequest.status === 'accepted' || activeRequest.status === 'assigned'
+                                                    ? `Hello! I've reviewed your request and I'm happy to help. I've accepted the project!`
+                                                    : activeRequest.status === 'done'
+                                                    ? "I've finished the job! Please review the work and approve the payment when you're ready."
+                                                    : "The job has been updated to: " + activeRequest.status}
+                                            </div>
+                                            <span className="text-slate-400 text-[9px] font-black uppercase tracking-tighter ml-1">
+                                                Received • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {/* Status Update Overlay */}
                                 {activeRequest.status === 'accepted' && (
@@ -302,7 +366,12 @@ const CustomerMessages = () => {
                                                     {isCurrent && step.actionRequired && (
                                                         <div className="mt-3 p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-2 animate-in fade-in slide-in-from-top-2">
                                                             <p className="text-[10px] font-black text-primary leading-snug">The Professional is waiting for you to confirm the booking details.</p>
-                                                            <button className="w-full py-1.5 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-primary/90 transition-all">Review & Book</button>
+                                                                <button 
+                                                                    onClick={handleApprove}
+                                                                    className="w-full py-1.5 bg-emerald-500 text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-emerald-600 transition-all"
+                                                                >
+                                                                    Approve & Release Payment
+                                                                </button>
                                                         </div>
                                                     )}
                                                 </div>

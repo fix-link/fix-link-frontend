@@ -1,18 +1,33 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import CustomerNavbar from "./components/CustomerNavbar";
 import CustomerFooter from "./components/CustomerFooter";
+import Sidebar from "../professional/components/Sidebar";
+import Header from "../professional/components/Header";
+import { getImageUrl, changePassword, updateUserProfile, deleteUserProfile, getUserDetails } from "../../../api/auth.api";
+import LocationInput from "../../../components/LocationInput";
+import PhoneInput from "../../../components/PhoneInput";
+import { useRef } from "react";
 
 const AccountSettings = () => {
     const { user, updateUser } = useAuth();
     const [activeTab, setActiveTab] = useState<"personal" | "security">("personal");
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     // Personal Info State
     const [firstName, setFirstName] = useState(user?.first_name || user?.name?.split(' ')[0] || "");
     const [lastName, setLastName] = useState(user?.last_name || user?.name?.split(' ')[1] || "");
-    const [email, setEmail] = useState(user?.email || "");
-    const [phone, setPhone] = useState(user?.phone || "");
+    const [email] = useState(user?.email || "");
+    const [phone, setPhone] = useState((user as any)?.phonenumber || user?.phone || "");
     const [location, setLocation] = useState(user?.city ? `${user.city}${user.subcity ? ', ' + user.subcity : ''}` : "");
+    const [profilePreview, setProfilePreview] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const isPro = user?.role === 'professional';
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const DEFAULT_AVATAR = "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y";
 
     // Security State
     const [currentPassword, setCurrentPassword] = useState("");
@@ -20,6 +35,29 @@ const AccountSettings = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [passwordError, setPasswordError] = useState("");
     const [updateSuccess, setUpdateSuccess] = useState(false);
+
+    // Fetch latest user details on mount to ensure we have phone/location
+    useEffect(() => {
+        const fetchLatestDetails = async () => {
+            if (user?.id) {
+                try {
+                    const latest = await getUserDetails(user.id);
+                    // Update context to keep everything in sync
+                    await updateUser(latest);
+                    
+                    // Update local form states
+                    setFirstName(latest.first_name || latest.name?.split(' ')[0] || "");
+                    setLastName(latest.last_name || latest.name?.split(' ')[1] || "");
+                    setPhone(latest.phonenumber || latest.phone || "");
+                    const loc = latest.city ? `${latest.city}${latest.subcity ? ', ' + latest.subcity : ''}` : "";
+                    setLocation(loc);
+                } catch (err) {
+                    console.error("AccountSettings: Failed to sync user details:", err);
+                }
+            }
+        };
+        fetchLatestDetails();
+    }, [user?.id]);
 
     const handleUpdatePersonal = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -39,7 +77,53 @@ const AccountSettings = () => {
         }
     };
 
-    const handleUpdatePassword = (e: React.FormEvent) => {
+    const handleImageClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !user) return;
+
+        // Validation
+        if (!file.type.startsWith('image/')) {
+            alert("Please upload an image file");
+            return;
+        }
+
+        // Preview
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setProfilePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+
+        // Upload
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('profile_picture', file);
+            
+            // Optionally add other fields if the backend requires them
+            // formData.append('first_name', firstName);
+
+            const updatedData = await updateUserProfile(user.id, formData);
+            
+            // Update local user context
+            await updateUser(updatedData);
+            
+            setUpdateSuccess(true);
+            setTimeout(() => setUpdateSuccess(false), 3000);
+        } catch (error: any) {
+            console.error("Image upload failed:", error);
+            alert("Failed to upload image: " + error.message);
+            setProfilePreview(null);
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleUpdatePassword = async (e: React.FormEvent) => {
         e.preventDefault();
         setPasswordError("");
         if (newPassword !== confirmPassword) {
@@ -50,24 +134,51 @@ const AccountSettings = () => {
             setPasswordError("Password must be at least 6 characters");
             return;
         }
-        // Mock update
-        console.log("Password updated successfully");
-        setUpdateSuccess(true);
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-        setTimeout(() => setUpdateSuccess(false), 3000);
+        
+        try {
+            await changePassword(currentPassword, newPassword);
+            setUpdateSuccess(true);
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setTimeout(() => setUpdateSuccess(false), 3000);
+        } catch (error: any) {
+            setPasswordError(error.message || "Failed to update password");
+        }
+    };
+
+    const { logout } = useAuth();
+    const navigate = useNavigate();
+
+
+    const handleDeleteAccount = async () => {
+        if (!user) return;
+        setIsDeleting(true);
+        try {
+            await deleteUserProfile(user.id);
+            logout();
+            navigate("/");
+        } catch (error: any) {
+            alert("Failed to delete account: " + error.message);
+        } finally {
+            setIsDeleting(false);
+            setIsDeleteModalOpen(false);
+        }
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-background-dark">
-            <CustomerNavbar />
+        <div className="flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-background-dark font-display">
+            {isPro && <Sidebar />}
 
-            <main className="max-w-3xl mx-auto px-4 py-12">
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-black text-text-primary dark:text-white tracking-tight">Account Settings</h1>
-                    <p className="text-text-secondary dark:text-gray-400 mt-3 font-medium text-lg">Manage your personal information and security preferences</p>
-                </div>
+            <div className={`flex flex-col flex-1 overflow-hidden ${isPro ? 'lg:ml-64' : ''}`}>
+                {isPro ? <Header /> : <CustomerNavbar />}
+
+                <main className="flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="max-w-4xl mx-auto px-4 py-12">
+                        <div className="text-center mb-12">
+                            <h1 className="text-4xl font-black text-text-primary dark:text-white tracking-tight">Account Settings</h1>
+                            <p className="text-text-secondary dark:text-gray-400 mt-3 font-medium text-lg">Manage your personal information and security preferences</p>
+                        </div>
 
                 <div className="bg-white dark:bg-card-dark rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden">
                     {/* Horizontal Tabs */}
@@ -77,14 +188,14 @@ const AccountSettings = () => {
                             className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-black text-sm transition-all ${activeTab === 'personal' ? 'bg-primary text-white shadow-lg' : 'text-text-secondary dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                         >
                             <span className="material-symbols-outlined">person</span>
-                            <span>Personal Info</span>
+                            <span>Profile Setting</span>
                         </button>
                         <button
                             onClick={() => setActiveTab("security")}
                             className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-2xl font-black text-sm transition-all ${activeTab === 'security' ? 'bg-primary text-white shadow-lg' : 'text-text-secondary dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
                         >
                             <span className="material-symbols-outlined">shield</span>
-                            <span>Login & Security</span>
+                            <span>Security & Password</span>
                         </button>
                     </div>
 
@@ -99,17 +210,33 @@ const AccountSettings = () => {
                         {activeTab === 'personal' ? (
                             <form onSubmit={handleUpdatePersonal} className="space-y-10 group">
                                 <div className="flex flex-col sm:flex-row items-center gap-6 pb-10 border-b border-slate-100 dark:border-slate-800">
-                                    <div className="relative group/avatar">
-                                        <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-slate-50 dark:border-slate-800 shadow-xl transition-transform group-hover/avatar:scale-105">
-                                            <img src={user?.profilePhoto || "https://i.pravatar.cc/150"} alt="Profile" className="w-full h-full object-cover" />
+                                    <div className="relative group/avatar cursor-pointer" onClick={handleImageClick}>
+                                        <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-slate-50 dark:border-slate-800 shadow-xl transition-transform group-hover/avatar:scale-105 relative">
+                                            <img 
+                                                src={profilePreview || getImageUrl(user?.profilePhoto || (user as any)?.profile_picture) || DEFAULT_AVATAR} 
+                                                alt="Profile" 
+                                                className={`w-full h-full object-cover ${isUploading ? 'opacity-50' : ''}`} 
+                                            />
+                                            {isUploading && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                                                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                                </div>
+                                            )}
                                         </div>
                                         <button type="button" className="absolute bottom-0 right-0 bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-2 border-white dark:border-card-dark hover:scale-110 transition-all">
                                             <span className="material-symbols-outlined text-xl">photo_camera</span>
                                         </button>
+                                        <input 
+                                            type="file" 
+                                            ref={fileInputRef} 
+                                            onChange={handleFileChange} 
+                                            accept="image/*" 
+                                            className="hidden" 
+                                        />
                                     </div>
                                     <div className="text-center sm:text-left">
                                         <h3 className="font-black text-2xl text-text-primary dark:text-white">Profile Photo</h3>
-                                        <p className="text-text-secondary dark:text-gray-400 text-sm mt-1">PNG, JPG or GIF. Max 5MB.</p>
+                                        <p className="text-text-secondary dark:text-gray-400 text-sm mt-1">Click image to upload. PNG, JPG or GIF.</p>
                                     </div>
                                 </div>
 
@@ -144,37 +271,29 @@ const AccountSettings = () => {
                                             <input
                                                 type="email"
                                                 value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
-                                                className="w-full px-5 py-4 pl-12 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-bold text-base text-text-primary dark:text-white"
-                                                required
+                                                readOnly
+                                                className="w-full px-5 py-4 pl-12 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/50 cursor-not-allowed font-bold text-base text-text-secondary dark:text-gray-400"
+                                                title="Email cannot be changed"
                                             />
                                         </div>
                                     </div>
 
                                     <div className="space-y-3">
-                                        <label className="text-sm font-black text-text-primary dark:text-white uppercase tracking-wider">Phone Number</label>
-                                        <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">call</span>
-                                            <input
-                                                type="tel"
-                                                value={phone}
-                                                onChange={(e) => setPhone(e.target.value)}
-                                                className="w-full px-5 py-4 pl-12 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-bold text-base text-text-primary dark:text-white"
-                                                placeholder="+251 ..."
-                                            />
-                                        </div>
+                                        <label className="text-sm font-black text-text-primary dark:text-white uppercase tracking-wider">Phone Number (+251)</label>
+                                        <PhoneInput
+                                            value={phone}
+                                            onChange={(val) => setPhone(val)}
+                                        />
                                     </div>
 
                                     <div className="space-y-3">
                                         <label className="text-sm font-black text-text-primary dark:text-white uppercase tracking-wider">Location</label>
                                         <div className="relative">
                                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">location_on</span>
-                                            <input
-                                                type="text"
+                                            <LocationInput
                                                 value={location}
-                                                onChange={(e) => setLocation(e.target.value)}
+                                                onSelect={(loc) => setLocation(loc)}
                                                 className="w-full px-5 py-4 pl-12 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20 focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all font-bold text-base text-text-primary dark:text-white"
-                                                placeholder="City, Area"
                                             />
                                         </div>
                                     </div>
@@ -252,14 +371,66 @@ const AccountSettings = () => {
                                         Update Password
                                     </button>
                                 </div>
-                            </form>
-                        )}
+                             </form>
+                         )}
+
+                        {/* Danger Zone Section */}
+                        <div className="mt-12 pt-10 border-t border-red-100 dark:border-red-900/20">
+                             <h4 className="text-red-500 font-black text-sm uppercase tracking-wider mb-4">Danger Zone</h4>
+                             <button
+                                onClick={() => setIsDeleteModalOpen(true)}
+                                className="flex items-center gap-3 px-6 py-4 text-red-500 font-black hover:bg-red-50 dark:hover:bg-red-900/10 rounded-2xl transition-all border-2 border-transparent hover:border-red-100 dark:hover:border-red-900/30"
+                            >
+                                <span className="material-symbols-outlined">delete_forever</span>
+                                <span>Delete My Account Permanently</span>
+                            </button>
+                            <p className="text-xs text-text-secondary dark:text-gray-500 mt-3 ml-2">This action is irreversible. All your data will be permanently removed.</p>
+                        </div>
                     </div>
                 </div>
+              </div>
             </main>
 
-            <CustomerFooter />
+            {/* Delete Confirmation Modal */}
+            {isDeleteModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-card-dark rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 animate-in zoom-in-95 duration-200">
+                        <div className="w-16 h-16 bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center mb-6">
+                            <span className="material-symbols-outlined text-red-500 text-3xl">warning</span>
+                        </div>
+                        <h3 className="text-2xl font-black text-text-primary dark:text-white mb-2">Delete Account?</h3>
+                        <p className="text-text-secondary dark:text-gray-400 font-medium mb-8">
+                            Are you absolutely sure? This will permanently delete your profile, jobs, and all associated data. This action cannot be undone.
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setIsDeleteModalOpen(false)}
+                                className="flex-1 py-4 bg-slate-100 dark:bg-slate-800 text-text-primary dark:text-white font-black rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteAccount}
+                                disabled={isDeleting}
+                                className="flex-1 py-4 bg-red-500 text-white font-black rounded-2xl shadow-lg shadow-red-200 dark:shadow-none hover:bg-red-600 active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                                {isDeleting ? (
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <>
+                                        <span className="material-symbols-outlined text-lg">delete</span>
+                                        Confirm Delete
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {!isPro && <CustomerFooter />}
         </div>
+      </div>
     );
 };
 
