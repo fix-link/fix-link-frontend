@@ -8,10 +8,28 @@ import LocationInput from "../../../components/LocationInput";
 import PasswordStrength from "../../../components/PasswordStrength";
 import { validatePassword } from "../../../utils/validation";
 import PhoneInput from "../../../components/PhoneInput";
+import { getServiceCategories } from "../../../api/jobs.api";
 
 const ProfessionalRegister = () => {
   const navigate = useNavigate();
   const location = useLocation();
+
+  const [categories, setCategories] = React.useState<{ id: string, name: string }[]>([]);
+
+  React.useEffect(() => {
+    getServiceCategories().then(data => {
+      let fetched = [];
+      if (Array.isArray(data)) fetched = data;
+      else if (data && Array.isArray(data.results)) fetched = data.results;
+
+      if (fetched.length > 0) {
+        setCategories(fetched);
+      }
+    }).catch(err => {
+      console.error("Failed to fetch categories", err);
+    });
+  }, []);
+
 
   // Get email from router state
   const email = (location.state as { email?: string })?.email;
@@ -40,25 +58,19 @@ const ProfessionalRegister = () => {
     password: "",
     confirmPassword: "",
     location: "",
-    paymentType: "perHour",
-    hourlyRate: "",
-    packages: [] as { title: string; price: string }[],
+    licenseNumber: "",
   });
 
   // File states
   const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
-  const [nationalIdFront, setNationalIdFront] = useState<File | null>(null);
-  const [nationalIdBack, setNationalIdBack] = useState<File | null>(null);
   const [cvFile, setCvFile] = useState<File | null>(null);
-  const [selfPicture, setSelfPicture] = useState<File | null>(null);
-  const [finNumber, setFinNumber] = useState("");
 
   // UI states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [success] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   // Handle input changes
   const handleChange = (
@@ -72,32 +84,11 @@ const ProfessionalRegister = () => {
 
       if (type === "file" && files && files.length > 0) {
         const file = files[0];
-        const validImageTypes = ["image/jpeg", "image/png", "image/jpg"];
-        const validDocTypes = [
-          "application/pdf",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        ];
-
-        // Handle CV separately
+        
         if (name === "cvFile") {
-          if (!validDocTypes.includes(file.type) && !file.name.endsWith(".docx")) {
-            setError("CV must be a PDF or DOCX file");
-            return;
-          }
           setCvFile(file);
-        } else {
-          // All other files are images
-          if (!validImageTypes.includes(file.type)) {
-            setError(`Please upload a valid image (PNG or JPG) for ${name}`);
-            return;
-          }
-
-          switch (name) {
-            case "profilePhoto": setProfilePhoto(file); break;
-            case "nationalIdFront": setNationalIdFront(file); break;
-            case "nationalIdBack": setNationalIdBack(file); break;
-            case "selfPicture": setSelfPicture(file); break;
-          }
+        } else if (name === "profilePhoto") {
+          setProfilePhoto(file);
         }
       } else {
         setForm({ ...form, [name]: value });
@@ -120,28 +111,12 @@ const ProfessionalRegister = () => {
     );
   };
 
-  // Package helpers
-  const addPackage = () => {
-    setForm({ ...form, packages: [...form.packages, { title: "", price: "" }] });
-  };
-
-  const removePackage = (index: number) => {
-    const updated = form.packages.filter((_, i) => i !== index);
-    setForm({ ...form, packages: updated });
-  };
-
-  const updatePackage = (index: number, field: "title" | "price", value: string) => {
-    const updated = form.packages.map((pkg, i) =>
-      i === index ? { ...pkg, [field]: value } : pkg
-    );
-    setForm({ ...form, packages: updated });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     setError(null);
 
-    // Required fields
+    // Required fields (strictly matching the backend schema and form)
     const requiredFields = [
       "firstName",
       "lastName",
@@ -149,45 +124,23 @@ const ProfessionalRegister = () => {
       "gender",
       "dateOfBirth",
       "city",
-      "subcity",
       "serviceCategory",
       "yearsOfExperience",
       "shortBio",
       "password",
       "confirmPassword",
       "location",
-      "payoutMethod",
-      "accountNumber",
     ];
 
     for (const field of requiredFields) {
       if (!form[field as keyof typeof form]) {
-        setError("Please fill all required fields");
+        setError(`Please fill all required fields (${field} is missing)`);
         return;
       }
     }
 
-    // Payment validation
-    if (form.paymentType === "perHour") {
-      if (!form.hourlyRate) {
-        setError("Please enter your hourly rate");
-        return;
-      }
-    } else {
-      if (form.packages.length === 0) {
-        setError("Please add at least one package");
-        return;
-      }
-      for (const pkg of form.packages) {
-        if (!pkg.title || !pkg.price) {
-          setError("All package descriptions and prices are required");
-          return;
-        }
-      }
-    }
-
-    if (!profilePhoto || !nationalIdFront || !nationalIdBack || !cvFile || !selfPicture || !finNumber) {
-      setError("All verification documents are required");
+    if (!profilePhoto || !cvFile) {
+      setError("Please upload both a profile photo and your CV/Resume");
       return;
     }
 
@@ -217,10 +170,11 @@ const ProfessionalRegister = () => {
     setError(null);
 
     try {
-      const response = await registerUser("professional", {
+      await registerUser("professional", {
         ...form,
         email,
-        finNumber,
+        profilePhoto,  // Pass the File object for profile picture upload
+        cvFile,        // Pass the File object for CV upload
       });
       // if (response.status === "ACTIVE") {
       //   login(response.token, response.user); // Auto-login if backend approves immediately
@@ -245,12 +199,6 @@ const ProfessionalRegister = () => {
           href="#"
           className="flex items-center gap-2.5 text-2xl font-black text-[#111518] dark:text-white"
         >
-          <span
-            className="material-symbols-outlined text-primary text-4xl"
-            style={{ fontVariationSettings: "'FILL' 1, 'wght' 700" }}
-          >
-            link
-          </span>
           Fix-Link
         </a>
       </header>
@@ -442,11 +390,9 @@ const ProfessionalRegister = () => {
                   required
                 >
                   <option value="">Select a category</option>
-                  <option>Plumbing</option>
-                  <option>Electrical</option>
-                  <option>Carpentry</option>
-                  <option>Painting</option>
-                  <option>Cleaning</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
                 </select>
               </label>
               <label className="flex flex-col">
@@ -478,125 +424,25 @@ const ProfessionalRegister = () => {
             </div>
           </section>
 
-          {/* Payment */}
-          <section className="space-y-4">
-            <h2 className="text-xl font-bold border-b pb-3">E. Payment *</h2>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="paymentType"
-                  value="perHour"
-                  checked={form.paymentType === "perHour"}
-                  onChange={(e) => setForm({ ...form, paymentType: e.target.value })}
-                />
-                Per Hour
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="paymentType"
-                  value="package"
-                  checked={form.paymentType === "package"}
-                  onChange={(e) => setForm({ ...form, paymentType: e.target.value })}
-                />
-                Package
-              </label>
-            </div>
-
-            {/* Per Hour */}
-            {form.paymentType === "perHour" && (
-              <input
-                type="number"
-                placeholder="Hourly Rate ETB"
-                value={form.hourlyRate}
-                onChange={(e) => setForm({ ...form, hourlyRate: e.target.value })}
-                className="form-input h-12 w-64"
-                required
-              />
-            )}
-
-            {/* Package */}
-            {form.paymentType === "package" && (
-              <div className="space-y-4">
-                {form.packages.map((pkg, index) => (
-                  <div key={index} className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-700 flex flex-col md:flex-row gap-4 items-start">
-                    <textarea
-                      placeholder="Package description (e.g., 'Clean whole house')"
-                      value={pkg.title}
-                      onChange={(e) => updatePackage(index, "title", e.target.value)}
-                      className="form-textarea flex-1 h-24 resize-none p-2 rounded-lg border border-gray-300 dark:border-gray-600"
-                      required
-                    />
-                    <input
-                      type="number"
-                      placeholder="Price ETB"
-                      value={pkg.price}
-                      onChange={(e) => updatePackage(index, "price", e.target.value)}
-                      className="form-input w-32 h-12 rounded-lg"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removePackage(index)}
-                      className="text-red-500 font-bold text-2xl self-start md:self-center mt-2 md:mt-0"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={addPackage}
-                  className="flex items-center gap-2 text-primary font-medium mt-2"
-                >
-                  <span className="text-xl">+</span> Add Package
-                </button>
-
-                {/* Live Preview */}
-                <div className="mt-4">
-                  <h3 className="font-semibold mb-2 text-lg">Preview:</h3>
-                  <div className="space-y-2">
-                    {form.packages.map((pkg, index) => (
-                      <div
-                        key={index}
-                        className="border rounded-lg p-3 bg-white dark:bg-gray-800 flex justify-between items-start shadow-sm"
-                      >
-                        <div>
-                          <p className="font-semibold text-gray-800 dark:text-gray-100">{pkg.title || "Package description"}</p>
-                          <p className="text-gray-500 dark:text-gray-300">Price: {pkg.price ? `${pkg.price} ETB` : "0 ETB"}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </section>
-
           {/* Verification */}
           <section className="space-y-6">
             <h2 className="text-xl font-bold border-b pb-3">C. Verification Documents *</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label className="flex flex-col md:col-span-2">
-                <span className="font-medium pb-1">FIN Number *</span>
-                <input type="text" value={finNumber} onChange={(e) => setFinNumber(e.target.value)} className="form-input h-12" required />
-              </label>
-              <label className="flex flex-col">
-                <span className="font-medium pb-1">National ID (Front) *</span>
-                <input type="file" name="nationalIdFront" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
-              </label>
-              <label className="flex flex-col">
-                <span className="font-medium pb-1">National ID (Back) *</span>
-                <input type="file" name="nationalIdBack" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
-              </label>
               <label className="flex flex-col">
                 <span className="font-medium pb-1">CV / Resume *</span>
                 <input type="file" name="cvFile" onChange={handleChange} className="form-input" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required />
               </label>
-              <label className="flex flex-col md:col-span-2">
-                <span className="font-medium pb-1">Picture of Yourself *</span>
-                <input type="file" name="selfPicture" onChange={handleChange} className="form-input" accept="image/png, image/jpeg, image/jpg" required />
+              <label className="flex flex-col">
+                <span className="font-medium pb-1">Professional License Number *</span>
+                <input
+                  type="text"
+                  name="licenseNumber"
+                  value={form.licenseNumber}
+                  onChange={handleChange}
+                  className="form-input h-12"
+                  placeholder="Enter your license number"
+                  required
+                />
               </label>
             </div>
           </section>
@@ -616,23 +462,26 @@ const ProfessionalRegister = () => {
                 >
                   <option value="">Select a method</option>
                   <option>Telebirr</option>
-                  <option>CBE Birr</option>
-                  <option>Bank Account</option>
                 </select>
               </label>
               <label className="flex flex-col">
-                <span className="font-medium pb-1">Account / Phone Number *</span>
+                <span className="font-medium pb-1">Telebirr Number *</span>
                 <input
                   type="text"
                   name="accountNumber"
                   value={form.accountNumber}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setForm({ ...form, accountNumber: val });
+                  }}
+                  placeholder="0911223344"
                   className="form-input h-12"
                   required
                 />
               </label>
             </div>
           </section>
+
 
           {error && <ErrorMessage message={error} />}
           {success && <SuccessMessage message={success} />}

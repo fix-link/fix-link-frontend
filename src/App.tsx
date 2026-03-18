@@ -7,16 +7,21 @@ import CustomerRegister from "./pages/auth/customer/CustomerRegister";
 import ProfessionalRegister from "./pages/auth/professional/ProfessionalRegister";
 import CustomerHome from "./pages/auth/customer/CustomerHome";
 import SearchResults from "./pages/auth/customer/SearchResults";
-import ProfessionalHome from "./pages/auth/professional/ProfessionalHome"
+import ProfessionalProfile from "./pages/auth/customer/ProfessionalProfile";
+import CustomerMessages from "./pages/auth/customer/CustomerMessages";
+import ProfessionalHome from "./pages/auth/professional/ProfessionalHome";
+import ProfessionalMessages from "./pages/auth/professional/ProfessionalMessages";
 import LoginPage from "./pages/auth/login";
 import ForgotPassword from "./pages/auth/login/ForgotPassword";
-import ResetPassword from "./pages/auth/login/ResetPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
+import AccountSettings from "./pages/auth/customer/AccountSettings";
 import ProtectedRoute from "./components/ProtectedRoute";
+import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Home Page */}
         <Route path="/" element={<Home />} />
@@ -31,7 +36,6 @@ function App() {
         {/* Login & Recovery */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
 
         {/* Dashboards */}
         <Route
@@ -50,6 +54,18 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/customer/profile/:id" element={
+          <ProtectedRoute role="customer">
+            <ProfessionalProfile />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/customer/messages/:id" element={
+          <ProtectedRoute role="customer">
+            <CustomerMessages />
+          </ProtectedRoute>
+        } />
+
         <Route
           path="/professional/home"
           element={
@@ -58,8 +74,29 @@ function App() {
             // </ProtectedRoute>
           }
         />
+        <Route
+          path="/professional/messages"
+          element={
+            <ProtectedRoute role="professional">
+              <ProfessionalMessages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/professional/profile"
+          element={
+            <ProtectedRoute role="professional">
+              <ProfessionalProfile />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="/signup/pending-approval" element={<PendingApproval />} />
+        <Route path="/account-settings" element={
+          <ProtectedRoute>
+            <AccountSettings />
+          </ProtectedRoute>
+        } />
 
       </Routes>
     </BrowserRouter>

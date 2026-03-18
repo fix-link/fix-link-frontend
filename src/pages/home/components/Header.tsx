@@ -24,9 +24,6 @@ const Header = () => {
           className={`flex items-center gap-3 font-bold transition-colors duration-300 ${scrolled ? "text-primary" : "text-white"
             }`}
         >
-          <svg className="w-6 h-6" viewBox="0 0 48 48" fill="currentColor">
-            <path d="M8.57829 8.57829L24 24L39.4217 8.57829..." />
-          </svg>
           <span className="text-xl">Fix-Link</span>
         </div>
 

@@ -1,159 +1,175 @@
 import axios from "axios";
 import type { Role, User } from "../types/auth.types";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_URL = (import.meta.env.VITE_API_URL || "https://fix-link-5332f899c079.herokuapp.com").replace(/\/$/, "") + "/api";
 
 // Create axios instance
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-/**
- * Simulate backend delay
- */
-const fakeDelay = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
-
-/**
- * Send OTP to email
- */
-export const sendOtp = async (email: string) => {
-  await fakeDelay(1000);
-
-  // Basic email regex
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    throw new Error("Please enter a valid email address");
+// Add interceptor to include token if available
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("access_token");
+  console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, token ? "With Token" : "No Token");
+  // Guard against invalid/expired/undefined token strings
+  if (token && token !== "undefined" && token !== "null") {
+    config.headers.Authorization = `Bearer ${token}`;
   }
+  return config;
+});
 
-  return {
-    success: true,
-    message: "Verification code sent to your email",
-  };
-};
+// Add interceptor to handle 401 Unauthorized errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear token and redirect if unauthorized
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      localStorage.removeItem("user");
 
-/**
- * Verify OTP
- */
-export const verifyOtp = async (email: string, otp: string) => {
-  try {
-    const response = await api.post("/accounts/users/verify-email/", {
-      email: email,
-      otp: otp,
-    });
-
-    return {
-      success: true,
-      message: response.data.message || "Email verified successfully",
-    };
-  } catch (error: any) {
-    throw new Error(
-      error.response?.data?.detail ||
-      error.response?.data?.error ||
-      "Invalid verification code"
-    );
+      // Only redirect to login if not already on an auth page
+      const path = window.location.pathname;
+      const isAuthPage = path.includes("/login") || path.includes("/signup") || path.includes("/register") || path.includes("/verify");
+      if (!isAuthPage) {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
   }
-};
+);
 
 /**
- * Resend OTP (Real)
+ * Helper to parse backend errors
  */
-export const resendOtp = async (email: string) => {
-  try {
-    const response = await api.post("/accounts/users/resend-email-otp/", {
-      email: email,
-    });
-    return {
-      success: true,
-      message: response.data.message || "OTP sent successfully",
-    };
-  } catch (error: any) {
-    throw new Error(
-      error.response?.data?.detail ||
-      error.response?.data?.error ||
-      "Failed to resend OTP"
-    );
-  }
-};
+export const parseError = (error: any): string => {
+  if (error.response?.data) {
+    const data = error.response.data;
 
-/**
- * Register customer or professional
- */
-export const registerUser = async (
-  role: Role,
-  formData: Record<string, any>
-) => {
-  try {
-    if (!formData.email) {
-      throw new Error("Email is missing from registration data");
+    // 1. If it's a "detail" string (generic)
+    if (typeof data.detail === "string") return data.detail;
+
+    // 2. If it's a "detail" object or list (specific fields)
+    if (data.detail && typeof data.detail === "object") {
+      return Object.entries(data.detail)
+        .map(([field, msg]) => `${field}: ${Array.isArray(msg) ? msg[0] : msg}`)
+        .join(" | ");
     }
 
-    // 2. Generate Username (from email)
-    const username = formData.email.split("@")[0] + Math.floor(Math.random() * 1000);
+    // 3. Handle standard DRF field errors (errors in root object)
+    if (typeof data === "object" && data !== null) {
+      const errorEntries = Object.entries(data);
+      if (errorEntries.length > 0) {
+        return errorEntries
+          .map(([field, msg]) => {
+            if (field === "non_field_errors") return Array.isArray(msg) ? msg[0] : msg;
+            return `${field}: ${Array.isArray(msg) ? msg[0] : msg}`;
+          })
+          .join(" | ");
+      }
+    } else if (typeof data === "string") {
+      if (data.includes("Server Error") || data.includes("500")) {
+        return "500 Internal Server Error. Please check backend server configuration or restart your local server.";
+      }
+      return "An unexpected format error occurred.";
+    }
+  }
+  return "Something went wrong. Please try again.";
+};
 
-    // 3. Prepare Payload matching Backend Spec
-    const payload = {
-      username: username,
+/**
+ * Register user
+ */
+export const registerUser = async (role: Role, formData: Record<string, any>) => {
+  try {
+    const isProfessional = role === "professional";
+
+    const endpoint = isProfessional
+      ? "/users/register-professional/"
+      : "/users/register/";
+
+    // Use FormData if a file is present (profile photo / cv)
+    const hasFile = formData.profilePhoto instanceof File || formData.cvFile instanceof File;
+
+    if (hasFile && isProfessional) {
+      const fd = new FormData();
+      fd.append("username", formData.email);
+      fd.append("email", formData.email);
+      fd.append("password", formData.password);
+      fd.append("first_name", formData.firstName);
+      fd.append("last_name", formData.lastName);
+      fd.append("profession", formData.serviceCategory);
+      fd.append("years_of_experience", String(Number(formData.yearsOfExperience) || 0));
+      if (formData.gender) fd.append("gender", formData.gender);
+      if (formData.dateOfBirth) fd.append("date_of_birth", formData.dateOfBirth);
+      if (formData.shortBio) fd.append("bio", formData.shortBio);
+      if (formData.city) fd.append("city", formData.city);
+      if (formData.subcity) fd.append("subcity", formData.subcity);
+      if (formData.houseNumber) fd.append("house_number", formData.houseNumber);
+      if (formData.payoutMethod) fd.append("preferred_payout_method", formData.payoutMethod);
+      if (formData.accountNumber) fd.append("payout_account_number", formData.accountNumber);
+      if (formData.serviceCategory) fd.append("service_categories", formData.serviceCategory);
+      // Attach files
+      if (formData.profilePhoto instanceof File) fd.append("profile_picture", formData.profilePhoto);
+      if (formData.cvFile instanceof File) fd.append("cv_file", formData.cvFile);
+
+      const response = await api.post(endpoint, fd);
+      // Note: Do NOT set Content-Type here — axios auto-sets multipart/form-data with the correct boundary
+      return {
+        success: true,
+        user: response.data.user,
+        access: response.data.access,
+        refresh: response.data.refresh,
+      };
+    }
+
+    // JSON fallback (no files)
+    const commonPayload = {
+      username: formData.email,
       email: formData.email,
       password: formData.password,
       first_name: formData.firstName,
       last_name: formData.lastName,
-      role: role,
-      // Note: Extra fields like 'phone', 'location' might be ignored by /users/register/
-      // Need clarify if we should PATCH specific profile endpoint later.
     };
 
-    const response = await api.post("/accounts/users/register/", payload);
-
-    // Normalize user object
-    const apiUser = response.data.user;
-    const user: User = {
-      id: apiUser.id,
-      name: apiUser.first_name + " " + apiUser.last_name || apiUser.username,
-      email: apiUser.email,
-      role: apiUser.role,
-      status:
-        apiUser.role === "professional" && !apiUser.is_verified_professional
-          ? "PENDING_APPROVAL"
-          : "ACTIVE",
-      profilePhoto: "https://i.pravatar.cc/150",
-    };
-
-    return {
-      success: true,
-      message: "Account created successfully",
-      token: response.data.access,
-      user: user,
-    };
-  } catch (error: any) {
-    console.error("Registration Error Details:", {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-    });
-
-    // Extract the most specific error message
-    let errorMessage = "Registration failed";
-
-    if (error.response?.data) {
-      const data = error.response.data;
-      if (data.detail) errorMessage = data.detail;
-      else if (data.email) errorMessage = `Email: ${data.email[0]}`;
-      else if (data.username) errorMessage = `Username: ${data.username[0]}`;
-      else if (data.password) errorMessage = `Password: ${data.password[0]}`;
-      else if (data.first_name) errorMessage = `First Name: ${data.first_name[0]}`;
-      else if (data.last_name) errorMessage = `Last Name: ${data.last_name[0]}`;
-      else if (typeof data === 'string') errorMessage = data;
-    } else if (error.request) {
-      errorMessage = "No response from server. Check your internet or VPN.";
+    let payload: any;
+    if (isProfessional) {
+      payload = {
+        ...commonPayload,
+        profession: formData.serviceCategory,
+        years_of_experience: Number(formData.yearsOfExperience) || 0,
+        ...(formData.gender && { gender: formData.gender }),
+        ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
+        ...(formData.shortBio && { bio: formData.shortBio }),
+        ...(formData.city && { city: formData.city }),
+        ...(formData.subcity && { subcity: formData.subcity }),
+        ...(formData.houseNumber && { house_number: formData.houseNumber }),
+        ...(formData.payoutMethod && { preferred_payout_method: formData.payoutMethod }),
+        ...(formData.accountNumber && { payout_account_number: formData.accountNumber }),
+        ...(formData.serviceCategory && { service_categories: [formData.serviceCategory] }),
+      };
     } else {
-      errorMessage = error.message;
+      payload = {
+        ...commonPayload,
+        phonenumber: formData.phone,
+        role: role,
+        ...(formData.gender && { gender: formData.gender }),
+      };
     }
 
-    throw new Error(errorMessage);
+    const response = await api.post(endpoint, payload);
+    return {
+      success: true,
+      user: response.data.user,
+      access: response.data.access,
+      refresh: response.data.refresh,
+    };
+  } catch (error: any) {
+    throw new Error(parseError(error));
   }
 };
 
@@ -162,57 +178,102 @@ export const registerUser = async (
  */
 export const loginUser = async (email: string, password: string) => {
   try {
-    const response = await api.post("/accounts/users/login/", {
-      email: email, // Changed from 'login' to 'email' based on error
+    const response = await api.post("/users/login/", {
+      username: email, // Backend might expect username
+      email: email,
       password: password,
     });
 
-    const apiUser = response.data.user;
-    const user: User = {
-      id: apiUser.id,
-      name: apiUser.first_name ? `${apiUser.first_name} ${apiUser.last_name}` : apiUser.username,
-      email: apiUser.email,
-      role: apiUser.role,
-      status:
-        apiUser.role === "professional" && !apiUser.is_verified_professional
-          ? "PENDING_APPROVAL"
-          : "ACTIVE",
-      profilePhoto: "https://i.pravatar.cc/150",
-    };
-
     return {
       success: true,
-      token: response.data.access,
-      user: user,
+      user: response.data.user,
+      access: response.data.access,
+      refresh: response.data.refresh,
+    };
+  } catch (error: any) {
+    const msg = error.response?.data?.detail || error.response?.data?.error || error.response?.data?.message || "Invalid credentials";
+    throw new Error(msg);
+  }
+};
+
+/**
+ * Get User Details by ID
+ */
+export const getUserDetails = async (id: string) => {
+  try {
+    const response = await api.get(`/users/${id}/`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(parseError(error));
+  }
+};
+
+/**
+ * Update User Profile
+ */
+export const updateUserProfile = async (id: string, data: Partial<User>) => {
+  try {
+    // Map frontend fields back to backend if needed
+    const apiData = {
+      ...data,
+      bio: data.bio || (data as any).shortBio,
+      profession: data.profession || (data as any).serviceCategory,
+      years_of_experience: data.years_of_experience || Number((data as any).yearsOfExperience)
     };
 
+    // Remove null/undefined to avoid overwriting with empty
+    Object.keys(apiData).forEach(key => (apiData as any)[key] === undefined && delete (apiData as any)[key]);
+
+    const response = await api.patch(`/users/${id}/`, apiData);
+    return response.data;
   } catch (error: any) {
-    throw new Error(error.response?.data?.detail || "Invalid credentials");
+    throw new Error(error.response?.data?.detail || "Failed to update profile");
   }
 };
 
 /**
- * Forgot Password (MOCK)
+ * Verify Email OTP
+ */
+export const verifyOtp = async (email: string, otp: string) => {
+  try {
+    const response = await api.post("/users/verify-email/", { email, otp });
+    console.log("OTP Verification Response:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("OTP Verification Error:", error.response?.data);
+    throw new Error(parseError(error));
+  }
+};
+
+/**
+ * Resend Email OTP
+ */
+export const resendOtp = async (email: string) => {
+  try {
+    const response = await api.post("/users/resend-email-otp/", { email });
+    console.log("OTP Resend Response:", response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error("OTP Resend Error:", error.response?.data);
+    throw new Error(parseError(error));
+  }
+};
+
+/**
+ * Forgot Password
  */
 export const forgotPassword = async (email: string) => {
-  await fakeDelay(1000);
-  console.log(`Sending reset password email to ${email}`);
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    throw new Error("Please enter a valid email address");
-  }
-
-  return { success: true, message: "Reset link sent" };
+  const response = await api.post("/users/forgot-password/", { email });
+  return response.data;
 };
 
 /**
- * Reset Password (MOCK)
+ * Reset Password
  */
-export const resetPassword = async (token: string, newPassword: string) => {
-  await fakeDelay(1000);
-  console.log(`Resetting password with token ${token} to ${newPassword}`);
-  if (!token) throw new Error("Invalid token");
-  if (!newPassword) throw new Error("New password is required");
-  return { success: true, message: "Password reset successfully" };
+export const resetPassword = async (email: string, otp: string, new_password: string) => {
+  const response = await api.post("/users/reset-password/", { email, otp, new_password });
+  return response.data;
 };
+
+export default api;
+

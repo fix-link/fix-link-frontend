@@ -1,4 +1,4 @@
-import React from 'react';
+import { useNavigate } from "react-router-dom";
 
 export type Professional = {
   id?: number | string;
@@ -8,7 +8,9 @@ export type Professional = {
   reviews?: number;
   price: number;
   image: string;
+  location?: string;
   quote?: string;
+  verified?: boolean;
 };
 
 interface ProfessionalCardProps {
@@ -16,53 +18,68 @@ interface ProfessionalCardProps {
 }
 
 const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
+  const navigate = useNavigate();
+
+  const handleViewProfile = () => {
+    navigate(`/customer/profile/${pro.id || 1}`);
+  };
+
   return (
-    <div className="flex flex-col overflow-hidden rounded-lg bg-white dark:bg-background-dark shadow-card transition-shadow hover:shadow-lg h-full">
-      {/* Header / Banner */}
-      <div className="relative h-24 bg-background-light dark:bg-white/10">
-        <div className="absolute left-1/2 top-full -translate-x-1/2 -translate-y-1/2 transform">
-          <img
-            alt={`Photo of ${pro.name}`}
-            className="size-24 rounded-full object-cover border-4 border-white dark:border-background-dark shadow-md"
-            src={pro.image}
-          />
-        </div>
+    <div
+      onClick={handleViewProfile}
+      className="bg-white dark:bg-card-dark rounded-xl p-5 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center group cursor-pointer h-full"
+    >
+      <div className="relative mb-3">
+        <img
+          alt={pro.name}
+          className="w-20 h-20 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-sm"
+          src={pro.image}
+        />
+        {/* Mock Status Dot (Green for now, could be dynamic) */}
+        <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full"></div>
       </div>
 
-      {/* Content */}
-      <div className="flex flex-1 flex-col p-5 pt-16 text-center">
-        <h3 className="text-lg font-bold text-text-primary dark:text-white">{pro.name}</h3>
-        <p className="text-sm text-text-secondary dark:text-gray-400 mt-0.5">{pro.role}</p>
-
-        <div className="mt-2 flex items-center justify-center gap-1">
-          <span className="material-symbols-outlined text-xl text-yellow-500" style={{ fontVariationSettings: "'FILL' 1" }}>
-            star
-          </span>
-          <span className="text-sm font-semibold text-text-primary dark:text-white">{pro.rating}</span>
-          {pro.reviews !== undefined && (
-            <span className="text-gray-400 text-xs ml-1">({pro.reviews} reviews)</span>
-          )}
-        </div>
-
-        {pro.quote && (
-          <p className="text-sm text-text-secondary dark:text-gray-400 mt-3 flex-grow line-clamp-2">
-            "{pro.quote}"
-          </p>
-        )}
-
-        <p className="text-base font-bold text-text-primary dark:text-white mt-4">
-          <span className="font-normal text-text-secondary">Starting from</span> {pro.price} ETB
+      <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
+        {pro.name}
+      </h3>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-1">{pro.role}</p>
+      
+      {pro.location && (
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1 flex items-center justify-center gap-1">
+          <span className="material-symbols-outlined text-xs">location_on</span>
+          {pro.location}
         </p>
+      )}
 
-        {/* Buttons */}
-        <div className="mt-5 flex items-center gap-3">
-          <button className="flex flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 bg-primary text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] px-4 transition-colors hover:bg-primary/90">
-            Book Now
-          </button>
-          <button className="flex flex-1 cursor-pointer items-center justify-center overflow-hidden rounded-lg h-11 bg-background-light dark:bg-white/10 text-text-primary dark:text-white gap-2 text-sm font-bold leading-normal tracking-[0.015em] px-4 transition-colors hover:bg-gray-200 dark:hover:bg-white/20">
-            View Profile
-          </button>
+      <div className="flex items-center gap-1 text-amber-500 text-xs mb-2">
+        <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>
+          star
+        </span>
+        <span className="font-bold text-slate-900 dark:text-white">{pro.rating}</span>
+        {pro.reviews !== undefined && (
+          <span className="text-slate-400 font-normal">({pro.reviews})</span>
+        )}
+      </div>
+
+      {pro.verified && (
+        <div className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-50 text-primary dark:bg-blue-900/30 dark:text-blue-300 mb-2 border border-blue-100 dark:border-blue-800">
+          <span className="material-symbols-outlined text-[14px] mr-1">verified</span> Trusted
         </div>
+      )}
+
+      <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-4 italic">
+        From <span className="text-primary font-bold not-italic">{pro.price} ETB</span>
+      </p>
+
+      <div className="mt-auto">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleViewProfile();
+          }}
+          className="bg-primary hover:bg-[#2559a1] text-white rounded-[10px] w-[120px] py-2 text-xs font-bold transition-colors block mx-auto">
+          View Profile
+        </button>
       </div>
     </div>
   );

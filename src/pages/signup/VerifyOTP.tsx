@@ -49,6 +49,13 @@ const VerifyEmail = () => {
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      const prev = document.getElementById(`otp-${index - 1}`);
+      prev?.focus();
+    }
+  };
+
   const handleVerify = async () => {
     const code = otp.join("");
     if (code.length !== 6) {
@@ -60,12 +67,15 @@ const VerifyEmail = () => {
     setError(null);
 
     try {
-      await verifyOtp(email, code); // ✅ NOW PASSING EMAIL
+      const response = await verifyOtp(email, code);
+      console.log("Verify OTP Response in Component:", response);
 
-      // Success! Go to Login
-      navigate("/login", { replace: true });
+      // Check for success indicators in response body if any, or rely on lack of 400
+      // Based on Swagger, 200 means success.
+      navigate("/login", { replace: true, state: { message: "Email verified successfully. Please login." } });
     } catch (err: any) {
-      setError(err.message || "Invalid OTP");
+      console.error("Verification error caught in component:", err);
+      setError(err.message || "Invalid or expired OTP code.");
     } finally {
       setLoading(false);
     }
@@ -97,6 +107,7 @@ const VerifyEmail = () => {
               id={`otp-${index}`}
               value={digit}
               onChange={(e) => handleChange(e.target.value, index)}
+              onKeyDown={(e) => handleKeyDown(e, index)}
               maxLength={1}
               className="w-12 h-14 text-center text-xl font-bold border rounded-lg"
             />

@@ -9,7 +9,6 @@ import SuccessMessage from "../../../components/SuccessMessage";
 import LocationInput from "../../../components/LocationInput"; // ✅ Step 1: Import LocationInput
 import PasswordStrength from "../../../components/PasswordStrength";
 import { validatePassword } from "../../../utils/validation";
-import { useAuth } from "../../../context/AuthContext";
 import PhoneInput from "../../../components/PhoneInput";
 
 const CustomerRegister = () => {
@@ -39,10 +38,9 @@ const CustomerRegister = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  /* 🔽 ADDED STATES */
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked, files } = e.target;
@@ -65,9 +63,10 @@ const CustomerRegister = () => {
   };
 
   /* 🔽 REPLACED handleSubmit */
-  const { login } = useAuth(); // Import useAuth at top
+  // registerUser is imported from api/auth.api
 
   const handleSubmit = async () => {
+    if (loading) return;
     setError(null);
 
     // 1. Validation Logic
@@ -105,7 +104,7 @@ const CustomerRegister = () => {
 
 
     try {
-      const response = await registerUser("customer", {
+      await registerUser("customer", {
         firstName: form.firstName,
         lastName: form.lastName,
         phone: form.phone,
@@ -115,12 +114,8 @@ const CustomerRegister = () => {
         email: email, // ✅ Pass email from location state
       });
 
-      // DO NOT Auto Login yet -> Go to Verification
-      // if (response.token && response.user) {
-      //   login(response.token, response.user);
-      // }
-
-      setSuccess(response.message || "Account created! Please verify your email.");
+      // Backend returns technical success, show user-friendly message
+      setSuccess("Account created! Directing to email verification...");
 
       setTimeout(() => {
         navigate("/signup/verify", { state: { email } });
@@ -139,9 +134,6 @@ const CustomerRegister = () => {
         {/* Logo */}
         <div className="flex flex-col items-center gap-2 mb-6 text-center">
           <div className="flex items-center gap-2 text-2xl font-black">
-            <span className="material-symbols-outlined text-primary text-4xl">
-              link
-            </span>
             <span>Fix-Link</span>
           </div>
           <h1 className="text-3xl font-bold">

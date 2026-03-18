@@ -1,15 +1,15 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import { useAuth } from "../../../../context/AuthContext";
 
 const Sidebar: React.FC = () => {
+    const { logout } = useAuth();
+    const navigate = useNavigate();
+
     return (
         <aside className="fixed z-20 h-full w-64 flex-col bg-primary p-4 text-white/80 hidden lg:flex">
 
             {/* LOGO */}
             <div className="flex items-center gap-3 p-2 mb-6 text-white">
-                <div className="size-8">
-                    {/* you can replace this svg later */}
-                    <span className="material-symbols-outlined text-3xl">handyman</span>
-                </div>
                 <h1 className="text-lg font-bold tracking-tight">Fix-Link</h1>
             </div>
 
@@ -36,7 +36,7 @@ const Sidebar: React.FC = () => {
                         <span className="material-symbols-outlined text-2xl">
                             {item.icon}
                         </span>
-                        <p className="text-sm font-medium">{item.label}</p>
+                        <p className="text-sm font-medium flex-1">{item.label}</p>
                     </NavLink>
                 ))}
             </nav>
@@ -51,7 +51,13 @@ const Sidebar: React.FC = () => {
                     <p className="text-sm font-medium">Settings</p>
                 </NavLink>
 
-                <button className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/10 hover:text-white">
+                <button
+                    onClick={() => {
+                        logout();
+                        navigate('/');
+                    }}
+                    className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/10 hover:text-white"
+                >
                     <span className="material-symbols-outlined text-2xl">logout</span>
                     <p className="text-sm font-medium">Logout</p>
                 </button>

@@ -24,15 +24,13 @@ const LoginPage: React.FC = () => {
 
     try {
       const response = await loginUser(email, password);
-      login(response.token, response.user);
+      login(response.access, response.refresh, response.user);
 
       // Redirect based on role
+      // Redirect based on role
       if (response.user.role === "professional") {
-        if (response.user.status === "PENDING_APPROVAL") {
-          navigate("/signup/pending-approval");
-        } else {
-          navigate("/professional/home");
-        }
+        // Bypass verification check for testing as requested by user
+        navigate("/professional/home");
       } else {
         // For customers, check if there is a return query param
         const params = new URLSearchParams(window.location.search);
