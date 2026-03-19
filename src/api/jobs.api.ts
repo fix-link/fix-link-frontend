@@ -94,3 +94,29 @@ export const acceptBid = async (bidId: string) => {
         throw new Error(parseError(error));
     }
 };
+
+/**
+ * Assign a professional to a job
+ * V2 Endpoint: PATCH /jobs/{id}/ (assigned_to UUID in payload)
+ */
+export const assignProfessional = async (jobId: string, professionalId: string) => {
+    try {
+        const response = await api.patch(`/jobs/${jobId}/`, { 
+            assigned_to: professionalId 
+        });
+        return response.data;
+    } catch (error: any) {
+        throw new Error(parseError(error));
+    }
+};
+/**
+ * Update job status (e.g. from pending to accepted, or done to completed)
+ */
+export const updateJobStatus = async (jobId: string, status: string) => {
+    try {
+        const response = await api.patch(`/jobs/${jobId}/`, { status: status });
+        return response.data;
+    } catch (error: any) {
+        throw new Error(parseError(error));
+    }
+};

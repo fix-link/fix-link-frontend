@@ -11,6 +11,15 @@ export const api = axios.create({
   },
 });
 
+/**
+ * Helper to get full image URL from backend path
+ */
+export const getImageUrl = (path: string | null | undefined): string => {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  return `${API_URL.replace("/api", "")}${path.startsWith("/") ? "" : "/"}${path}`;
+};
+
 // Add interceptor to include token if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
@@ -210,21 +219,30 @@ export const getUserDetails = async (id: string) => {
 
 /**
  * Update User Profile
+ * Supports both JSON and FormData (for images)
  */
-export const updateUserProfile = async (id: string, data: Partial<User>) => {
+export const updateUserProfile = async (id: string, data: Partial<User> | FormData) => {
   try {
-    // Map frontend fields back to backend if needed
-    const apiData = {
-      ...data,
-      bio: data.bio || (data as any).shortBio,
-      profession: data.profession || (data as any).serviceCategory,
-      years_of_experience: data.years_of_experience || Number((data as any).yearsOfExperience)
-    };
+    let payload = data;
+    let headers = {};
 
-    // Remove null/undefined to avoid overwriting with empty
-    Object.keys(apiData).forEach(key => (apiData as any)[key] === undefined && delete (apiData as any)[key]);
+    if (!(data instanceof FormData)) {
+      // Map frontend fields back to backend if needed
+       payload = {
+        ...data,
+        bio: data.bio || (data as any).shortBio,
+        profession: data.profession || (data as any).serviceCategory,
+        years_of_experience: data.years_of_experience || Number((data as any).yearsOfExperience)
+      };
 
-    const response = await api.patch(`/users/${id}/`, apiData);
+      // Remove null/undefined to avoid overwriting with empty
+      Object.keys(payload).forEach(key => (payload as any)[key] === undefined && delete (payload as any)[key]);
+    } else {
+      // Axios will handle multipart/form-data boundary
+      headers = { "Content-Type": "multipart/form-data" };
+    }
+
+    const response = await api.patch(`/users/${id}/`, payload, { headers });
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.detail || "Failed to update profile");
@@ -273,6 +291,34 @@ export const forgotPassword = async (email: string) => {
 export const resetPassword = async (email: string, otp: string, new_password: string) => {
   const response = await api.post("/users/reset-password/", { email, otp, new_password });
   return response.data;
+};
+
+/**
+ * Change Password
+ * V2 Endpoint: POST /users/change-password/
+ */
+export const changePassword = async (oldPassword: string, newPassword: string) => {
+  try {
+    const response = await api.post("/users/change-password/", {
+      old_password: oldPassword,
+      new_password: newPassword
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(parseError(error));
+  }
+};
+
+/**
+ * Delete User Account
+ */
+export const deleteUserProfile = async (id: string) => {
+  try {
+    const response = await api.delete(`/users/${id}/`);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.detail || "Failed to delete account");
+  }
 };
 
 export default api;

@@ -15,6 +15,7 @@ import LoginPage from "./pages/auth/login";
 import ForgotPassword from "./pages/auth/login/ForgotPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
 import AccountSettings from "./pages/auth/customer/AccountSettings";
+import Bookings from "./pages/auth/customer/Bookings";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -63,6 +64,12 @@ function App() {
         <Route path="/customer/messages/:id" element={
           <ProtectedRoute role="customer">
             <CustomerMessages />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/customer/bookings" element={
+          <ProtectedRoute role="customer">
+            <Bookings />
           </ProtectedRoute>
         } />
 
