@@ -90,6 +90,14 @@ function App() {
           }
         />
         <Route
+          path="/professional/notifications"
+          element={
+            <ProtectedRoute role="professional">
+              <ProfessionalMessages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/professional/profile"
           element={
             <ProtectedRoute role="professional">

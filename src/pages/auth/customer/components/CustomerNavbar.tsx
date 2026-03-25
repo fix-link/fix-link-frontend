@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { getServiceCategories } from "../../../../api/jobs.api";
-import { getNotifications, type Notification } from "../../../../api/notifications.api";
+import { getNotifications, markNotificationAsRead, type Notification } from "../../../../api/notifications.api";
 import { getImageUrl } from "../../../../api/auth.api";
 
 const LOCATIONS = [
@@ -77,6 +77,23 @@ const CustomerNavbar = () => {
     navigate(`/customer/search?${params.toString()}`);
   };
 
+  const getDescriptiveMessage = (n: Notification) => {
+    if (n.message && n.message !== "New Notification") return n.message;
+    
+    switch (n.type?.toLowerCase()) {
+        case 'job_accepted':
+        case 'request_accepted':
+            return "Professional accepted your request";
+        case 'job_completed':
+            return "A professional marked your job as done";
+        case 'message':
+        case 'new_message':
+            return "New message from professional";
+        default:
+            return "New update on your project";
+    }
+  };
+
   const filteredLocations = LOCATIONS.filter(loc =>
     loc.toLowerCase().includes(location.toLowerCase())
   );
@@ -99,7 +116,7 @@ const CustomerNavbar = () => {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 flex items-center justify-between whitespace-nowrap border-b border-solid border-border-color px-4 sm:px-6 lg:px-10 py-3 bg-white/80 dark:bg-background-dark/80 backdrop-blur-sm">
+    <nav className="sticky top-0 z-[100] flex items-center justify-between whitespace-nowrap border-b border-solid border-border-color px-4 sm:px-6 lg:px-10 py-3 bg-white/80 dark:bg-background-dark/80 backdrop-blur-sm">
       <div className="flex items-center gap-4 text-text-primary dark:text-white">
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0 cursor-pointer" onClick={() => navigate('/')}>
@@ -220,17 +237,41 @@ const CustomerNavbar = () => {
                     <div
                       key={n.id}
                       className={`px-5 py-4 border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${!n.is_read ? 'bg-primary/-[0.02]' : ''}`}
-                      onClick={() => {
+                      onClick={async () => {
                         setShowNotifications(false);
-                        if (n.link) navigate(n.link);
-                        else navigate(`/customer/messages/1`);
+                        // Mark as read non-blocking — still clear badge locally on failure
+                        markNotificationAsRead(n.id).then(() => {
+                          setNotifications(prev => prev.map(notif =>
+                            notif.id === n.id ? { ...notif, is_read: true } : notif
+                          ));
+                        }).catch(() => {
+                          setNotifications(prev => prev.map(notif =>
+                            notif.id === n.id ? { ...notif, is_read: true } : notif
+                          ));
+                        });
+                        // Navigate
+                        const type = (n.type || '').toLowerCase();
+                        if (n.link && !n.link.includes('/1')) {
+                          navigate(n.link);
+                        } else if (n.job_id) {
+                          navigate(`/customer/messages?requestId=${n.job_id}`);
+                        } else if (type.includes('job') || type.includes('request') || type.includes('accepted') || type.includes('done') || type.includes('message')) {
+                          navigate('/customer/messages');
+                        } else {
+                          navigate('/customer/home');
+                        }
                       }}
                     >
                       <div className="flex gap-3">
                         <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.is_read ? 'bg-primary' : 'bg-transparent'}`}></div>
                         <div className="flex-1">
-                           <p className={`text-sm leading-snug ${!n.is_read ? 'font-black text-text-primary dark:text-white' : 'font-medium text-text-secondary dark:text-gray-400'}`}>{n.message}</p>
-                           <p className="text-[10px] text-gray-400 mt-1 font-bold">{n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}</p>
+                           <p className={`text-sm leading-snug ${!n.is_read ? 'font-black text-slate-900 dark:text-white' : 'font-medium text-slate-500 dark:text-gray-400'}`}>
+                             {getDescriptiveMessage(n)}
+                           </p>
+                           <p className="text-[10px] text-slate-400 mt-1.5 font-bold flex items-center gap-1">
+                             <span className="material-symbols-outlined text-[12px]">schedule</span>
+                             {n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Recently"}
+                           </p>
                         </div>
                       </div>
                     </div>

@@ -56,6 +56,14 @@ api.interceptors.response.use(
  * Helper to parse backend errors
  */
 export const parseError = (error: any): string => {
+  // Handle 5xx server errors immediately — never try to parse the body
+  const status = error.response?.status;
+  if (status >= 500) {
+    const detail = error.response?.data?.detail;
+    if (typeof detail === "string") return detail;
+    return "A server error occurred. The backend team has been notified. Please try again shortly.";
+  }
+
   if (error.response?.data) {
     const data = error.response.data;
 
@@ -69,25 +77,23 @@ export const parseError = (error: any): string => {
         .join(" | ");
     }
 
-    // 3. Handle standard DRF field errors (errors in root object)
+    // 3. Handle standard DRF field errors
     if (typeof data === "object" && data !== null) {
       const errorEntries = Object.entries(data);
       if (errorEntries.length > 0) {
         return errorEntries
           .map(([field, msg]) => {
-            if (field === "non_field_errors") return Array.isArray(msg) ? msg[0] : msg;
-            return `${field}: ${Array.isArray(msg) ? msg[0] : msg}`;
+            if (field === "non_field_errors") return Array.isArray(msg) ? msg[0] : String(msg);
+            return `${field}: ${Array.isArray(msg) ? msg[0] : String(msg)}`;
           })
           .join(" | ");
       }
     } else if (typeof data === "string") {
-      if (data.includes("Server Error") || data.includes("500")) {
-        return "500 Internal Server Error. Please check backend server configuration or restart your local server.";
-      }
-      return "An unexpected format error occurred.";
+      return data.length > 200 ? "An unexpected server error occurred." : data;
     }
   }
-  return "Something went wrong. Please try again.";
+
+  return error.message || "Something went wrong. Please try again.";
 };
 
 /**

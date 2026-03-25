@@ -42,48 +42,88 @@ const ProfessionalMessages = () => {
         }
     }, [user]);
 
-    // Get the active request from search params, or default to first one
-    const requestId = searchParams.get('requestId') || professionalRequests[0]?.id;
-    const activeRequest = professionalRequests.find(r => r.id === requestId);
-    const activeRequestId = activeRequest?.id;
+    // Sidebar Hydration: Fetch details for ALL customers in the list
+    const [hydratedRequests, setHydratedRequests] = useState<any[]>([]);
 
-    // Fetch details for active user if not present (Lazy Hydration)
     useEffect(() => {
-        const fetchDetails = async () => {
-            if (!activeRequest) {
-                setActiveUserDetails(null);
+        const hydrate = async () => {
+            if (professionalRequests.length === 0) {
+                setHydratedRequests([]);
                 return;
             }
-            const customerId = activeRequest.customer;
-            if (!customerId) return;
-            
-            try {
-                const details = await getUserDetails(customerId);
-                setActiveUserDetails(details);
-            } catch (err) {
-                console.error("Failed to fetch customer details:", err);
-            }
+
+            const jobsWithDetails = await Promise.all(professionalRequests.map(async (job) => {
+                // If backend already provides detail, use it; otherwise fetch.
+                if (job.customer_detail?.first_name || job.customer_detail?.user?.first_name) {
+                    return job;
+                }
+                try {
+                    const details = await getUserDetails(job.customer);
+                    return { ...job, customer_detail: details };
+                } catch (err) {
+                    console.error("Failed to hydrate job customer:", job.id, err);
+                    return job;
+                }
+            }));
+            setHydratedRequests(jobsWithDetails);
         };
-        fetchDetails();
-    }, [activeRequestId]);
+        hydrate();
+    }, [professionalRequests]);
+
+    // Active Chat Hydration (for Header/Project info)
+    const requestId = searchParams.get('requestId') || hydratedRequests[0]?.id;
+    const activeRequest = hydratedRequests.find(r => r.id === requestId);
+    const activeRequestId = activeRequest?.id;
+
+    // When jobs finish loading, make sure the URL's requestId is still honoured.
+    // This handles the case where a notification click navigates before data loads.
+    useEffect(() => {
+        const urlRequestId = searchParams.get('requestId');
+        if (urlRequestId && hydratedRequests.length > 0) {
+            const match = hydratedRequests.find(r => r.id === urlRequestId);
+            if (!match) {
+                console.warn('ProfessionalMessages: requestId from URL not found in job list:', urlRequestId);
+            }
+        }
+    }, [hydratedRequests]);
+
+    useEffect(() => {
+        if (activeRequest?.customer_detail) {
+            setActiveUserDetails(activeRequest.customer_detail);
+        } else if (activeRequest?.customer) {
+            getUserDetails(activeRequest.customer).then(setActiveUserDetails).catch(console.error);
+        }
+    }, [activeRequestId, activeRequest?.customer_detail]);
 
     const [messageInput, setMessageInput] = useState("");
     const [showStatus, setShowStatus] = useState(false);
+    const [showCustomerProfile, setShowCustomerProfile] = useState(false);
 
     const handleSelectRequest = (id: string) => {
         setSearchParams({ requestId: id });
     };
 
     const handleAccept = async () => {
-        if (!activeRequestId) return;
+        if (!activeRequestId) {
+            console.error("ProfessionalMessages: No activeRequestId found for handleAccept");
+            return;
+        }
         try {
+            console.log("ProfessionalMessages: ATTEMPTING ACCEPT for ID:", activeRequestId);
             const updated = await updateJobStatus(activeRequestId, 'accepted');
-            console.log("ProfessionalMessages: Accepted Job Response:", updated);
-            // Merge updated status with existing hydrated request to keep details like customer_detail
-            setProfessionalRequests(prev => prev.map(r => 
-                r.id === activeRequestId ? { ...r, ...updated } : r
-            ));
+            console.log("ProfessionalMessages: ACCEPT SUCCESS response:", updated);
+            
+            // Force immediate UI reflection by updating all sets
+            const updatedRequests = (prev: any[]) => prev.map(r => 
+                r.id === activeRequestId ? { ...r, status: 'accepted' } : r
+            );
+            
+            setProfessionalRequests(updatedRequests);
+            setHydratedRequests(updatedRequests);
+            
+            console.log("ProfessionalMessages: State updated to 'accepted'");
         } catch (error: any) {
+            console.error("ProfessionalMessages: ACCEPT FAILURE:", error);
             alert("Failed to accept: " + error.message);
         }
     };
@@ -91,8 +131,13 @@ const ProfessionalMessages = () => {
     const handleMarkDone = async () => {
         if (!activeRequestId) return;
         try {
-            const updated = await updateJobStatus(activeRequestId, 'done');
-            setProfessionalRequests(prev => prev.map(r => r.id === activeRequestId ? updated : r));
+            await updateJobStatus(activeRequestId, 'done');
+            setProfessionalRequests(prev => prev.map(r => 
+                r.id === activeRequestId ? { ...r, status: 'done' } : r
+            ));
+            setHydratedRequests(prev => prev.map(r => 
+                r.id === activeRequestId ? { ...r, status: 'done' } : r
+            ));
         } catch (error: any) {
             alert("Failed to mark as done: " + error.message);
         }
@@ -101,8 +146,13 @@ const ProfessionalMessages = () => {
     const handleDecline = async () => {
         if (!activeRequestId) return;
         try {
-            const updated = await updateJobStatus(activeRequestId, 'cancelled');
-            setProfessionalRequests(prev => prev.map(r => r.id === activeRequestId ? updated : r));
+            await updateJobStatus(activeRequestId, 'cancelled');
+            setProfessionalRequests(prev => prev.map(r => 
+                r.id === activeRequestId ? { ...r, status: 'cancelled' } : r
+            ));
+            setHydratedRequests(prev => prev.map(r => 
+                r.id === activeRequestId ? { ...r, status: 'cancelled' } : r
+            ));
         } catch (error: any) {
             alert("Failed to decline: " + error.message);
         }
@@ -132,7 +182,7 @@ const ProfessionalMessages = () => {
                                         {professionalRequests.length} Total
                                     </span>
                                     {notifications.filter(n => !n.is_read && (n.message?.toLowerCase().includes('request') || n.message?.toLowerCase().includes('job'))).length > 0 && (
-                                        <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
+                                        <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
                                             {notifications.filter(n => !n.is_read).length} New
                                         </span>
                                     )}
@@ -140,13 +190,13 @@ const ProfessionalMessages = () => {
                             )}
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            {professionalRequests.length === 0 ? (
+                            {hydratedRequests.length === 0 ? (
                                 <div className="p-10 text-center space-y-3 opacity-40">
                                     <span className="material-symbols-outlined text-4xl block">pending_actions</span>
                                     <p className="text-xs font-bold leading-relaxed">No requests yet.<br />Your profile is live and visible!</p>
                                 </div>
                             ) : (
-                                professionalRequests.map(req => (
+                                hydratedRequests.map(req => (
                                     <div
                                         key={req.id}
                                         onClick={() => handleSelectRequest(req.id)}
@@ -169,7 +219,7 @@ const ProfessionalMessages = () => {
                                                         </span>
                                                     </div>
                                                 )}
-                                                {req.status === 'pending' && <div className="absolute -top-0.5 -right-0.5 size-3 bg-primary rounded-full border-2 border-white dark:border-slate-900 animate-pulse" />}
+                                                {req.status === 'pending' && <div className="absolute -top-0.5 -right-0.5 size-3 bg-primary rounded-full border-2 border-white dark:border-slate-900" />}
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <h4 className={`text-sm tracking-tight truncate ${activeRequestId === req.id ? 'font-black text-primary' : 'font-bold'}`}>
@@ -189,7 +239,7 @@ const ProfessionalMessages = () => {
                                                 <span className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase">
                                                     {(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--"}
                                                 </span>
-                                                {req.status === 'pending' && <span className="size-2 bg-primary rounded-full animate-pulse" />}
+                                                {req.status === 'pending' && <span className="size-2 bg-primary rounded-full" />}
                                             </div>
                                         </div>
                                     </div>
@@ -224,6 +274,11 @@ const ProfessionalMessages = () => {
                                         >
                                             <span className="material-symbols-outlined text-xl">arrow_back</span>
                                         </button>
+                                        {/* Clickable customer identity — opens mini profile */}
+                                        <button
+                                            onClick={() => setShowCustomerProfile(p => !p)}
+                                            className="flex items-center gap-3 md:gap-4 hover:opacity-80 transition-opacity"
+                                        >
                                         <div className="relative group cursor-pointer">
                                             <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-md overflow-hidden">
                                                 {(activeUserDetails?.profile_picture || activeRequest.customer_detail?.profile_picture) ? (
@@ -234,8 +289,8 @@ const ProfessionalMessages = () => {
                                             </div>
                                             <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm" />
                                         </div>
-                                        <div className="flex flex-col gap-0.5">
-                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none">
+                                        <div className="flex flex-col gap-0.5 text-left">
+                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none underline-offset-2 hover:underline">
                                                 {(() => {
                                                     const detail = activeUserDetails || activeRequest.customer_detail;
                                                     if (!detail) return "Customer";
@@ -246,9 +301,68 @@ const ProfessionalMessages = () => {
                                             </h3>
                                             <div className="flex items-center gap-1.5 opacity-60">
                                                 <span className="size-1.5 bg-green-500 rounded-full animate-blink" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Customer • Online</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Online</span>
                                             </div>
                                         </div>
+                                        </button>
+
+                                        {/* Customer Mini-Profile Popup */}
+                                        {showCustomerProfile && (() => {
+                                            const detail = activeUserDetails || activeRequest.customer_detail;
+                                            const first = detail?.first_name || detail?.user?.first_name || "Customer";
+                                            const last = detail?.last_name || detail?.user?.last_name || "";
+                                            const fullName = `${first} ${last}`.trim();
+                                            const photo = detail?.profile_picture || detail?.user?.profile_picture;
+                                            const email = detail?.email || detail?.user?.email;
+                                            const phone = detail?.phonenumber || detail?.phone || detail?.user?.phonenumber;
+                                            const location = detail?.city || detail?.location || detail?.user?.city;
+                                            return (
+                                                <div
+                                                    className="absolute left-4 top-[4.5rem] z-[100] w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                                                    onClick={e => e.stopPropagation()}
+                                                >
+                                                    {/* Mini cover */}
+                                                    <div className="h-16 bg-gradient-to-r from-primary/30 to-primary/10 relative" />
+                                                    <div className="px-5 pb-5 -mt-8">
+                                                        <div className="size-16 rounded-full border-4 border-white dark:border-slate-800 overflow-hidden bg-primary/10 flex items-center justify-center shadow-lg mb-3">
+                                                            {photo ? (
+                                                                <img src={getImageUrl(photo)} alt={fullName} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span className="material-symbols-outlined text-3xl text-primary">person</span>
+                                                            )}
+                                                        </div>
+                                                        <h4 className="font-black text-base text-slate-900 dark:text-white">{fullName}</h4>
+                                                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-3">Customer</p>
+                                                        <div className="space-y-2">
+                                                            {location && (
+                                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                                    <span className="material-symbols-outlined text-sm text-slate-400">location_on</span>
+                                                                    <span className="font-medium">{location}</span>
+                                                                </div>
+                                                            )}
+                                                            {email && (
+                                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                                    <span className="material-symbols-outlined text-sm text-slate-400">mail</span>
+                                                                    <span className="font-medium truncate">{email}</span>
+                                                                </div>
+                                                            )}
+                                                            {phone && (
+                                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                                    <span className="material-symbols-outlined text-sm text-slate-400">call</span>
+                                                                    <span className="font-medium">{phone}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setShowCustomerProfile(false)}
+                                                            className="mt-4 w-full py-2 text-[11px] font-black uppercase tracking-widest rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                                        >
+                                                            Close
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                     <div className="flex gap-2">
                                         <button

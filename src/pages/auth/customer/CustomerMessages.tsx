@@ -41,30 +41,53 @@ const CustomerMessages = () => {
         }
     }, [user]);
 
-    // Get active request from URL or default to first
-    const requestId = searchParams.get('requestId') || userRequests[0]?.id;
-    const activeRequest = userRequests.find(r => r.id === requestId);
-    const activeRequestId = activeRequest?.id;
+    // Sidebar Hydration: Fetch details for ALL professionals in the list
+    const [hydratedRequests, setHydratedRequests] = useState<any[]>([]);
 
-    // Fetch details for active professional if not present (Lazy Hydration)
     useEffect(() => {
-        const fetchDetails = async () => {
-            if (!activeRequest) {
-                setActiveUserDetails(null);
+        const hydrate = async () => {
+            if (userRequests.length === 0) {
+                setHydratedRequests([]);
                 return;
             }
-            const proId = activeRequest.professional || activeRequest.assigned_to;
-            if (!proId) return;
-            
-            try {
-                const details = await getUserDetails(proId);
-                setActiveUserDetails(details);
-            } catch (err) {
-                console.error("Failed to fetch professional details:", err);
-            }
+
+            const jobsWithDetails = await Promise.all(userRequests.map(async (job) => {
+                // If backend already provides detail, use it; otherwise fetch.
+                if (job.professional_detail?.first_name || job.professional_detail?.user?.first_name) {
+                    return job;
+                }
+                const proId = job.professional || job.assigned_to;
+                if (!proId) return job;
+
+                try {
+                    const details = await getUserDetails(proId);
+                    return { ...job, professional_detail: details };
+                } catch (err) {
+                    console.error("Failed to hydrate job professional:", job.id, err);
+                    return job;
+                }
+            }));
+            setHydratedRequests(jobsWithDetails);
         };
-        fetchDetails();
-    }, [activeRequestId]);
+        hydrate();
+    }, [userRequests]);
+
+    // Get active request from URL or default to first
+    const requestId = searchParams.get('requestId') || hydratedRequests[0]?.id;
+    const activeRequest = hydratedRequests.find(r => r.id === requestId);
+    const activeRequestId = activeRequest?.id;
+
+    // Fetch details for active professional
+    useEffect(() => {
+        if (activeRequest?.professional_detail) {
+            setActiveUserDetails(activeRequest.professional_detail);
+        } else {
+            const proId = activeRequest?.professional || activeRequest?.assigned_to;
+            if (proId) {
+                getUserDetails(proId).then(setActiveUserDetails).catch(console.error);
+            }
+        }
+    }, [activeRequestId, activeRequest?.professional_detail]);
 
     const handleSelectRequest = (id: string) => {
         setSearchParams({ requestId: id });
@@ -133,7 +156,7 @@ const CustomerMessages = () => {
                                         {userRequests.length} Total
                                     </span>
                                     {notifications.filter(n => !n.is_read).length > 0 && (
-                                        <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
+                                        <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
                                             {notifications.filter(n => !n.is_read).length} New
                                         </span>
                                     )}
@@ -141,14 +164,14 @@ const CustomerMessages = () => {
                         )}
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar">
-                        {userRequests.length === 0 ? (
+                        {hydratedRequests.length === 0 ? (
                             <div className="p-10 text-center space-y-3 opacity-40">
                                 <span className="material-symbols-outlined text-4xl block">forum</span>
                                 <p className="text-xs font-black uppercase tracking-widest">No conversation yet</p>
                                 <p className="text-[10px] font-bold leading-relaxed">Pending requests will appear here once accepted.</p>
                             </div>
                         ) : (
-                            userRequests.map(req => (
+                            hydratedRequests.map(req => (
                                 <div
                                     key={req.id}
                                     onClick={() => handleSelectRequest(req.id)}
@@ -190,7 +213,7 @@ const CustomerMessages = () => {
                                             <span className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase">
                                                 {(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--"}
                                             </span>
-                                            {req.status === 'pending' && <span className="size-2 bg-primary rounded-full animate-pulse" />}
+                                            {req.status === 'pending' && <span className="size-2 bg-primary rounded-full" />}
                                         </div>
                                     </div>
                                 </div>

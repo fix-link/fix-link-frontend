@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
-import { createJob, assignProfessional } from "../../../../api/jobs.api";
+import { createJob } from "../../../../api/jobs.api";
+import { useAuth } from "../../../../context/AuthContext";
 
 const LOCATIONS = [
     "Addis Ababa",
@@ -23,6 +24,10 @@ interface RequestEstimateModalProps {
 }
 
 const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onClose, professionalName, serviceId, professionalId }) => {
+    const { user } = useAuth();
+    console.log("RequestEstimateModal: Current User Role:", user?.role);
+    console.log("RequestEstimateModal: Target Professional ID:", professionalId);
+
     const [description, setDescription] = useState("");
     const [preferredDate, setPreferredDate] = useState("");
     const [location, setLocation] = useState("");
@@ -88,27 +93,35 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
         setIsSubmitting(true);
 
         try {
+            // Role Check Defense
+            const currentRole = user?.role?.toLowerCase();
+            if (currentRole !== 'customer') {
+                alert(`Current role is ${currentRole}. Only customers can create jobs. Please switch accounts.`);
+                return;
+            }
+
             const budgetNum = parseFloat(budget.replace(/[^0-9.]/g, ''));
             
-            // Step 1: Create the Job (assigned_to is read-only here)
-            const newJob = await createJob({
+            // Create Job with direct assignment (1-step)
+            await createJob({
                 title: description.split('\n')[0].substring(0, 50) || "Job Request",
                 description: description,
                 service: serviceId || undefined, 
                 address: location,
                 scheduled_at: preferredDate ? new Date(preferredDate).toISOString() : undefined,
                 budget: isNaN(budgetNum) ? undefined : budgetNum.toString(),
+                assigned_to: professionalId?.toString()
             } as any);
-
-            // Step 2: Assign the Professional via PATCH
-            if (newJob?.id && professionalId) {
-                await assignProfessional(newJob.id, professionalId.toString());
-            }
 
             setIsSubmitted(true);
         } catch (err: any) {
             const msg = err.message || "Failed to submit request. Please try again.";
-            alert(msg);
+            // Improved error parsing
+            if (msg.toLowerCase().includes("only customers")) {
+                alert("The server reports that only customers can create jobs. Your session might be for a professional account.");
+            } else {
+                alert(msg);
+            }
         } finally {
             setIsSubmitting(false);
         }

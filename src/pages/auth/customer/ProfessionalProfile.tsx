@@ -512,6 +512,7 @@ const ProfessionalProfile = () => {
                                                     <span>{isPreviewMode ? 'Back to Editor' : 'See Customer View'}</span>
                                                 </button>
                                             )}
+                                            
                                             {isEditing ? (
                                                 <button
                                                     onClick={handleSave}
@@ -524,28 +525,38 @@ const ProfessionalProfile = () => {
                                                 <>
                                                     {(!isProView || isPreviewMode) && (
                                                         <>
-                                                            <button
-                                                                onClick={handleEstimateRequest}
-                                                                disabled={estimateRequested}
-                                                                className={`flex-1 md:flex-auto flex h-12 items-center justify-center rounded-xl px-8 text-base font-bold text-white shadow-lg transition-all ${isProView || estimateRequested ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95'}`}
-                                                                title={isProView ? "You cannot request an estimate from yourself" : estimateRequested ? "Estimate already requested" : ""}
-                                                            >
-                                                                <span>Request Estimate</span>
-                                                            </button>
-                                                            {hasAcceptedJob && (
-                                                                <button
-                                                                    onClick={handleChat}
-                                                                    className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all ${isProView ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-primary hover:border-primary'}`}
-                                                                    title={isProView ? "You cannot message yourself" : ""}
-                                                                >
-                                                                    <span className="material-symbols-outlined">chat_bubble</span>
-                                                                </button>
-                                                            )}
-                                                            <button
-                                                                className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all ${isProView ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-pink-500 hover:border-pink-200'}`}
-                                                            >
-                                                                <span className="material-symbols-outlined">favorite_border</span>
-                                                            </button>
+                                                            {user?.role === 'customer' ? (
+                                                                <>
+                                                                    <button
+                                                                        onClick={handleEstimateRequest}
+                                                                        disabled={estimateRequested}
+                                                                        className={`flex-1 md:flex-auto flex h-12 items-center justify-center rounded-xl px-8 text-base font-bold text-white shadow-lg transition-all ${estimateRequested ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95'}`}
+                                                                        title={estimateRequested ? "Estimate already requested" : ""}
+                                                                    >
+                                                                        <span>Request Estimate</span>
+                                                                    </button>
+                                                                    {hasAcceptedJob && (
+                                                                        <button
+                                                                            onClick={handleChat}
+                                                                            className="flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-primary hover:border-primary"
+                                                                        >
+                                                                            <span className="material-symbols-outlined">chat_bubble</span>
+                                                                        </button>
+                                                                    )}
+                                                                    <button
+                                                                        className="flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-pink-500 hover:border-pink-200"
+                                                                    >
+                                                                        <span className="material-symbols-outlined">favorite_border</span>
+                                                                    </button>
+                                                                </>
+                                                            ) : !isProView ? (
+                                                                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                                                                    <p className="text-xs font-bold text-text-secondary dark:text-gray-400 flex items-center gap-2">
+                                                                        <span className="material-symbols-outlined text-primary text-base">info</span>
+                                                                        Only customer accounts can hire professionals.
+                                                                    </p>
+                                                                </div>
+                                                            ) : null}
                                                         </>
                                                     )}
                                                 </>

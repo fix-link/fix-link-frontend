@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { getNotifications, type Notification } from "../../../../api/notifications.api";
+import { getNotifications, markNotificationAsRead, type Notification } from "../../../../api/notifications.api";
 import { getImageUrl } from "../../../../api/auth.api";
 import { useRef, useEffect } from "react";
 
@@ -49,8 +49,38 @@ const Header: React.FC = () => {
         navigate("/login");
     };
 
+    const getDescriptiveMessage = (n: Notification) => {
+        // Build the best possible human-readable message from type + sender
+        const who = n.sender_name && n.sender_name.trim() ? n.sender_name.trim() : null;
+        const type = (n.type || '').toLowerCase();
+
+        if (type.includes('job_request') || type.includes('new_job') || type.includes('new_request')) {
+            return who ? `New job request from ${who}` : 'You received a new job request';
+        }
+        if (type.includes('accepted')) {
+            return who ? `${who} accepted your services` : 'Your services were accepted';
+        }
+        if (type.includes('completed') || type.includes('done')) {
+            return who ? `${who} confirmed job completion` : 'A job was marked as complete';
+        }
+        if (type.includes('message') || type.includes('msg') || type.includes('chat')) {
+            return who ? `New message from ${who}` : 'You have a new message';
+        }
+        if (type.includes('cancelled') || type.includes('declined')) {
+            return who ? `${who} declined the request` : 'A request was declined';
+        }
+
+        // If backend message is useful (not generic), show it
+        const raw = (n.message || '').trim();
+        const isGeneric = !raw || raw === 'New Notification' || raw === 'you have update' || raw.length < 5;
+        if (!isGeneric) return raw;
+
+        return 'You have a new update';
+    };
+
+
     return (
-        <header className="sticky top-0 z-10 flex items-center justify-between bg-white/80 dark:bg-gray-900/80 px-6 py-4 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+        <header className="sticky top-0 z-[100] flex items-center justify-between bg-white/80 dark:bg-gray-900/80 px-6 py-4 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
 
             {/* LEFT */}
             <div className="flex items-center gap-3">
@@ -71,7 +101,7 @@ const Header: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">notifications</span>
                         {unreadNotifications.length > 0 && (
-                            <span className="absolute right-2 top-2 h-4 w-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center font-bold animate-pulse">
+                            <span className="absolute right-2 top-2 h-4 w-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center font-bold">
                                 {unreadNotifications.length}
                             </span>
                         )}
@@ -94,16 +124,43 @@ const Header: React.FC = () => {
                                         <div 
                                             key={n.id}
                                             className={`px-5 py-4 border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${!n.is_read ? 'bg-primary/-[0.02]' : ''}`}
-                                            onClick={() => {
+                                            onClick={async () => {
                                                 setShowNotifications(false);
-                                                if (n.link) navigate(n.link);
-                                            }}
+                                                // Mark as read first (don't block navigation on failure)
+                                                markNotificationAsRead(n.id).then(() => {
+                                                    setNotifications(prev => prev.map(notif => 
+                                                        notif.id === n.id ? { ...notif, is_read: true } : notif
+                                                    ));
+                                                }).catch(err => {
+                                                    // Still update locally so badge clears
+                                                    setNotifications(prev => prev.map(notif => 
+                                                        notif.id === n.id ? { ...notif, is_read: true } : notif
+                                                    ));
+                                                    console.warn("Mark-as-read failed (local update applied):", err);
+                                                });
+                                                // Navigate
+                                                const type = (n.type || '').toLowerCase();
+                                                if (n.link && !n.link.includes('/1')) {
+                                                  navigate(n.link);
+                                                } else if (n.job_id) {
+                                                  navigate(`/professional/messages?requestId=${n.job_id}`);
+                                                } else if (type.includes('job') || type.includes('request') || type.includes('accepted') || type.includes('done') || type.includes('message')) {
+                                                  navigate('/professional/messages');
+                                                } else {
+                                                  navigate('/professional/home');
+                                                }
+                                              }}
                                         >
                                             <div className="flex gap-3">
                                                 <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${!n.is_read ? 'bg-primary' : 'bg-transparent'}`}></div>
                                                 <div className="flex-1">
-                                                    <p className={`text-sm leading-snug ${!n.is_read ? 'font-black text-text-primary dark:text-white' : 'font-medium text-text-secondary dark:text-gray-400'}`}>{n.message}</p>
-                                                    <p className="text-[10px] text-gray-400 mt-1 font-bold">{n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}</p>
+                                                    <p className={`text-sm leading-snug ${!n.is_read ? 'font-black text-slate-900 dark:text-white' : 'font-medium text-slate-500 dark:text-gray-400'}`}>
+                                                        {getDescriptiveMessage(n)}
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-400 mt-1.5 font-bold flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-[12px]">schedule</span>
+                                                        {n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
