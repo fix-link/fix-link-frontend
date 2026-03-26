@@ -22,14 +22,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const token = localStorage.getItem("access_token");
         const savedUser = localStorage.getItem("user");
 
-        console.log("AuthContext: Checking for saved session...", { hasToken: !!token, hasUser: !!savedUser });
-
         if (token && savedUser) {
             try {
                 const user = JSON.parse(savedUser);
-                console.log("AuthContext: Restoring session for", user.email);
                 setUser(user);
                 setIsAuthenticated(true);
+                
+                // CRITICAL: Ensure the axios instance is aware of this token immediately
+                // This prevents race conditions where the first API call fails before the interceptor can react
+                import("../api/auth.api").then(({ api }) => {
+                    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                });
             } catch (e) {
                 console.error("AuthContext: Failed to parse saved user", e);
                 logout();
@@ -48,7 +51,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthenticated(true);
     };
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+            const { logoutUser } = await import("../api/auth.api");
+            await logoutUser();
+        } catch (err) {
+            console.error("AuthContext: Server logout failed", err);
+        }
+
         localStorage.removeItem("access_token");
         localStorage.removeItem("refresh_token");
         localStorage.removeItem("user");

@@ -73,8 +73,24 @@ const CustomerMessages = () => {
     }, [userRequests]);
 
     // Get active request from URL or default to first
-    const requestId = searchParams.get('requestId') || hydratedRequests[0]?.id;
-    const activeRequest = hydratedRequests.find(r => r.id === requestId);
+    const urlRequestId = searchParams.get('requestId');
+    const urlJobTitle = searchParams.get('jobTitle');
+    
+    // 1. Try to find by ID
+    // 2. Try to find by Title (fallback for buggy backend notifications)
+    // 3. Default to first
+    const activeRequest = hydratedRequests.find(r => r.id === urlRequestId) || 
+                          (urlJobTitle ? hydratedRequests.find(r => {
+                              const match = r.title?.toLowerCase() === urlJobTitle.toLowerCase();
+                              if (urlJobTitle) console.log(`Comparing "${r.title?.toLowerCase()}" vs "${urlJobTitle.toLowerCase()}": ${match}`);
+                              return match;
+                          }) : null) ||
+                          hydratedRequests[0];
+                          
+    if (urlJobTitle && activeRequest && !urlRequestId) {
+        console.log("Matched job by title fallback:", activeRequest.title);
+    }
+    const requestId = activeRequest?.id;
     const activeRequestId = activeRequest?.id;
 
     // Fetch details for active professional

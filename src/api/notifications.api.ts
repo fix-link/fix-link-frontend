@@ -6,9 +6,13 @@ export interface Notification {
     type: string;
     is_read: boolean;
     created_at: string;
+    message_id?: string;
+    message_session_id?: string;
     link?: string;
     job_id?: string;       // job/request UUID for navigation
     sender_name?: string;  // name of the person who triggered the notification
+    title?: string;
+    body?: string;
 }
 
 /**
@@ -29,6 +33,8 @@ export const getNotifications = async (): Promise<Notification[]> => {
         return response.data.map((n: any) => ({
             id: n.id,
             message: n.body || n.message || n.text || n.title || "New update",
+            title: n.title,
+            body: n.body,
             type: n.notification_type || n.type || (n.channel === 'job_updates' ? 'job_request' : 'info'),
             is_read: n.is_read || n.status === 'read' || false,
             created_at: n.created_at || n.sent_at || n.timestamp,

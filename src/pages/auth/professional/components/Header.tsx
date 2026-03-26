@@ -142,10 +142,15 @@ const Header: React.FC = () => {
                                                 const type = (n.type || '').toLowerCase();
                                                 if (n.link && !n.link.includes('/1')) {
                                                   navigate(n.link);
-                                                } else if (n.job_id) {
-                                                  navigate(`/professional/messages?requestId=${n.job_id}`);
+                                                } else if (n.job_id || n.message_id || n.message_session_id) {
+                                                  const targetId = n.job_id || n.message_id || n.message_session_id;
+                                                  navigate(`/professional/messages?requestId=${targetId}`);
                                                 } else if (type.includes('job') || type.includes('request') || type.includes('accepted') || type.includes('done') || type.includes('message')) {
-                                                  navigate('/professional/messages');
+                                                  // Fallback: If no ID, try to pass the title to help the messages page find it
+                                                  const msg = n.message || n.body || n.title || "";
+                                                  const titleMatch = msg.match(/'([^']+)'/) || msg.match(/"([^"]+)"/) || msg.match(/:(.*)$/);
+                                                  const extractedTitle = titleMatch ? titleMatch[1].trim() : "";
+                                                  navigate(extractedTitle ? `/professional/messages?jobTitle=${encodeURIComponent(extractedTitle)}` : '/professional/messages');
                                                 } else {
                                                   navigate('/professional/home');
                                                 }

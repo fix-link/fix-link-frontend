@@ -66,6 +66,11 @@ function App() {
             <CustomerMessages />
           </ProtectedRoute>
         } />
+        <Route path="/customer/messages" element={
+          <ProtectedRoute role="customer">
+            <CustomerMessages />
+          </ProtectedRoute>
+        } />
 
         <Route path="/customer/bookings" element={
           <ProtectedRoute role="customer">

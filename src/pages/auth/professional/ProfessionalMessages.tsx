@@ -71,8 +71,24 @@ const ProfessionalMessages = () => {
     }, [professionalRequests]);
 
     // Active Chat Hydration (for Header/Project info)
-    const requestId = searchParams.get('requestId') || hydratedRequests[0]?.id;
-    const activeRequest = hydratedRequests.find(r => r.id === requestId);
+    const urlRequestId = searchParams.get('requestId');
+    const urlJobTitle = searchParams.get('jobTitle');
+
+    // 1. Try to find by ID
+    // 2. Try to find by Title (fallback for buggy backend notifications)
+    // 3. Default to first
+    const activeRequest = hydratedRequests.find(r => r.id === urlRequestId) || 
+                          (urlJobTitle ? hydratedRequests.find(r => {
+                              const match = r.title?.toLowerCase() === urlJobTitle.toLowerCase();
+                              if (urlJobTitle) console.log(`Comparing Pro Job "${r.title?.toLowerCase()}" vs "${urlJobTitle.toLowerCase()}": ${match}`);
+                              return match;
+                          }) : null) ||
+                          hydratedRequests[0];
+                          
+    if (urlJobTitle && activeRequest && !urlRequestId) {
+        console.log("ProfessionalMatched job by title fallback:", activeRequest.title);
+    }
+    const requestId = activeRequest?.id;
     const activeRequestId = activeRequest?.id;
 
     // When jobs finish loading, make sure the URL's requestId is still honoured.

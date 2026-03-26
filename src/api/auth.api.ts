@@ -31,23 +31,89 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Add interceptor to handle 401 Unauthorized errors
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+const handleLogout = (error: any) => {
+  console.error("Auth: Forced Logout - Reason:", error.response?.status, error.response?.data?.detail || error.message);
+
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+  localStorage.removeItem("user");
+
+  const path = window.location.pathname;
+  const isAuthPage = path.includes("/login") || path.includes("/signup") || path.includes("/register") || path.includes("/verify");
+  if (!isAuthPage) {
+    window.location.href = "/login";
+  }
+  return Promise.reject(error);
+};
+
+// Add interceptor to handle 401 Unauthorized errors with token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Clear token and redirect if unauthorized
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      localStorage.removeItem("user");
+  async (error) => {
+    const originalRequest = error.config;
 
-      // Only redirect to login if not already on an auth page
-      const path = window.location.pathname;
-      const isAuthPage = path.includes("/login") || path.includes("/signup") || path.includes("/register") || path.includes("/verify");
-      if (!isAuthPage) {
-        window.location.href = "/login";
+    // If error is 401 and we haven't already retried
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      
+      // If a refresh is already in progress, queue the request
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return api(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (!refreshToken) {
+        isRefreshing = false;
+        return handleLogout(error);
+      }
+
+      try {
+        // Try to fetch a new access token (backend requires double /api prefix here)
+        const { data } = await axios.post(`${API_URL}/api/token/refresh/`, { refresh: refreshToken });
+        
+        localStorage.setItem("access_token", data.access);
+        if (data.refresh) {
+            localStorage.setItem("refresh_token", data.refresh); // If backend rotates refresh tokens
+        }
+        
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + data.access;
+        originalRequest.headers['Authorization'] = 'Bearer ' + data.access;
+        
+        processQueue(null, data.access);
+        isRefreshing = false;
+        
+        // Retry the original request with the new token
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        return handleLogout(error);
       }
     }
+    
     return Promise.reject(error);
   }
 );
@@ -324,6 +390,22 @@ export const deleteUserProfile = async (id: string) => {
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.detail || "Failed to delete account");
+  }
+};
+
+/**
+ * Logout User
+ * Blacklists the refresh token on the backend
+ */
+export const logoutUser = async () => {
+  try {
+    const refresh = localStorage.getItem("refresh_token");
+    if (refresh) {
+      await api.post("/users/logout/", { refresh });
+    }
+  } catch (error) {
+    console.warn("Server-side logout failed:", error);
+    // Continue with local logout regardless
   }
 };
 
