@@ -15,7 +15,7 @@ const PhoneInput: React.FC<PhoneInputProps> = ({ value, onChange, error }) => {
     const [countryCode, setCountryCode] = useState("+251");
     const [phoneNumber, setPhoneNumber] = useState("");
 
-    // Initialize from value if present
+    // Sync from value prop whenever it changes
     useEffect(() => {
         if (value) {
             // Simple heuristic to split code and number if possible
@@ -25,10 +25,12 @@ const PhoneInput: React.FC<PhoneInputProps> = ({ value, onChange, error }) => {
                 setCountryCode(foundCode.code);
                 setPhoneNumber(value.replace(foundCode.code, ""));
             } else {
-                setPhoneNumber(value);
+                // Strip leading zero if present (e.g. "0911..." -> "911...")
+                const cleaned = value.replace(/^\+?0?/, "");
+                setPhoneNumber(cleaned);
             }
         }
-    }, []);
+    }, [value]);
 
     const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const raw = e.target.value;

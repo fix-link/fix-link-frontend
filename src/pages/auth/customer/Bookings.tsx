@@ -28,7 +28,8 @@ const Bookings = () => {
       const allJobs = await listJobs();
       // Filter out 'pending' jobs - only show bookings that are accepted or beyond
       const confirmedBookings = allJobs.filter((job: Job) => 
-        job.customer === user?.id && job.status.toLowerCase() !== 'pending'
+        job.customer === user?.id && 
+        ['booked', 'in_progress', 'done', 'completed'].includes(job.status.toLowerCase())
       );
       setBookings(confirmedBookings);
     } catch (error) {
@@ -64,12 +65,19 @@ const Bookings = () => {
           icon: "hourglass_empty"
         };
       case "accepted":
-      case "assigned":
         return { 
-          label: "Pro Accepted & Booked", 
-          desc: "Professional is ready to start", 
-          color: "bg-blue-100 text-blue-700 border-blue-200",
-          icon: "check_circle"
+          label: "Request Accepted", 
+          desc: "Professional is ready! Pay to book.", 
+          color: "bg-amber-100 text-amber-700 border-amber-200",
+          icon: "pending_actions"
+        };
+      case "assigned":
+      case "booked":
+        return { 
+          label: "Job Booked & Confirmed", 
+          desc: "Professional is confirmed for this date", 
+          color: "bg-emerald-100 text-emerald-700 border-emerald-200",
+          icon: "verified"
         };
       case "in_progress":
         return { 
@@ -239,7 +247,6 @@ const Bookings = () => {
           </div>
         )}
       </main>
-
       <CustomerFooter />
     </div>
   );

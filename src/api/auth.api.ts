@@ -31,23 +31,89 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Add interceptor to handle 401 Unauthorized errors
+let isRefreshing = false;
+let failedQueue: any[] = [];
+
+const processQueue = (error: any, token: string | null = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+const handleLogout = (error: any) => {
+  console.error("Auth: Forced Logout - Reason:", error.response?.status, error.response?.data?.detail || error.message);
+
+  localStorage.removeItem("access_token");
+  localStorage.removeItem("refresh_token");
+  localStorage.removeItem("user");
+
+  const path = window.location.pathname;
+  const isAuthPage = path.includes("/login") || path.includes("/signup") || path.includes("/register") || path.includes("/verify");
+  if (!isAuthPage) {
+    window.location.href = "/login";
+  }
+  return Promise.reject(error);
+};
+
+// Add interceptor to handle 401 Unauthorized errors with token refresh
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Clear token and redirect if unauthorized
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
-      localStorage.removeItem("user");
+  async (error) => {
+    const originalRequest = error.config;
 
-      // Only redirect to login if not already on an auth page
-      const path = window.location.pathname;
-      const isAuthPage = path.includes("/login") || path.includes("/signup") || path.includes("/register") || path.includes("/verify");
-      if (!isAuthPage) {
-        window.location.href = "/login";
+    // If error is 401 and we haven't already retried
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      
+      // If a refresh is already in progress, queue the request
+      if (isRefreshing) {
+        return new Promise(function(resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        }).then(token => {
+          originalRequest.headers['Authorization'] = 'Bearer ' + token;
+          return api(originalRequest);
+        }).catch(err => {
+          return Promise.reject(err);
+        });
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem("refresh_token");
+      if (!refreshToken) {
+        isRefreshing = false;
+        return handleLogout(error);
+      }
+
+      try {
+        // Try to fetch a new access token (backend requires double /api prefix here)
+        const { data } = await axios.post(`${API_URL}/api/token/refresh/`, { refresh: refreshToken });
+        
+        localStorage.setItem("access_token", data.access);
+        if (data.refresh) {
+            localStorage.setItem("refresh_token", data.refresh); // If backend rotates refresh tokens
+        }
+        
+        api.defaults.headers.common['Authorization'] = 'Bearer ' + data.access;
+        originalRequest.headers['Authorization'] = 'Bearer ' + data.access;
+        
+        processQueue(null, data.access);
+        isRefreshing = false;
+        
+        // Retry the original request with the new token
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        return handleLogout(error);
       }
     }
+    
     return Promise.reject(error);
   }
 );
@@ -56,6 +122,14 @@ api.interceptors.response.use(
  * Helper to parse backend errors
  */
 export const parseError = (error: any): string => {
+  // Handle 5xx server errors immediately — never try to parse the body
+  const status = error.response?.status;
+  if (status >= 500) {
+    const detail = error.response?.data?.detail;
+    if (typeof detail === "string") return detail;
+    return "A server error occurred. The backend team has been notified. Please try again shortly.";
+  }
+
   if (error.response?.data) {
     const data = error.response.data;
 
@@ -69,25 +143,23 @@ export const parseError = (error: any): string => {
         .join(" | ");
     }
 
-    // 3. Handle standard DRF field errors (errors in root object)
+    // 3. Handle standard DRF field errors
     if (typeof data === "object" && data !== null) {
       const errorEntries = Object.entries(data);
       if (errorEntries.length > 0) {
         return errorEntries
           .map(([field, msg]) => {
-            if (field === "non_field_errors") return Array.isArray(msg) ? msg[0] : msg;
-            return `${field}: ${Array.isArray(msg) ? msg[0] : msg}`;
+            if (field === "non_field_errors") return Array.isArray(msg) ? msg[0] : String(msg);
+            return `${field}: ${Array.isArray(msg) ? msg[0] : String(msg)}`;
           })
           .join(" | ");
       }
     } else if (typeof data === "string") {
-      if (data.includes("Server Error") || data.includes("500")) {
-        return "500 Internal Server Error. Please check backend server configuration or restart your local server.";
-      }
-      return "An unexpected format error occurred.";
+      return data.length > 200 ? "An unexpected server error occurred." : data;
     }
   }
-  return "Something went wrong. Please try again.";
+
+  return error.message || "Something went wrong. Please try again.";
 };
 
 /**
@@ -101,36 +173,59 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
       ? "/users/register-professional/"
       : "/users/register/";
 
-    // Use FormData if a file is present (profile photo / cv)
+    // NEW: Use FormData if ANY file is present (now supports Customers too)
     const hasFile = formData.profilePhoto instanceof File || formData.cvFile instanceof File;
 
-    if (hasFile && isProfessional) {
+    if (hasFile) {
       const fd = new FormData();
       fd.append("username", formData.email);
       fd.append("email", formData.email);
       fd.append("password", formData.password);
       fd.append("first_name", formData.firstName);
       fd.append("last_name", formData.lastName);
-      fd.append("profession", formData.serviceCategory);
-      fd.append("years_of_experience", String(Number(formData.yearsOfExperience) || 0));
-      if (formData.gender) fd.append("gender", formData.gender);
-      if (formData.dateOfBirth) fd.append("date_of_birth", formData.dateOfBirth);
-      if (formData.shortBio) fd.append("bio", formData.shortBio);
-      if (formData.city) fd.append("city", formData.city);
-      if (formData.subcity) fd.append("subcity", formData.subcity);
-      if (formData.houseNumber) fd.append("house_number", formData.houseNumber);
-      if (formData.payoutMethod) fd.append("preferred_payout_method", formData.payoutMethod);
-      if (formData.accountNumber) fd.append("payout_account_number", formData.accountNumber);
-      if (formData.serviceCategory) fd.append("service_categories", formData.serviceCategory);
-      // Attach files
-      if (formData.profilePhoto instanceof File) fd.append("profile_picture", formData.profilePhoto);
-      if (formData.cvFile instanceof File) fd.append("cv_file", formData.cvFile);
+      
+      if (isProfessional) {
+        fd.append("phonenumber", formData.phone); // ✅ ADDED THIS
+        fd.append("profession", formData.serviceCategory);
+        fd.append("years_of_experience", String(Number(formData.yearsOfExperience) || 0));
+        if (formData.gender) fd.append("gender", formData.gender);
+        if (formData.dateOfBirth) fd.append("date_of_birth", formData.dateOfBirth);
+        if (formData.shortBio) fd.append("bio", formData.shortBio);
+        
+        // If location is provided, parse it into city/subcity if they are missing
+        const city = formData.city || (formData.location?.split(',')[0]?.trim());
+        const subcity = formData.subcity || (formData.location?.split(',')[1]?.trim() || "");
+        if (city) fd.append("city", city);
+        if (subcity) fd.append("subcity", subcity);
+        
+        if (formData.houseNumber) fd.append("house_number", formData.houseNumber);
+        if (formData.payoutMethod) fd.append("preferred_payout_method", formData.payoutMethod);
+        if (formData.accountNumber) fd.append("payout_account_number", formData.accountNumber);
+        if (formData.licenseNumber) fd.append("license_number", formData.licenseNumber); // ✅ ADDED THIS
+        if (formData.serviceCategory) fd.append("service_categories", formData.serviceCategory);
+        if (formData.skills) fd.append("skills", formData.skills); // ✅ ADDED THIS
+        if (formData.cvFile instanceof File) fd.append("cv_file", formData.cvFile);
+      } else {
+        // Customer specific FormData fields
+        fd.append("phonenumber", formData.phone);
+        fd.append("role", role);
+        if (formData.gender) fd.append("gender", formData.gender);
+        if (formData.dateOfBirth) fd.append("date_of_birth", formData.dateOfBirth);
+        if (formData.location) {
+          fd.append("city", formData.location.split(',')[0]?.trim());
+          fd.append("subcity", formData.location.split(',')[1]?.trim() || "");
+        }
+      }
+
+      // Universal profile picture
+      if (formData.profilePhoto instanceof File) {
+        fd.append("profile_picture", formData.profilePhoto);
+      }
 
       const response = await api.post(endpoint, fd);
-      // Note: Do NOT set Content-Type here — axios auto-sets multipart/form-data with the correct boundary
       return {
         success: true,
-        user: response.data.user,
+        user: response.data.user || response.data,
         access: response.data.access,
         refresh: response.data.refresh,
       };
@@ -149,16 +244,20 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
     if (isProfessional) {
       payload = {
         ...commonPayload,
+        phonenumber: formData.phone, // ✅ ADDED THIS
         profession: formData.serviceCategory,
         years_of_experience: Number(formData.yearsOfExperience) || 0,
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
         ...(formData.shortBio && { bio: formData.shortBio }),
-        ...(formData.city && { city: formData.city }),
-        ...(formData.subcity && { subcity: formData.subcity }),
+        // Smart location merge
+        city: formData.city || (formData.location?.split(',')[0]?.trim()),
+        subcity: formData.subcity || (formData.location?.split(',')[1]?.trim() || ""),
         ...(formData.houseNumber && { house_number: formData.houseNumber }),
         ...(formData.payoutMethod && { preferred_payout_method: formData.payoutMethod }),
         ...(formData.accountNumber && { payout_account_number: formData.accountNumber }),
+        ...(formData.licenseNumber && { license_number: formData.licenseNumber }), // ✅ ADDED THIS
+        ...(formData.skills && { skills: formData.skills }), // ✅ ADDED THIS
         ...(formData.serviceCategory && { service_categories: [formData.serviceCategory] }),
       };
     } else {
@@ -167,13 +266,18 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
         phonenumber: formData.phone,
         role: role,
         ...(formData.gender && { gender: formData.gender }),
+        ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
+        ...(formData.location && {
+          city: formData.location.split(',')[0]?.trim(),
+          subcity: formData.location.split(',')[1]?.trim() || ""
+        }),
       };
     }
 
     const response = await api.post(endpoint, payload);
     return {
       success: true,
-      user: response.data.user,
+      user: response.data.user || response.data,
       access: response.data.access,
       refresh: response.data.refresh,
     };
@@ -230,13 +334,18 @@ export const updateUserProfile = async (id: string, data: Partial<User> | FormDa
       // Map frontend fields back to backend if needed
        payload = {
         ...data,
+        phonenumber: (data as any).phone || (data as any).phonenumber,
         bio: data.bio || (data as any).shortBio,
         profession: data.profession || (data as any).serviceCategory,
         years_of_experience: data.years_of_experience || Number((data as any).yearsOfExperience)
       };
 
-      // Remove null/undefined to avoid overwriting with empty
-      Object.keys(payload).forEach(key => (payload as any)[key] === undefined && delete (payload as any)[key]);
+      // Remove null/undefined/phone (since we mapped it) to avoid overwriting with empty
+      Object.keys(payload).forEach(key => {
+        if ((payload as any)[key] === undefined || key === 'phone') {
+          delete (payload as any)[key];
+        }
+      });
     } else {
       // Axios will handle multipart/form-data boundary
       headers = { "Content-Type": "multipart/form-data" };
@@ -318,6 +427,22 @@ export const deleteUserProfile = async (id: string) => {
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.detail || "Failed to delete account");
+  }
+};
+
+/**
+ * Logout User
+ * Blacklists the refresh token on the backend
+ */
+export const logoutUser = async () => {
+  try {
+    const refresh = localStorage.getItem("refresh_token");
+    if (refresh) {
+      await api.post("/users/logout/", { refresh });
+    }
+  } catch (error) {
+    console.warn("Server-side logout failed:", error);
+    // Continue with local logout regardless
   }
 };
 

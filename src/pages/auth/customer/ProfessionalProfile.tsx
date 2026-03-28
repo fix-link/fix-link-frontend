@@ -189,10 +189,7 @@ const ProfessionalProfile = () => {
                     setProfileImage(getImageUrl(fetchedUser.profile_picture || (fetchedUser as any).profilePhoto));
                     
                     setProfileLanguages(fetchedUser.languages || ["Amharic", "English"]);
-                    setProfilePortfolio(fetchedUser.portfolio || [
-                        { img: "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?auto=format&fit=crop&q=80&w=400", title: "Showcase Project 1" },
-                        { img: "https://images.unsplash.com/photo-1558403194-611308249627?auto=format&fit=crop&q=80&w=400", title: "Showcase Project 2" }
-                    ]);
+                    setProfilePortfolio(fetchedUser.portfolio || []);
                     
                     // Store ratings and reviews if available (fallback to 0)
                     setProfileRating(fetchedUser.average_rating || fetchedUser.rating || 0);
@@ -388,13 +385,11 @@ const ProfessionalProfile = () => {
     }
 
     return (
-        <div className="relative flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-display text-text-primary dark:text-white">
+        <div className={`relative flex w-full bg-background-light dark:bg-background-dark font-display text-text-primary dark:text-white ${isProView ? 'h-screen overflow-hidden' : 'min-h-screen flex-col'}`}>
             {isProView && <Sidebar />}
-
-            <div className={`flex flex-col flex-1 overflow-hidden ${isProView ? 'lg:ml-64' : ''}`}>
+            <div className={`flex flex-col flex-1 ${isProView ? 'overflow-hidden lg:ml-64' : 'w-full'}`}>
                 {!isProView ? <CustomerNavbar /> : <Header />}
-
-                <main className="flex-1 overflow-y-auto custom-scrollbar">
+                <main className={`flex-1 ${isProView ? 'overflow-y-auto custom-scrollbar' : 'w-full'}`}>
                     <div className="w-full max-w-7xl mx-auto px-4 sm:px-10 py-8">
                         <div className="w-full rounded-2xl shadow-soft bg-white dark:bg-card-dark mb-8 border border-border-color dark:border-slate-800">
                             <div
@@ -512,6 +507,7 @@ const ProfessionalProfile = () => {
                                                     <span>{isPreviewMode ? 'Back to Editor' : 'See Customer View'}</span>
                                                 </button>
                                             )}
+                                            
                                             {isEditing ? (
                                                 <button
                                                     onClick={handleSave}
@@ -524,28 +520,38 @@ const ProfessionalProfile = () => {
                                                 <>
                                                     {(!isProView || isPreviewMode) && (
                                                         <>
-                                                            <button
-                                                                onClick={handleEstimateRequest}
-                                                                disabled={estimateRequested}
-                                                                className={`flex-1 md:flex-auto flex h-12 items-center justify-center rounded-xl px-8 text-base font-bold text-white shadow-lg transition-all ${isProView || estimateRequested ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95'}`}
-                                                                title={isProView ? "You cannot request an estimate from yourself" : estimateRequested ? "Estimate already requested" : ""}
-                                                            >
-                                                                <span>Request Estimate</span>
-                                                            </button>
-                                                            {hasAcceptedJob && (
-                                                                <button
-                                                                    onClick={handleChat}
-                                                                    className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all ${isProView ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-primary hover:border-primary'}`}
-                                                                    title={isProView ? "You cannot message yourself" : ""}
-                                                                >
-                                                                    <span className="material-symbols-outlined">chat_bubble</span>
-                                                                </button>
-                                                            )}
-                                                            <button
-                                                                className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all ${isProView ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-pink-500 hover:border-pink-200'}`}
-                                                            >
-                                                                <span className="material-symbols-outlined">favorite_border</span>
-                                                            </button>
+                                                            {user?.role === 'customer' ? (
+                                                                <>
+                                                                    <button
+                                                                        onClick={handleEstimateRequest}
+                                                                        disabled={estimateRequested}
+                                                                        className={`flex-1 md:flex-auto flex h-12 items-center justify-center rounded-xl px-8 text-base font-bold text-white shadow-lg transition-all ${estimateRequested ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95'}`}
+                                                                        title={estimateRequested ? "Estimate already requested" : ""}
+                                                                    >
+                                                                        <span>Request Estimate</span>
+                                                                    </button>
+                                                                    {hasAcceptedJob && (
+                                                                        <button
+                                                                            onClick={handleChat}
+                                                                            className="flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-primary hover:border-primary"
+                                                                        >
+                                                                            <span className="material-symbols-outlined">chat_bubble</span>
+                                                                        </button>
+                                                                    )}
+                                                                    <button
+                                                                        className="flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-pink-500 hover:border-pink-200"
+                                                                    >
+                                                                        <span className="material-symbols-outlined">favorite_border</span>
+                                                                    </button>
+                                                                </>
+                                                            ) : !isProView ? (
+                                                                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-3 rounded-xl border border-slate-200 dark:border-slate-700">
+                                                                    <p className="text-xs font-bold text-text-secondary dark:text-gray-400 flex items-center gap-2">
+                                                                        <span className="material-symbols-outlined text-primary text-base">info</span>
+                                                                        Only customer accounts can hire professionals.
+                                                                    </p>
+                                                                </div>
+                                                            ) : null}
                                                         </>
                                                     )}
                                                 </>
@@ -683,72 +689,75 @@ const ProfessionalProfile = () => {
                                     </div>
                                 </section>
 
-                                <section className="scroll-mt-28" id="portfolio">
-                                    {/* Portfolio Showcase */}
-                        <div className="bg-white dark:bg-card-dark rounded-3xl p-8 shadow-soft border border-border-color dark:border-slate-800">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
-                                        <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">photo_library</span>
-                                    </div>
-                                    <h2 className="text-2xl font-bold text-text-primary dark:text-white">Portfolio & Certifications</h2>
-                                </div>
-                                {isProView && (
-                                    <label className="cursor-pointer bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-base">add</span>
-                                        Add Work
-                                        <input 
-                                            type="file" 
-                                            className="hidden" 
-                                            multiple
-                                            accept="image/*,.pdf,.doc,.docx"
-                                            onChange={(e) => {
-                                                const files = Array.from(e.target.files || []);
-                                                // Simplified frontend representation for now
-                                                const newItems = files.map(f => ({
-                                                    title: f.name,
-                                                    type: f.type.includes('image') ? 'image' : 'file',
-                                                    url: URL.createObjectURL(f)
-                                                }));
-                                                setProfilePortfolio([...profilePortfolio, ...newItems]);
-                                            }}
-                                        />
-                                    </label>
-                                )}
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                {profilePortfolio.map((item, index) => (
-                                    <div key={index} className="group relative rounded-2xl overflow-hidden border border-border-color dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
-                                        {item.type === 'file' || item.img?.endsWith('.pdf') ? (
-                                            <div className="aspect-video flex flex-col items-center justify-center p-6 text-center">
-                                                <div className="p-4 bg-red-50 dark:bg-red-900/30 rounded-2xl mb-3">
-                                                    <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-4xl">description</span>
+                                {(profilePortfolio.length > 0 || isProView) && (
+                                    <section className="p-8 rounded-2xl shadow-soft bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 scroll-mt-28" id="portfolio">
+                                        <div className="flex items-center justify-between mb-8">
+                                            <div className="flex items-center gap-4">
+                                                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
+                                                    <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">photo_library</span>
                                                 </div>
-                                                <p className="text-sm font-medium text-text-primary dark:text-white line-clamp-1 px-4">{item.title}</p>
-                                                <p className="text-xs text-text-secondary dark:text-gray-400 mt-1 uppercase">Document File</p>
+                                                <h2 className="text-2xl font-bold text-text-primary dark:text-white">Portfolio & Certifications</h2>
+                                            </div>
+                                            {isProView && (
+                                                <label className="cursor-pointer bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-2">
+                                                    <span className="material-symbols-outlined text-base">add</span>
+                                                    Add Work
+                                                    <input 
+                                                        type="file" 
+                                                        className="hidden" 
+                                                        multiple
+                                                        accept="image/*,.pdf,.doc,.docx"
+                                                        onChange={(e) => {
+                                                            const files = Array.from(e.target.files || []);
+                                                            const newItems = files.map(f => ({
+                                                                title: f.name,
+                                                                type: f.type.includes('image') ? 'image' : 'file',
+                                                                url: URL.createObjectURL(f)
+                                                            }));
+                                                            setProfilePortfolio([...profilePortfolio, ...newItems]);
+                                                        }}
+                                                    />
+                                                </label>
+                                            )}
+                                        </div>
+                                        
+                                        {profilePortfolio.length > 0 ? (
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                                {profilePortfolio.map((item, index) => (
+                                                    <div key={index} className="group relative rounded-2xl overflow-hidden border border-border-color dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                                                        {item.type === 'file' || item.img?.endsWith('.pdf') ? (
+                                                            <div className="aspect-video flex flex-col items-center justify-center p-6 text-center">
+                                                                <div className="p-4 bg-red-50 dark:bg-red-900/30 rounded-2xl mb-3">
+                                                                    <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-4xl">description</span>
+                                                                </div>
+                                                                <p className="text-sm font-medium text-text-primary dark:text-white line-clamp-1 px-4">{item.title}</p>
+                                                                <p className="text-xs text-text-secondary dark:text-gray-400 mt-1 uppercase">Document File</p>
+                                                            </div>
+                                                        ) : (
+                                                            <img
+                                                                src={item.img || item.url}
+                                                                alt={item.title}
+                                                                className="w-full aspect-video object-cover transition-transform duration-500 group-hover:scale-110"
+                                                            />
+                                                        )}
+                                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-6">
+                                                            <p className="text-white font-medium text-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{item.title}</p>
+                                                            <button className="mt-3 text-white/80 text-sm hover:text-white flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-75">
+                                                                View Full Size <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         ) : (
-                                            <img
-                                                src={item.img || item.url}
-                                                alt={item.title}
-                                                className="w-full aspect-video object-cover transition-transform duration-500 group-hover:scale-110"
-                                            />
+                                            <div className="py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl">
+                                                <span className="material-symbols-outlined text-4xl text-slate-200 dark:text-slate-700 mb-4 font-light">collections</span>
+                                                <p className="text-slate-400 dark:text-slate-500 text-sm font-medium">No portfolio items added yet.</p>
+                                                {isProView && <p className="text-slate-300 dark:text-slate-600 text-xs mt-1">Upload photos of your past work to attract more clients.</p>}
+                                            </div>
                                         )}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-6">
-                                            <p className="text-white font-medium text-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">{item.title}</p>
-                                            <button className="mt-3 text-white/80 text-sm hover:text-white flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-75">
-                                                View Full Size <span className="material-symbols-outlined text-sm">open_in_new</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                                </section>
-
-
-
-
+                                    </section>
+                                )}
 
                                 <section className="p-8 rounded-2xl shadow-soft bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 scroll-mt-28" id="availability">
                                     <div className="flex items-center justify-between mb-8">
@@ -936,10 +945,9 @@ const ProfessionalProfile = () => {
                                 )}
                             </div>
                         </div>
-                        {!isProView && <CustomerFooter />}
                     </div>
                 </main>
-
+                {!isProView && <CustomerFooter />}
             </div>
 
             <RequestEstimateModal

@@ -42,57 +42,162 @@ const ProfessionalMessages = () => {
         }
     }, [user]);
 
-    // Get the active request from search params, or default to first one
-    const requestId = searchParams.get('requestId') || professionalRequests[0]?.id;
-    const activeRequest = professionalRequests.find(r => r.id === requestId);
-    const activeRequestId = activeRequest?.id;
+    // Sidebar Hydration: Fetch details for ALL customers in the list
+    const [hydratedRequests, setHydratedRequests] = useState<any[]>([]);
 
-    // Fetch details for active user if not present (Lazy Hydration)
     useEffect(() => {
-        const fetchDetails = async () => {
-            if (!activeRequest) {
-                setActiveUserDetails(null);
+        const hydrate = async () => {
+            if (professionalRequests.length === 0) {
+                setHydratedRequests([]);
                 return;
             }
-            const customerId = activeRequest.customer;
-            if (!customerId) return;
-            
-            try {
-                const details = await getUserDetails(customerId);
-                setActiveUserDetails(details);
-            } catch (err) {
-                console.error("Failed to fetch customer details:", err);
-            }
+
+            const jobsWithDetails = await Promise.all(professionalRequests.map(async (job) => {
+                // If backend already provides detail, use it; otherwise fetch.
+                if (job.customer_detail?.first_name || job.customer_detail?.user?.first_name) {
+                    return job;
+                }
+                try {
+                    const details = await getUserDetails(job.customer);
+                    return { ...job, customer_detail: details };
+                } catch (err) {
+                    console.error("Failed to hydrate job customer:", job.id, err);
+                    return job;
+                }
+            }));
+            setHydratedRequests(jobsWithDetails);
         };
-        fetchDetails();
-    }, [activeRequestId]);
+        hydrate();
+    }, [professionalRequests]);
+
+    // Active Chat Hydration (for Header/Project info)
+    const urlRequestId = searchParams.get('requestId');
+    const urlConversationId = searchParams.get('conversationId');
+    const urlJobTitle = searchParams.get('jobTitle');
+
+    // Priority: conversationId > requestId > jobTitle > first item
+    const activeRequest = (urlConversationId ? hydratedRequests.find(r => r.conversation_id === urlConversationId || r.id === urlConversationId) : null) ||
+                          hydratedRequests.find(r => r.id === urlRequestId) || 
+                          (urlJobTitle ? hydratedRequests.find(r => {
+                              const match = r.title?.toLowerCase() === urlJobTitle.toLowerCase();
+                              if (urlJobTitle) console.log(`Comparing Pro Job "${r.title?.toLowerCase()}" vs "${urlJobTitle.toLowerCase()}": ${match}`);
+                              return match;
+                          }) : null) ||
+                          hydratedRequests[0];
+                          
+    if (urlConversationId && activeRequest) {
+        console.log("ProfessionalMessages: Matched job by conversationId:", activeRequest.id);
+    } else if (urlJobTitle && activeRequest && !urlRequestId) {
+        console.log("ProfessionalMatched job by title fallback:", activeRequest.title);
+    }
+    const requestId = activeRequest?.id;
+    const activeRequestId = activeRequest?.id;
+
+    // When jobs finish loading, make sure the URL's requestId is still honoured.
+    // This handles the case where a notification click navigates before data loads.
+    useEffect(() => {
+        const urlRequestId = searchParams.get('requestId');
+        if (urlRequestId && hydratedRequests.length > 0) {
+            const match = hydratedRequests.find(r => r.id === urlRequestId);
+            if (!match) {
+                console.warn('ProfessionalMessages: requestId from URL not found in job list:', urlRequestId);
+            }
+        }
+    }, [hydratedRequests]);
+
+    useEffect(() => {
+        if (activeRequest?.customer_detail) {
+            setActiveUserDetails(activeRequest.customer_detail);
+        } else if (activeRequest?.customer) {
+            getUserDetails(activeRequest.customer).then(setActiveUserDetails).catch(console.error);
+        }
+    }, [activeRequestId, activeRequest?.customer_detail]);
 
     const [messageInput, setMessageInput] = useState("");
     const [showStatus, setShowStatus] = useState(false);
+    const [showCustomerProfile, setShowCustomerProfile] = useState(false);
 
     const handleSelectRequest = (id: string) => {
         setSearchParams({ requestId: id });
     };
 
     const handleAccept = async () => {
-        if (!activeRequestId) return;
+        if (!activeRequestId) {
+            console.error("ProfessionalMessages: No activeRequestId found for handleAccept");
+            return;
+        }
         try {
+            console.log("ProfessionalMessages: ATTEMPTING ACCEPT for ID:", activeRequestId);
             const updated = await updateJobStatus(activeRequestId, 'accepted');
-            console.log("ProfessionalMessages: Accepted Job Response:", updated);
-            // Merge updated status with existing hydrated request to keep details like customer_detail
-            setProfessionalRequests(prev => prev.map(r => 
-                r.id === activeRequestId ? { ...r, ...updated } : r
-            ));
+            console.log("ProfessionalMessages: ACCEPT SUCCESS response:", updated);
+            
+            // Force immediate UI reflection by updating all sets
+            const updatedRequests = (prev: any[]) => prev.map(r => 
+                r.id === activeRequestId ? { ...r, status: 'accepted' } : r
+            );
+            
+            setProfessionalRequests(updatedRequests);
+            setHydratedRequests(updatedRequests);
+            
+            console.log("ProfessionalMessages: State updated to 'accepted'");
         } catch (error: any) {
+            console.error("ProfessionalMessages: ACCEPT FAILURE:", error);
             alert("Failed to accept: " + error.message);
         }
     };
 
+    const getStepStatus = (index: number, currentStatus: string) => {
+        const statusMap: Record<string, number> = {
+            'pending': 0,
+            'accepted': 1,
+            'booked': 2,
+            'in_progress': 2,
+            'done': 3,
+            'completed': 4
+        };
+        const currentIndex = statusMap[currentStatus.toLowerCase()] || 0;
+        if (index < currentIndex) return 'completed';
+        if (index === currentIndex) return 'current';
+        return 'upcoming';
+    };
+
+    const jobSteps = [
+        {
+            title: "Request Received",
+            status: getStepStatus(0, activeRequest?.status || 'pending'),
+            date: activeRequest?.created_at ? new Date(activeRequest.created_at).toLocaleDateString([], { month: 'short', day: 'numeric'}) : null
+        },
+        {
+            title: "Pro Ready",
+            status: getStepStatus(1, activeRequest?.status || 'pending'),
+            actionRequired: activeRequest?.status === 'pending'
+        },
+        {
+            title: "Job Booked",
+            status: getStepStatus(2, activeRequest?.status || 'pending'),
+            date: activeRequest?.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric'}) : null
+        },
+        {
+            title: "Work Finished",
+            status: getStepStatus(3, activeRequest?.status || 'pending'),
+            actionRequired: activeRequest?.status === 'booked' || activeRequest?.status === 'in_progress'
+        },
+        {
+            title: "Paid & Released",
+            status: getStepStatus(4, activeRequest?.status || 'pending')
+        }
+    ];
+
     const handleMarkDone = async () => {
         if (!activeRequestId) return;
         try {
-            const updated = await updateJobStatus(activeRequestId, 'done');
-            setProfessionalRequests(prev => prev.map(r => r.id === activeRequestId ? updated : r));
+            await updateJobStatus(activeRequestId, 'done');
+            setProfessionalRequests(prev => prev.map(r => 
+                r.id === activeRequestId ? { ...r, status: 'done' } : r
+            ));
+            setHydratedRequests(prev => prev.map(r => 
+                r.id === activeRequestId ? { ...r, status: 'done' } : r
+            ));
         } catch (error: any) {
             alert("Failed to mark as done: " + error.message);
         }
@@ -101,8 +206,13 @@ const ProfessionalMessages = () => {
     const handleDecline = async () => {
         if (!activeRequestId) return;
         try {
-            const updated = await updateJobStatus(activeRequestId, 'cancelled');
-            setProfessionalRequests(prev => prev.map(r => r.id === activeRequestId ? updated : r));
+            await updateJobStatus(activeRequestId, 'cancelled');
+            setProfessionalRequests(prev => prev.map(r => 
+                r.id === activeRequestId ? { ...r, status: 'cancelled' } : r
+            ));
+            setHydratedRequests(prev => prev.map(r => 
+                r.id === activeRequestId ? { ...r, status: 'cancelled' } : r
+            ));
         } catch (error: any) {
             alert("Failed to decline: " + error.message);
         }
@@ -132,7 +242,7 @@ const ProfessionalMessages = () => {
                                         {professionalRequests.length} Total
                                     </span>
                                     {notifications.filter(n => !n.is_read && (n.message?.toLowerCase().includes('request') || n.message?.toLowerCase().includes('job'))).length > 0 && (
-                                        <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter animate-pulse">
+                                        <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
                                             {notifications.filter(n => !n.is_read).length} New
                                         </span>
                                     )}
@@ -140,13 +250,13 @@ const ProfessionalMessages = () => {
                             )}
                         </div>
                         <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            {professionalRequests.length === 0 ? (
+                            {hydratedRequests.length === 0 ? (
                                 <div className="p-10 text-center space-y-3 opacity-40">
                                     <span className="material-symbols-outlined text-4xl block">pending_actions</span>
                                     <p className="text-xs font-bold leading-relaxed">No requests yet.<br />Your profile is live and visible!</p>
                                 </div>
                             ) : (
-                                professionalRequests.map(req => (
+                                hydratedRequests.map(req => (
                                     <div
                                         key={req.id}
                                         onClick={() => handleSelectRequest(req.id)}
@@ -169,7 +279,7 @@ const ProfessionalMessages = () => {
                                                         </span>
                                                     </div>
                                                 )}
-                                                {req.status === 'pending' && <div className="absolute -top-0.5 -right-0.5 size-3 bg-primary rounded-full border-2 border-white dark:border-slate-900 animate-pulse" />}
+                                                {req.status === 'pending' && <div className="absolute -top-0.5 -right-0.5 size-3 bg-primary rounded-full border-2 border-white dark:border-slate-900" />}
                                             </div>
                                             <div className="min-w-0 flex-1">
                                                 <h4 className={`text-sm tracking-tight truncate ${activeRequestId === req.id ? 'font-black text-primary' : 'font-bold'}`}>
@@ -189,7 +299,7 @@ const ProfessionalMessages = () => {
                                                 <span className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase">
                                                     {(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--"}
                                                 </span>
-                                                {req.status === 'pending' && <span className="size-2 bg-primary rounded-full animate-pulse" />}
+                                                {req.status === 'pending' && <span className="size-2 bg-primary rounded-full" />}
                                             </div>
                                         </div>
                                     </div>
@@ -224,6 +334,11 @@ const ProfessionalMessages = () => {
                                         >
                                             <span className="material-symbols-outlined text-xl">arrow_back</span>
                                         </button>
+                                        {/* Clickable customer identity — opens mini profile */}
+                                        <button
+                                            onClick={() => setShowCustomerProfile(p => !p)}
+                                            className="flex items-center gap-3 md:gap-4 hover:opacity-80 transition-opacity"
+                                        >
                                         <div className="relative group cursor-pointer">
                                             <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-md overflow-hidden">
                                                 {(activeUserDetails?.profile_picture || activeRequest.customer_detail?.profile_picture) ? (
@@ -234,8 +349,8 @@ const ProfessionalMessages = () => {
                                             </div>
                                             <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm" />
                                         </div>
-                                        <div className="flex flex-col gap-0.5">
-                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none">
+                                        <div className="flex flex-col gap-0.5 text-left">
+                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none underline-offset-2 hover:underline">
                                                 {(() => {
                                                     const detail = activeUserDetails || activeRequest.customer_detail;
                                                     if (!detail) return "Customer";
@@ -246,9 +361,68 @@ const ProfessionalMessages = () => {
                                             </h3>
                                             <div className="flex items-center gap-1.5 opacity-60">
                                                 <span className="size-1.5 bg-green-500 rounded-full animate-blink" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Customer • Online</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Online</span>
                                             </div>
                                         </div>
+                                        </button>
+
+                                        {/* Customer Mini-Profile Popup */}
+                                        {showCustomerProfile && (() => {
+                                            const detail = activeUserDetails || activeRequest.customer_detail;
+                                            const first = detail?.first_name || detail?.user?.first_name || "Customer";
+                                            const last = detail?.last_name || detail?.user?.last_name || "";
+                                            const fullName = `${first} ${last}`.trim();
+                                            const photo = detail?.profile_picture || detail?.user?.profile_picture;
+                                            const email = detail?.email || detail?.user?.email;
+                                            const phone = detail?.phonenumber || detail?.phone || detail?.user?.phonenumber;
+                                            const location = detail?.city || detail?.location || detail?.user?.city;
+                                            return (
+                                                <div
+                                                    className="absolute left-4 top-[4.5rem] z-[100] w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                                                    onClick={e => e.stopPropagation()}
+                                                >
+                                                    {/* Mini cover */}
+                                                    <div className="h-16 bg-gradient-to-r from-primary/30 to-primary/10 relative" />
+                                                    <div className="px-5 pb-5 -mt-8">
+                                                        <div className="size-16 rounded-full border-4 border-white dark:border-slate-800 overflow-hidden bg-primary/10 flex items-center justify-center shadow-lg mb-3">
+                                                            {photo ? (
+                                                                <img src={getImageUrl(photo)} alt={fullName} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span className="material-symbols-outlined text-3xl text-primary">person</span>
+                                                            )}
+                                                        </div>
+                                                        <h4 className="font-black text-base text-slate-900 dark:text-white">{fullName}</h4>
+                                                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-3">Customer</p>
+                                                        <div className="space-y-2">
+                                                            {location && (
+                                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                                    <span className="material-symbols-outlined text-sm text-slate-400">location_on</span>
+                                                                    <span className="font-medium">{location}</span>
+                                                                </div>
+                                                            )}
+                                                            {email && (
+                                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                                    <span className="material-symbols-outlined text-sm text-slate-400">mail</span>
+                                                                    <span className="font-medium truncate">{email}</span>
+                                                                </div>
+                                                            )}
+                                                            {phone && (
+                                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                                    <span className="material-symbols-outlined text-sm text-slate-400">call</span>
+                                                                    <span className="font-medium">{phone}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setShowCustomerProfile(false)}
+                                                            className="mt-4 w-full py-2 text-[11px] font-black uppercase tracking-widest rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                                                        >
+                                                            Close
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                     <div className="flex gap-2">
                                         <button
@@ -263,125 +437,123 @@ const ProfessionalMessages = () => {
                                     </div>
                                 </div>
 
-                                {/* Messaging Area */}
-                                <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-[size:24px_24px]">
-
-                                    {/* Project Insight Card */}
-                                    <div className="max-w-lg mx-auto w-full bg-white dark:bg-slate-900 rounded-2xl border-2 border-primary/20 p-6 space-y-4 shadow-2xl shadow-primary/5 animate-in fade-in slide-in-from-top-4 duration-500">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2 text-primary">
-                                                <span className="material-symbols-outlined font-black">assignment</span>
-                                                <h4 className="font-black text-xs uppercase tracking-widest">Inbound Proposal</h4>
+                                {/* Messaging Canvas with Premium Background */}
+                                <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 relative" 
+                                     style={{ 
+                                        backgroundColor: 'transparent',
+                                        backgroundImage: `
+                                            radial-gradient(circle at 2px 2px, rgba(148, 163, 184, 0.05) 1px, transparent 0),
+                                            linear-gradient(to bottom, rgba(248, 250, 252, 0.8), rgba(241, 245, 249, 0.8))
+                                        `,
+                                        backgroundSize: '32px 32px, 100% 100%'
+                                     }}>                                    {/* Project Insight Card - Simplified */}
+                                    <div className="max-w-lg mx-auto w-full bg-white dark:bg-card-dark rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm animate-in fade-in slide-in-from-top-4">
+                                        <div className="flex items-center justify-between mb-4 border-b border-slate-50 dark:border-slate-800 pb-4">
+                                            <div className="flex items-center gap-2 text-slate-900 dark:text-white">
+                                                <span className="material-symbols-outlined text-xl">assignment_late</span>
+                                                <h4 className="font-bold text-sm tracking-tight text-text-primary dark:text-white">Inbound Proposal</h4>
                                             </div>
-                                            <span className="text-[10px] font-black text-slate-400 tracking-tighter">
-                                                ID: {activeRequest.id.substring(0, 8)}
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                ID-{activeRequest.id.substring(0, 6)}
                                             </span>
                                         </div>
 
                                         <div className="space-y-4">
-                                            <p className="text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 italic">
+                                            <p className="text-sm text-slate-600 dark:text-slate-400 font-medium leading-relaxed bg-slate-50 dark:bg-slate-900/50 p-4 rounded-xl italic">
                                                 "{activeRequest.description}"
                                             </p>
 
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl flex items-center gap-3">
-                                                    <span className="material-symbols-outlined text-primary text-lg">location_on</span>
-                                                    <div className="min-w-0">
-                                                        <p className="text-[9px] font-black uppercase tracking-wide opacity-40 leading-none mb-1">Location</p>
-                                                        <p className="text-xs font-bold truncate">{activeRequest.location}</p>
-                                                    </div>
+                                            <div className="flex flex-col gap-3">
+                                                <div className="flex items-center gap-3 text-slate-600 dark:text-slate-400">
+                                                    <span className="material-symbols-outlined text-sm">location_on</span>
+                                                    <span className="text-xs font-bold leading-tight truncate">
+                                                        {activeRequest.address || activeRequest.city || activeRequest.subcity || activeRequest.location || "Addis Ababa"}
+                                                    </span>
                                                 </div>
-                                                <div className="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-xl flex items-center gap-3">
-                                                    <span className="material-symbols-outlined text-green-500 text-lg">payments</span>
-                                                    <div className="min-w-0">
-                                                        <p className="text-[9px] font-black uppercase tracking-wide opacity-40 leading-none mb-1">Budget</p>
-                                                        <p className="text-xs font-bold truncate text-green-600 dark:text-green-400">{activeRequest.budget}</p>
-                                                    </div>
+                                                <div className="flex items-center gap-3 text-emerald-600 dark:text-emerald-400">
+                                                    <span className="material-symbols-outlined text-sm">payments</span>
+                                                    <span className="text-xs font-bold">
+                                                        {activeRequest.budget ? `${activeRequest.budget} ETB` : "Budget TBD"}
+                                                    </span>
                                                 </div>
                                             </div>
 
-                                            {activeRequest.preferredDate && (
+                                            {(activeRequest.scheduled_at || activeRequest.preferredDate) && (
                                                 <div className="bg-primary/5 p-3 rounded-xl flex items-center gap-3 border border-primary/10">
                                                     <span className="material-symbols-outlined text-primary text-lg">event_upcoming</span>
                                                     <div className="min-w-0">
-                                                        <p className="text-[9px] font-black uppercase tracking-wide opacity-50 leading-none mb-1 text-primary">Target Completion</p>
-                                                        <p className="text-xs font-black text-primary">
-                                                            {new Date(activeRequest.preferredDate).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
+                                                        <p className="text-[9px] font-bold uppercase tracking-wide opacity-50 leading-none mb-1 text-primary">Target Completion</p>
+                                                        <p className="text-xs font-bold text-primary">
+                                                            {new Date(activeRequest.scheduled_at || activeRequest.preferredDate).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
                                                         </p>
                                                     </div>
                                                 </div>
                                             )}
+                                        </div>
 
-                                            {activeRequest.photos?.length > 0 && (
-                                                <div className="flex gap-2 overflow-x-auto py-1 custom-scrollbar">
-                                                    {activeRequest.photos.map((p: string, i: number) => (
-                                                        <img key={i} src={p} alt="" className="size-20 rounded-xl object-cover border-2 border-white dark:border-slate-800 shadow-sm hover:scale-105 transition-transform" />
-                                                    ))}
+                                        <div className="mt-6">
+                                            {activeRequest.status === 'pending' ? (
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={handleAccept}
+                                                        className="flex-1 py-3 bg-primary text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-primary/30 hover:bg-primary/90"
+                                                    >
+                                                        Accept Request
+                                                    </button>
+                                                    <button
+                                                        onClick={handleDecline}
+                                                        className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-xs font-bold uppercase tracking-widest transition-all hover:bg-red-50 hover:text-red-500"
+                                                    >
+                                                        Decline
+                                                    </button>
+                                                </div>
+                                            ) : (activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'in_progress') ? (
+                                                <button
+                                                    onClick={handleMarkDone}
+                                                    className="w-full py-3 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all hover:bg-emerald-700 shadow-lg shadow-emerald-600/20"
+                                                >
+                                                    Mark Job Done
+                                                </button>
+                                            ) : (
+                                                <div className={`py-3 text-center rounded-xl text-xs font-bold uppercase tracking-widest ${activeRequest.status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                                                    Status: {activeRequest.status}
                                                 </div>
                                             )}
                                         </div>
-                                         {activeRequest.status === 'pending' ? (
-                                            <div className="flex gap-3 pt-2">
-                                                <button
-                                                    onClick={handleAccept}
-                                                    className="flex-1 py-3 bg-primary text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-primary/30 hover:scale-[1.02] active:scale-[0.98]"
-                                                >
-                                                    Accept & Connect
-                                                </button>
-                                                <button
-                                                    onClick={handleDecline}
-                                                    className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:bg-red-50 hover:text-red-500"
-                                                >
-                                                    Decline
-                                                </button>
-                                            </div>
-                                        ) : activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'in_progress' ? (
-                                            <button
-                                                onClick={handleMarkDone}
-                                                className="w-full py-3 bg-emerald-500 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-200 dark:shadow-none hover:bg-emerald-600 active:scale-95"
-                                            >
-                                                Mark as Job Done
-                                            </button>
-                                        ) : (
-                                            <div className={`py-3 text-center rounded-xl text-xs font-black uppercase tracking-[0.2em] ${activeRequest.status === 'completed' ? 'bg-green-500/10 text-green-600 border border-green-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20'
-                                                }`}>
-                                                Status: {activeRequest.status}
-                                            </div>
-                                        )}
-
                                     </div>
 
+                                    {/* Timeline Marker */}
                                     <div className="flex justify-center my-4">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm">
-                                        Session Started • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "--"}
-                                    </span>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 bg-white/50 dark:bg-slate-900/50 px-4 py-1 rounded-full border border-slate-100 dark:border-slate-800">
+                                            Chat Started • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "--"}
+                                        </span>
                                     </div>
 
-                                    {/* Inbound Customer Message (Real Description) */}
+                                    {/* Inbound Customer Message */}
                                     <div className="flex justify-start animate-in fade-in slide-in-from-left-4">
                                         <div className="flex flex-col gap-1.5 max-w-[85%]">
                                             <div className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl rounded-bl-none px-4 py-3 text-sm font-medium shadow-sm border border-slate-100 dark:border-slate-700">
-                                                {activeRequest.description || "Hello! I'm interested in your services for my project. Looking forward to your response!"}
+                                                {activeRequest.description || "Hello! Looking forward to working with you."}
                                             </div>
-                                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter ml-1">
-                                                Received • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--"}
+                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">
+                                                Received • {new Date(activeRequest.created_at || activeRequest.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
                                     </div>
 
-                                    {/* Pro Response (Sent after Accept) */}
+                                    {/* Professional Response */}
                                     {activeRequest.status !== 'pending' && (
                                         <div className="flex justify-end animate-in fade-in slide-in-from-right-4">
                                             <div className="flex flex-col items-end gap-1.5 max-w-[85%]">
-                                                <div className="bg-primary text-white rounded-2xl rounded-br-none px-4 py-3 text-sm font-medium shadow-lg shadow-primary/20 border border-primary/20">
+                                                <div className="bg-primary text-white rounded-2xl rounded-br-none px-4 py-3 text-sm font-medium shadow-lg shadow-primary/20">
                                                     {activeRequest.status === 'accepted' || activeRequest.status === 'assigned'
                                                         ? "I've reviewed your request and accepted the project! Let's get started."
                                                         : activeRequest.status === 'done'
                                                         ? "I've marked the job as completed. Please review and release payment."
                                                         : "Status updated to: " + activeRequest.status}
                                                 </div>
-                                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter mr-1">
-                                                    Sent • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mr-1">
+                                                    Sent • Just now
                                                 </span>
                                             </div>
                                         </div>
@@ -396,17 +568,17 @@ const ProfessionalMessages = () => {
                                         </button>
                                         <input
                                             className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 dark:text-white placeholder-slate-400 py-3"
-                                            placeholder={activeRequest.status === 'accepted' ? "Reply to customer..." : "Accept request to start messaging"}
+                                            placeholder={['accepted', 'assigned', 'in_progress'].includes(activeRequest.status) ? "Reply to customer..." : "Accept request to start messaging"}
                                             type="text"
                                             value={messageInput}
                                             onChange={(e) => setMessageInput(e.target.value)}
-                                            disabled={activeRequest.status !== 'accepted'}
+                                            disabled={!['accepted', 'assigned', 'in_progress'].includes(activeRequest.status)}
                                         />
                                         <button
-                                            className="flex items-center justify-center bg-primary text-white rounded-xl px-5 py-2.5 gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/30 disabled:opacity-40 disabled:scale-100"
-                                            disabled={activeRequest.status !== 'accepted'}
+                                            className="flex items-center justify-center bg-primary text-white rounded-xl px-5 py-2.5 gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/30 disabled:opacity-40"
+                                            disabled={!['accepted', 'assigned', 'in_progress'].includes(activeRequest.status)}
                                         >
-                                            <span className="text-xs font-black uppercase tracking-wider">Send</span>
+                                            <span className="text-xs font-bold uppercase tracking-wider">Send</span>
                                             <span className="material-symbols-outlined text-sm">send</span>
                                         </button>
                                     </div>
@@ -430,81 +602,77 @@ const ProfessionalMessages = () => {
                             </button>
                         )}
                         {activeRequest ? (
-                            <div className={`bg-white dark:bg-card-dark rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/60 dark:border-slate-800 p-6 relative overflow-hidden ${activeRequest?.status === 'accepted' ? 'ring-2 ring-green-500/20' : ''}`}>
-                                <div className="absolute top-0 right-0 w-20 h-20 bg-primary/5 rounded-full -translate-y-10 translate-x-10 pointer-events-none" />
-
-
-
-                                <div className="space-y-8 relative">
-                                    <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-slate-100 dark:bg-slate-800" />
-
-                                    {/* Timeline Steps */}
-                                    <div className="flex items-start gap-4 relative z-10">
-                                        <div className="size-4 rounded-full bg-green-500 flex items-center justify-center text-white ring-4 ring-white dark:ring-slate-900 shadow-sm">
-                                            <span className="material-symbols-outlined text-[10px] font-black">check</span>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-black text-slate-700 dark:text-slate-300">Request Received</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Initial Inquiry</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-start gap-4 relative z-10">
-                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${activeRequest?.status !== 'pending' ? 'bg-green-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                                            {activeRequest?.status !== 'pending' ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
-                                        </div>
-                                        <div>
-                                            <p className={`text-xs font-black ${activeRequest?.status !== 'pending' ? 'text-green-600' : 'text-slate-500'}`}>Accepted</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Pro Ready</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-start gap-4 relative z-10">
-                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${(activeRequest?.status === 'booked' || activeRequest?.status === 'in_progress' || activeRequest?.status === 'done' || activeRequest?.status === 'completed') ? 'bg-blue-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                                            {(activeRequest?.status === 'booked' || activeRequest?.status === 'in_progress' || activeRequest?.status === 'done' || activeRequest?.status === 'completed') ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
-                                        </div>
-                                        <div>
-                                            <p className={`text-xs font-black ${(activeRequest?.status === 'booked' || activeRequest?.status === 'in_progress') ? 'text-blue-600' : 'text-slate-500'}`}>Job Booked</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Customer Paid</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-start gap-4 relative z-10">
-                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${(activeRequest?.status === 'done' || activeRequest?.status === 'completed') ? 'bg-emerald-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                                            {(activeRequest?.status === 'done' || activeRequest?.status === 'completed') ? <span className="material-symbols-outlined text-[10px] font-black">check</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
-                                        </div>
-                                        <div>
-                                            <p className={`text-xs font-black ${activeRequest?.status === 'done' ? 'text-emerald-600' : 'text-slate-500'}`}>Marked Done</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Awaiting Approval</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-start gap-4 relative z-10">
-                                        <div className={`size-4 rounded-full flex items-center justify-center ring-4 ring-white dark:ring-slate-900 shadow-sm ${activeRequest?.status === 'completed' ? 'bg-amber-500 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-400'}`}>
-                                            {activeRequest?.status === 'completed' ? <span className="material-symbols-outlined text-[10px] font-black">payments</span> : <div className="size-1.5 bg-slate-400 rounded-full" />}
-                                        </div>
-                                        <div>
-                                            <p className={`text-xs font-black ${activeRequest?.status === 'completed' ? 'text-amber-600' : 'text-slate-500'}`}>Verified & Paid</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Funds Released</p>
-                                        </div>
+                            <div className="flex flex-col gap-6">
+                                {/* Clean Timeline */}
+                                <div className="bg-white dark:bg-card-dark rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/60 dark:border-slate-800 p-8">
+                                    <h3 className="text-sm font-black text-text-primary dark:text-white uppercase tracking-[0.15em] mb-10 text-center">Project Timeline</h3>
+    
+                                    <div className="relative flex flex-col gap-12">
+                                        {/* Progress Line */}
+                                        <div className="absolute left-[11px] top-6 bottom-6 w-1 bg-slate-100 dark:bg-slate-800 rounded-full" />
+    
+                                        {jobSteps.map((step, index) => {
+                                            const isCompleted = step.status === 'completed';
+                                            const isCurrent = step.status === 'current';
+    
+                                            return (
+                                                <div key={index} className={`flex gap-6 relative group transition-all duration-500 ${!isCompleted && !isCurrent ? 'opacity-40 grayscale' : ''}`}>
+                                                    {/* Stepper Node */}
+                                                    <div className="relative shrink-0 z-10">
+                                                        {isCompleted ? (
+                                                            <div className="size-[26px] bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-green-500/40 ring-4 ring-white dark:ring-slate-900">
+                                                                <span className="material-symbols-outlined text-sm font-black">check</span>
+                                                            </div>
+                                                        ) : isCurrent ? (
+                                                            <div className="size-[26px] bg-primary rounded-full flex items-center justify-center text-white shadow-lg shadow-primary/40 ring-4 ring-white dark:ring-slate-900">
+                                                                <div className="size-2.5 bg-white rounded-full animate-ping" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="size-[26px] bg-slate-200 dark:bg-slate-700 rounded-full ring-4 ring-white dark:ring-slate-900" />
+                                                        )}
+                                                    </div>
+    
+                                                    <div className="flex flex-col flex-1 gap-0.5">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className={`text-sm font-black tracking-tight ${isCurrent ? 'text-primary' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                                {step.title}
+                                                            </span>
+                                                            {step.date && <span className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-tighter">{step.date}</span>}
+                                                        </div>
+                                                        <span className={`text-[11px] font-bold ${isCurrent ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+                                                            {isCompleted ? 'Phase Finalized' : isCurrent ? 'Active Phase • Action required' : 'Future Milestone'}
+                                                        </span>
+    
+                                                        {isCurrent && step.actionRequired && (
+                                                            <div className="mt-4 p-4 bg-primary/5 rounded-xl border border-primary/20 space-y-3 animate-in fade-in slide-in-from-top-2">
+                                                                <p className="text-[10px] font-black text-primary leading-tight">
+                                                                    {activeRequest.status === 'pending' ? "Review this request and accept to begin." : "Ready to finalize? Mark this job as done."}
+                                                                </p>
+                                                                {activeRequest.status === 'pending' ? (
+                                                                    <button 
+                                                                        onClick={handleAccept}
+                                                                        className="w-full py-2.5 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-sm">handshake</span>
+                                                                        Accept Request
+                                                                    </button>
+                                                                ) : (activeRequest.status === 'booked' || activeRequest.status === 'in_progress') && (
+                                                                    <button 
+                                                                        onClick={handleMarkDone}
+                                                                        className="w-full py-2.5 bg-emerald-500 text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 shadow-sm"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-sm">check_circle</span>
+                                                                        Mark as Completed
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
-
-                                {(['booked', 'in_progress'].includes(activeRequest?.status)) && (
-                                    <div className="mt-8 p-4 bg-primary/5 rounded-xl border border-primary/20 animate-in bounce-in duration-500">
-                                        <h5 className="text-[10px] font-black text-primary uppercase tracking-widest mb-2">Job is Active</h5>
-                                        <p className="text-[10px] text-slate-500 font-bold leading-relaxed mb-4">
-                                            Funds are in Escrow. You can now mark the job as done when finished.
-                                        </p>
-                                        <button 
-                                            onClick={() => updateJobStatus(activeRequestId, 'done')}
-                                            className="w-full py-2.5 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-primary/90 transition-all shadow-md flex items-center justify-center gap-2"
-                                        >
-                                            <span className="material-symbols-outlined text-base">task_alt</span>
-                                            Mark as Completed
-                                        </button>
-                                    </div>
-                                )}
 
                                 {activeRequest?.status === 'completed' && (
                                     <div className="mt-8 p-4 bg-amber-500/10 rounded-xl border border-amber-500/20 animate-in zoom-in">

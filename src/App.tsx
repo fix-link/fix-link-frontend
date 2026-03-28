@@ -66,6 +66,11 @@ function App() {
             <CustomerMessages />
           </ProtectedRoute>
         } />
+        <Route path="/customer/messages" element={
+          <ProtectedRoute role="customer">
+            <CustomerMessages />
+          </ProtectedRoute>
+        } />
 
         <Route path="/customer/bookings" element={
           <ProtectedRoute role="customer">
@@ -83,6 +88,14 @@ function App() {
         />
         <Route
           path="/professional/messages"
+          element={
+            <ProtectedRoute role="professional">
+              <ProfessionalMessages />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/professional/notifications"
           element={
             <ProtectedRoute role="professional">
               <ProfessionalMessages />
