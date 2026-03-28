@@ -14,8 +14,13 @@ const ProfessionalMessages = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [activeUserDetails, setActiveUserDetails] = useState<any>(null);
 
+    const [isLoading, setIsLoading] = useState(true);
+    const [isInitialFetchComplete, setIsInitialFetchComplete] = useState(false);
+
     useEffect(() => {
         const fetchData = async () => {
+            // Only set loading true if we haven't completed the initial fetch yet
+            if (!isInitialFetchComplete) setIsLoading(true);
             try {
                 const [allJobs, allNotifications] = await Promise.all([
                     listJobs(),
@@ -32,6 +37,9 @@ const ProfessionalMessages = () => {
                 setNotifications(allNotifications);
             } catch (error) {
                 console.error("Error fetching pro data:", error);
+                setIsLoading(false); // don't spin forever
+            } finally {
+                setIsInitialFetchComplete(true);
             }
         };
 
@@ -47,8 +55,12 @@ const ProfessionalMessages = () => {
 
     useEffect(() => {
         const hydrate = async () => {
+            // Don't hydrate or stop loading if we haven't finished the initial API call
+            if (!isInitialFetchComplete) return;
+
             if (professionalRequests.length === 0) {
                 setHydratedRequests([]);
+                setIsLoading(false);
                 return;
             }
 
@@ -66,9 +78,10 @@ const ProfessionalMessages = () => {
                 }
             }));
             setHydratedRequests(jobsWithDetails);
+            setIsLoading(false);
         };
         hydrate();
-    }, [professionalRequests]);
+    }, [professionalRequests, isInitialFetchComplete]);
 
     // Active Chat Hydration (for Header/Project info)
     const urlRequestId = searchParams.get('requestId');
@@ -229,7 +242,7 @@ const ProfessionalMessages = () => {
                     {/* Left Sidebar: Conversation List */}
                     <div className={`
                         w-full md:w-80 flex-col bg-white dark:bg-card-dark rounded-none md:rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border-b md:border border-slate-200/60 dark:border-slate-800 overflow-hidden shrink-0
-                        ${requestId ? 'hidden md:flex' : 'flex'}
+                        ${requestId || (!isLoading && hydratedRequests.length > 0) ? 'hidden md:flex' : 'flex'}
                     `}>
                         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                             <h3 className="text-sm font-black flex items-center gap-2 tracking-tight">
@@ -249,8 +262,13 @@ const ProfessionalMessages = () => {
                                 </div>
                             )}
                         </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            {hydratedRequests.length === 0 ? (
+                        <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+                            {isLoading ? (
+                                <div className="flex flex-col items-center justify-center h-full opacity-60">
+                                    <span className="material-symbols-outlined text-4xl animate-spin text-primary">autorenew</span>
+                                    <p className="text-xs font-bold mt-3">Loading requests...</p>
+                                </div>
+                            ) : hydratedRequests.length === 0 ? (
                                 <div className="p-10 text-center space-y-3 opacity-40">
                                     <span className="material-symbols-outlined text-4xl block">pending_actions</span>
                                     <p className="text-xs font-bold leading-relaxed">No requests yet.<br />Your profile is live and visible!</p>
@@ -313,7 +331,17 @@ const ProfessionalMessages = () => {
                         flex flex-col flex-1 bg-white dark:bg-card-dark rounded-none md:rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border-x md:border border-slate-200/60 dark:border-slate-800 relative z-0 overflow-hidden
                         ${!requestId ? 'hidden md:flex' : 'flex'}
                     `}>
-                        {!activeRequest ? (
+                        {isLoading ? (
+                            <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-60 p-10">
+                                <span className="material-symbols-outlined text-4xl animate-spin text-primary">autorenew</span>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">Connecting to chat...</h3>
+                                    <p className="text-sm font-medium text-text-secondary dark:text-gray-400 max-w-xs">
+                                        Fetching your requests securely.
+                                    </p>
+                                </div>
+                            </div>
+                        ) : !activeRequest ? (
                             <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-40 p-10 animate-in fade-in zoom-in">
                                 <div className="size-24 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
                                     <span className="material-symbols-outlined text-6xl">quick_reference_all</span>
