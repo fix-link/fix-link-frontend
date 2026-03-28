@@ -112,6 +112,7 @@ const CustomerRegister = () => {
         dateOfBirth: form.dateOfBirth,
         password: form.password,
         email: email, // ✅ Pass email from location state
+        profilePhoto: profilePhoto, // ✅ ADDED THIS
       });
 
       // Backend returns technical success, show user-friendly message

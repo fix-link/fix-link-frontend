@@ -173,36 +173,59 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
       ? "/users/register-professional/"
       : "/users/register/";
 
-    // Use FormData if a file is present (profile photo / cv)
+    // NEW: Use FormData if ANY file is present (now supports Customers too)
     const hasFile = formData.profilePhoto instanceof File || formData.cvFile instanceof File;
 
-    if (hasFile && isProfessional) {
+    if (hasFile) {
       const fd = new FormData();
       fd.append("username", formData.email);
       fd.append("email", formData.email);
       fd.append("password", formData.password);
       fd.append("first_name", formData.firstName);
       fd.append("last_name", formData.lastName);
-      fd.append("profession", formData.serviceCategory);
-      fd.append("years_of_experience", String(Number(formData.yearsOfExperience) || 0));
-      if (formData.gender) fd.append("gender", formData.gender);
-      if (formData.dateOfBirth) fd.append("date_of_birth", formData.dateOfBirth);
-      if (formData.shortBio) fd.append("bio", formData.shortBio);
-      if (formData.city) fd.append("city", formData.city);
-      if (formData.subcity) fd.append("subcity", formData.subcity);
-      if (formData.houseNumber) fd.append("house_number", formData.houseNumber);
-      if (formData.payoutMethod) fd.append("preferred_payout_method", formData.payoutMethod);
-      if (formData.accountNumber) fd.append("payout_account_number", formData.accountNumber);
-      if (formData.serviceCategory) fd.append("service_categories", formData.serviceCategory);
-      // Attach files
-      if (formData.profilePhoto instanceof File) fd.append("profile_picture", formData.profilePhoto);
-      if (formData.cvFile instanceof File) fd.append("cv_file", formData.cvFile);
+      
+      if (isProfessional) {
+        fd.append("phonenumber", formData.phone); // ✅ ADDED THIS
+        fd.append("profession", formData.serviceCategory);
+        fd.append("years_of_experience", String(Number(formData.yearsOfExperience) || 0));
+        if (formData.gender) fd.append("gender", formData.gender);
+        if (formData.dateOfBirth) fd.append("date_of_birth", formData.dateOfBirth);
+        if (formData.shortBio) fd.append("bio", formData.shortBio);
+        
+        // If location is provided, parse it into city/subcity if they are missing
+        const city = formData.city || (formData.location?.split(',')[0]?.trim());
+        const subcity = formData.subcity || (formData.location?.split(',')[1]?.trim() || "");
+        if (city) fd.append("city", city);
+        if (subcity) fd.append("subcity", subcity);
+        
+        if (formData.houseNumber) fd.append("house_number", formData.houseNumber);
+        if (formData.payoutMethod) fd.append("preferred_payout_method", formData.payoutMethod);
+        if (formData.accountNumber) fd.append("payout_account_number", formData.accountNumber);
+        if (formData.licenseNumber) fd.append("license_number", formData.licenseNumber); // ✅ ADDED THIS
+        if (formData.serviceCategory) fd.append("service_categories", formData.serviceCategory);
+        if (formData.skills) fd.append("skills", formData.skills); // ✅ ADDED THIS
+        if (formData.cvFile instanceof File) fd.append("cv_file", formData.cvFile);
+      } else {
+        // Customer specific FormData fields
+        fd.append("phonenumber", formData.phone);
+        fd.append("role", role);
+        if (formData.gender) fd.append("gender", formData.gender);
+        if (formData.dateOfBirth) fd.append("date_of_birth", formData.dateOfBirth);
+        if (formData.location) {
+          fd.append("city", formData.location.split(',')[0]?.trim());
+          fd.append("subcity", formData.location.split(',')[1]?.trim() || "");
+        }
+      }
+
+      // Universal profile picture
+      if (formData.profilePhoto instanceof File) {
+        fd.append("profile_picture", formData.profilePhoto);
+      }
 
       const response = await api.post(endpoint, fd);
-      // Note: Do NOT set Content-Type here — axios auto-sets multipart/form-data with the correct boundary
       return {
         success: true,
-        user: response.data.user,
+        user: response.data.user || response.data,
         access: response.data.access,
         refresh: response.data.refresh,
       };
@@ -221,16 +244,20 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
     if (isProfessional) {
       payload = {
         ...commonPayload,
+        phonenumber: formData.phone, // ✅ ADDED THIS
         profession: formData.serviceCategory,
         years_of_experience: Number(formData.yearsOfExperience) || 0,
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
         ...(formData.shortBio && { bio: formData.shortBio }),
-        ...(formData.city && { city: formData.city }),
-        ...(formData.subcity && { subcity: formData.subcity }),
+        // Smart location merge
+        city: formData.city || (formData.location?.split(',')[0]?.trim()),
+        subcity: formData.subcity || (formData.location?.split(',')[1]?.trim() || ""),
         ...(formData.houseNumber && { house_number: formData.houseNumber }),
         ...(formData.payoutMethod && { preferred_payout_method: formData.payoutMethod }),
         ...(formData.accountNumber && { payout_account_number: formData.accountNumber }),
+        ...(formData.licenseNumber && { license_number: formData.licenseNumber }), // ✅ ADDED THIS
+        ...(formData.skills && { skills: formData.skills }), // ✅ ADDED THIS
         ...(formData.serviceCategory && { service_categories: [formData.serviceCategory] }),
       };
     } else {
@@ -239,13 +266,18 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
         phonenumber: formData.phone,
         role: role,
         ...(formData.gender && { gender: formData.gender }),
+        ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
+        ...(formData.location && {
+          city: formData.location.split(',')[0]?.trim(),
+          subcity: formData.location.split(',')[1]?.trim() || ""
+        }),
       };
     }
 
     const response = await api.post(endpoint, payload);
     return {
       success: true,
-      user: response.data.user,
+      user: response.data.user || response.data,
       access: response.data.access,
       refresh: response.data.refresh,
     };
@@ -302,13 +334,18 @@ export const updateUserProfile = async (id: string, data: Partial<User> | FormDa
       // Map frontend fields back to backend if needed
        payload = {
         ...data,
+        phonenumber: (data as any).phone || (data as any).phonenumber,
         bio: data.bio || (data as any).shortBio,
         profession: data.profession || (data as any).serviceCategory,
         years_of_experience: data.years_of_experience || Number((data as any).yearsOfExperience)
       };
 
-      // Remove null/undefined to avoid overwriting with empty
-      Object.keys(payload).forEach(key => (payload as any)[key] === undefined && delete (payload as any)[key]);
+      // Remove null/undefined/phone (since we mapped it) to avoid overwriting with empty
+      Object.keys(payload).forEach(key => {
+        if ((payload as any)[key] === undefined || key === 'phone') {
+          delete (payload as any)[key];
+        }
+      });
     } else {
       // Axios will handle multipart/form-data boundary
       headers = { "Content-Type": "multipart/form-data" };
