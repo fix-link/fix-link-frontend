@@ -42,13 +42,21 @@ const AccountSettings = () => {
             if (user?.id) {
                 try {
                     const latest = await getUserDetails(user.id);
-                    // Update context to keep everything in sync
-                    await updateUser(latest);
+                    console.log("AccountSettings: Backend user data:", { 
+                        phonenumber: latest.phonenumber, 
+                        phone: latest.phone, 
+                        phone_number: (latest as any).phone_number,
+                        allKeys: Object.keys(latest) 
+                    });
+                    // Only update localStorage + local form states — do NOT call updateUser()
+                    // because that triggers a PATCH back to the backend which can lose fields.
+                    const synced = { ...user, ...latest };
+                    localStorage.setItem("user", JSON.stringify(synced));
                     
                     // Update local form states
                     setFirstName(latest.first_name || latest.name?.split(' ')[0] || "");
                     setLastName(latest.last_name || latest.name?.split(' ')[1] || "");
-                    setPhone(latest.phonenumber || latest.phone || "");
+                    setPhone(latest.phonenumber || latest.phone || (latest as any).phone_number || "");
                     const loc = latest.city ? `${latest.city}${latest.subcity ? ', ' + latest.subcity : ''}` : "";
                     setLocation(loc);
                 } catch (err) {
@@ -66,7 +74,7 @@ const AccountSettings = () => {
                 first_name: firstName,
                 last_name: lastName,
                 email,
-                phone,
+                phonenumber: phone,
                 city: location.split(',')[0]?.trim(),
                 subcity: location.split(',')[1]?.trim() || ""
             });

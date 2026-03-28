@@ -176,12 +176,6 @@ const ProfessionalRegister = () => {
         profilePhoto,  // Pass the File object for profile picture upload
         cvFile,        // Pass the File object for CV upload
       });
-      // if (response.status === "ACTIVE") {
-      //   login(response.token, response.user); // Auto-login if backend approves immediately
-      //   setTimeout(() => navigate("/professional/home"), 1500);
-      // } else {
-      //   setTimeout(() => navigate("/signup/pending-approval"), 1500);
-      // }
 
       // Standard Flow: Verify Email First
       setTimeout(() => navigate("/signup/verify", { state: { email } }), 1500);
