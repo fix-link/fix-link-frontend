@@ -6,19 +6,45 @@ import api, { parseError } from "./auth.api";
  */
 export const createJob = async (jobData: any) => {
     try {
+        const hasFiles = jobData.photos && jobData.photos.length > 0;
+        
+        if (hasFiles) {
+            const fd = new FormData();
+            fd.append("title", jobData.title || "Job Request");
+            fd.append("description", jobData.description || "");
+            if (jobData.service) fd.append("service", String(jobData.service));
+            if (jobData.address) fd.append("address", jobData.address);
+            if (jobData.scheduled_at) fd.append("scheduled_at", jobData.scheduled_at);
+            if (jobData.budget) fd.append("budget", String(jobData.budget));
+            if (jobData.assigned_to) fd.append("assigned_to", String(jobData.assigned_to));
+
+            // Append multiple photos
+            jobData.photos.forEach((photo: File, index: number) => {
+                fd.append(`image_${index}`, photo); // Or just 'images' depending on backend
+                // If backend expects 'images' field multiple times:
+                fd.append("images", photo);
+            });
+
+            console.log("createJob: Sending FormData...");
+            const response = await api.post("/jobs/", fd);
+            return response.data;
+        }
+
+        // JSON fallback
         const payload = {
             title: jobData.title,
             description: jobData.description,
-            service: jobData.service, // UUID of service category
+            service: jobData.service,
             address: jobData.address,
             scheduled_at: jobData.scheduled_at,
             budget: jobData.budget,
             assigned_to: jobData.assigned_to
         };
-        console.log("createJob: Sending payload:", payload);
+        console.log("createJob: Sending JSON payload:", payload);
         const response = await api.post("/jobs/", payload);
         return response.data;
     } catch (error: any) {
+        // ... rest of error handling
         console.error("createJob: FULL ERROR OBJECT:", error);
         if (error.response) {
             console.error("createJob: ERROR RESPONSE DATA:", error.response.data);

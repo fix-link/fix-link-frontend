@@ -29,14 +29,14 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
       onClick={handleViewProfile}
       className="bg-white dark:bg-card-dark rounded-xl p-5 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center group cursor-pointer h-full"
     >
-      <div className="relative mb-3">
-        <img
-          alt={pro.name}
-          className="w-20 h-20 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-sm"
-          src={pro.image}
-        />
-        {/* Mock Status Dot (Green for now, could be dynamic) */}
-        <div className="absolute bottom-0 right-0 w-4 h-4 bg-green-500 border-2 border-white dark:border-slate-800 rounded-full"></div>
+      <div className="relative mb-4 group-hover:scale-105 transition-transform duration-300">
+        <div className="size-24 rounded-full bg-slate-100 dark:bg-slate-800 border-4 border-white dark:border-slate-800 shadow-md overflow-hidden">
+          <img
+            alt={pro.name}
+            className="w-full h-full object-cover"
+            src={pro.image}
+          />
+        </div>
       </div>
 
       <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors">
@@ -71,13 +71,13 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
         From <span className="text-primary font-bold not-italic">{pro.price} ETB</span>
       </p>
 
-      <div className="mt-auto">
+      <div className="mt-auto w-full pt-4 border-t border-slate-50 dark:border-slate-800/50">
         <button
           onClick={(e) => {
             e.stopPropagation();
             handleViewProfile();
           }}
-          className="bg-primary hover:bg-[#2559a1] text-white rounded-[10px] w-[120px] py-2 text-xs font-bold transition-colors block mx-auto">
+          className="w-full py-2.5 bg-primary text-white text-[11px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-primary/20 hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all">
           View Profile
         </button>
       </div>

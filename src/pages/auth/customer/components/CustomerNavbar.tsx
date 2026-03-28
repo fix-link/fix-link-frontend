@@ -131,64 +131,88 @@ const CustomerNavbar = () => {
            I will keep the Center Search Bar but update the styling of the nav container and the right-side icons as requested.
         */}
 
-      <div className="flex-1 max-w-2xl mx-4">
-        <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full border border-slate-200 dark:border-slate-700 p-1 shadow-sm relative z-50">
-          <div className="relative flex-[0.8] hidden sm:block">
+      <div className="flex-1 max-w-xl mx-4 hidden lg:block">
+        <div className="flex h-11 w-full items-center self-center overflow-hidden rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10 transition-all duration-300">
+          <div className="relative flex-[0.4] hidden sm:block h-full">
             <select
               value={service}
               onChange={(e) => setService(e.target.value)}
-              className="w-full bg-transparent border-none focus:ring-0 text-xs font-semibold py-1 pl-4 pr-8 text-slate-700 dark:text-slate-300 cursor-pointer appearance-none"
+              className="w-full h-full bg-transparent border-none focus:ring-0 text-xs font-bold pl-5 pr-8 text-slate-700 dark:text-slate-300 cursor-pointer appearance-none"
             >
               <option>All Services</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.name}>{cat.name}</option>
               ))}
             </select>
-            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-base">expand_more</span>
+            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-sm">expand_more</span>
           </div>
-          <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 hidden sm:block mx-1"></div>
-          <div className="relative flex-1 flex items-center" ref={suggestionRef}>
-            <span className="material-symbols-outlined absolute left-3 text-slate-400 text-base">location_on</span>
-            <input
-              className="w-full bg-transparent border-none focus:ring-0 text-xs py-1 pl-9 pr-4 text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
-              placeholder="Addis Ababa, Ethiopia"
-              type="text"
-              value={location}
-              onChange={(e) => {
-                setLocation(e.target.value);
-                setShowSuggestions(true);
-              }}
-              onFocus={() => setShowSuggestions(true)}
-            />
+          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
+          <div className="flex flex-1 items-center px-4 relative h-full">
+            <span className="material-symbols-outlined text-slate-400 text-lg mr-2">location_on</span>
+            <div className="relative flex-1 h-full flex items-center" ref={suggestionRef}>
+              <input
+                className="w-full bg-transparent border-none focus:ring-0 text-xs font-bold py-1 text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                placeholder="Search location..."
+                type="text"
+                value={location}
+                onChange={(e) => {
+                  setLocation(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+              />
 
-            {/* Location Suggestions Dropdown */}
-            {showSuggestions && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-border-color dark:border-slate-700 overflow-hidden py-1 max-h-60 overflow-y-auto w-full min-w-[200px] z-[60]">
-                {filteredLocations.length > 0 ? (
-                  filteredLocations.map((loc) => (
-                    <button
-                      key={loc}
-                      onClick={() => {
-                        setLocation(loc);
-                        setShowSuggestions(false);
-                      }}
-                      className="w-full text-left px-4 py-2 text-sm text-text-primary dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"
-                    >
-                      <span className="material-symbols-outlined text-slate-400 text-sm">location_on</span>
-                      {loc}
-                    </button>
-                  ))
-                ) : (
-                  <div className="px-4 py-2 text-sm text-text-secondary dark:text-gray-400">No locations found</div>
-                )}
-              </div>
-            )}
+              {/* Location Suggestions Dropdown */}
+              {showSuggestions && (
+                <div className="absolute top-[calc(100%+12px)] left-[-40px] right-[-40px] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] border border-white/20 dark:border-slate-800/50 overflow-hidden z-[70] animate-in fade-in zoom-in-95 duration-200">
+                  <div className="px-6 py-4 border-b border-slate-100/50 dark:border-slate-800/50 bg-slate-50/30 dark:bg-slate-900/30 flex items-center justify-between">
+                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Popular Locations</span>
+                    <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-sm">location_city</span>
+                  </div>
+                  <div className="max-h-72 overflow-y-auto custom-scrollbar py-2">
+                    {filteredLocations.length > 0 ? (
+                      filteredLocations.map((loc) => (
+                        <button
+                          key={loc}
+                          onClick={() => {
+                            setLocation(loc);
+                            setShowSuggestions(false);
+                          }}
+                          className="w-full text-left px-6 py-3.5 hover:bg-primary/5 group transition-all duration-200 flex items-center justify-between"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="size-8 rounded-xl bg-slate-50 dark:bg-slate-800 group-hover:bg-primary/10 flex items-center justify-center transition-colors">
+                              <span className="material-symbols-outlined text-slate-400 group-hover:text-primary text-lg transition-colors">near_me</span>
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-slate-700 dark:text-slate-200 group-hover:text-primary transition-colors">{loc}</p>
+                                <p className="text-[10px] text-slate-400 font-medium">Ethiopia</p>
+                            </div>
+                          </div>
+                          <span className="material-symbols-outlined text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-2 group-hover:translate-x-0 transition-all text-sm">arrow_forward</span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="px-8 py-10 text-center">
+                        <div className="size-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3">
+                           <span className="material-symbols-outlined text-slate-300">search_off</span>
+                        </div>
+                        <p className="text-sm text-slate-400 font-bold italic">No matching locations found</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="px-6 py-3 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100/50 dark:border-slate-800/50">
+                    <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">Quickly select a major city in Ethiopia</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <button
             onClick={handleSearch}
-            className="bg-primary hover:bg-[#2559a1] text-white w-8 h-8 rounded-full transition-all flex items-center justify-center shrink-0 cursor-pointer"
+            className="flex h-full items-center justify-center bg-primary px-5 text-white hover:bg-primary/90 transition-colors group h-full"
           >
-            <span className="material-symbols-outlined text-base">search</span>
+            <span className="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">search</span>
           </button>
         </div>
       </div>

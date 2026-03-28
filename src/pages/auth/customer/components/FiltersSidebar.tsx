@@ -48,7 +48,7 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
     };
 
     return (
-        <div className="bg-white dark:bg-background-dark p-6 rounded-lg shadow-card max-h-[calc(100vh-8rem)] overflow-y-auto border border-border-color dark:border-slate-800">
+        <div className="bg-white dark:bg-background-dark p-6 rounded-lg shadow-card border border-border-color dark:border-slate-800">
             <div className="flex justify-between items-center mb-6">
                 <h3 className="text-text-primary dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">
                     Filters

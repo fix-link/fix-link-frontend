@@ -84,7 +84,7 @@ const CustomerHome = () => {
   }, []);
 
   // Filter Visibility State
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
 
   // Filter States
   const [priceMin, setPriceMin] = useState<number>(0);
@@ -97,6 +97,16 @@ const CustomerHome = () => {
   const [sortBy, setSortBy] = useState<string>("recommended");
 
   // Derived filtered and sorted list
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortOptions = [
+    { value: "recommended", label: "Recommended", icon: "stars" },
+    { value: "rating", label: "Top Rated", icon: "grade" },
+    { value: "reviews", label: "Most Jobs", icon: "work" },
+    { value: "experience", label: "Experienced", icon: "timeline" },
+    { value: "price-low", label: "Price: Low to High", icon: "arrow_upward" },
+    { value: "price-high", label: "Price: High to Low", icon: "arrow_downward" },
+  ];
+
   const filteredProfessionals = professionals
     .filter((pro: any) => {
       const matchesPrice = pro.price >= priceMin && pro.price <= priceMax;
@@ -144,9 +154,14 @@ const CustomerHome = () => {
       <main className="max-w-[1600px] w-full mx-auto px-4 md:px-8 py-6">
         {/* Header Section */}
         <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-text-primary dark:text-white">Professional Services in Addis Ababa</h1>
-            <p className="text-sm text-text-secondary dark:text-gray-400 mt-1">Found {filteredProfessionals.length} verified professionals ready to help.</p>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Professional Services</h1>
+            <div className="flex items-center gap-2">
+              <span className="size-1.5 rounded-full bg-emerald-500"></span>
+              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                {filteredProfessionals.length} Experts Available in Addis Ababa
+              </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -155,21 +170,46 @@ const CustomerHome = () => {
             >
               <span className="material-symbols-outlined text-lg">tune</span> Filters
             </button>
-            <div className="flex items-center gap-2 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 transition group relative shadow-sm">
-              <span className="material-symbols-outlined text-lg text-slate-500">sort</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-transparent border-none focus:ring-0 text-sm font-bold text-text-primary dark:text-white cursor-pointer p-0 pr-6 appearance-none"
+            <div className="relative group">
+              <button
+                onClick={() => setIsSortOpen(!isSortOpen)}
+                className={`flex items-center gap-3 px-5 py-2.5 rounded-xl text-sm font-bold border transition-all duration-200 ${isSortOpen ? 'bg-white dark:bg-slate-800 border-primary ring-4 ring-primary/5 shadow-lg' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'}`}
               >
-                <option value="recommended">Sort by: Recommended</option>
-                <option value="rating">Sort by: Top Rated</option>
-                <option value="reviews">Sort by: Most Jobs</option>
-                <option value="experience">Sort by: Experienced</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-              </select>
-              <span className="material-symbols-outlined absolute right-3 text-slate-400 pointer-events-none text-lg">expand_more</span>
+                <span className="material-symbols-outlined text-lg text-slate-400">sort</span>
+                <span className="text-slate-700 dark:text-slate-200">
+                  {sortOptions.find(o => o.value === sortBy)?.label || "Sort Results"}
+                </span>
+                <span className={`material-symbols-outlined text-slate-400 text-lg transition-transform duration-300 ${isSortOpen ? 'rotate-180' : ''}`}>expand_more</span>
+              </button>
+              
+              {isSortOpen && (
+                <>
+                  <div className="fixed inset-0 z-[55]" onClick={() => setIsSortOpen(false)} />
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 z-[60] overflow-hidden p-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="px-3 py-2 mb-1">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Sort Professionals By</p>
+                    </div>
+                    {sortOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setSortBy(option.value);
+                          setIsSortOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-bold transition-all ${sortBy === option.value ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="material-symbols-outlined text-lg">
+                            {option.icon}
+                          </span>
+                          {option.label}
+                        </div>
+                        {sortBy === option.value && <span className="material-symbols-outlined text-lg">check</span>}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -215,7 +255,7 @@ const CustomerHome = () => {
                 </div>
               </div>
             ) : (
-              <div className={`grid grid-cols-1 sm:grid-cols-2 ${showFilters ? 'lg:grid-cols-3 xl:grid-cols-4' : 'lg:grid-cols-4 xl:grid-cols-4'} 2xl:grid-cols-4 gap-6`}>
+              <div className={`grid grid-cols-1 sm:grid-cols-2 ${showFilters ? 'lg:grid-cols-2 xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'} 2xl:grid-cols-4 gap-6`}>
                 {filteredProfessionals.map((pro) => (
                   <ProfessionalCard key={pro.id} pro={pro} />
                 ))}

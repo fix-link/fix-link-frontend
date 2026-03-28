@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import CustomerNavbar from './components/CustomerNavbar';
 import { useAuth } from '../../../context/AuthContext';
 import { listJobs, updateJobStatus } from '../../../api/jobs.api';
@@ -275,19 +275,25 @@ const CustomerMessages = () => {
                                         <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm" />
                                     </div>
                                     <div className="flex flex-col gap-0.5">
-                                        <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none">
-                                            {(() => {
-                                                const detail = activeUserDetails || activeRequest.professional_detail;
-                                                if (!detail) return "Professional";
-                                                const first = detail.first_name || detail.user?.first_name || detail.user_detail?.first_name;
-                                                const last = detail.last_name || detail.user?.last_name || detail.user_detail?.last_name || "";
-                                                return first ? `${first} ${last}`.trim() : "Professional";
-                                            })()}
-                                        </h3>
+                                        <Link 
+                                            to={`/customer/profile/${activeRequest.professional || activeRequest.assigned_to}`}
+                                            className="hover:text-primary transition-colors cursor-pointer group/name flex items-center gap-1"
+                                        >
+                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none group-hover/name:text-primary transition-colors">
+                                                {(() => {
+                                                    const detail = activeUserDetails || activeRequest.professional_detail;
+                                                    if (!detail) return "Professional";
+                                                    const first = detail.first_name || detail.user?.first_name || detail.user_detail?.first_name;
+                                                    const last = detail.last_name || detail.user?.last_name || detail.user_detail?.last_name || "";
+                                                    return first ? `${first} ${last}`.trim() : "Professional";
+                                                })()}
+                                            </h3>
+                                            <span className="material-symbols-outlined text-sm opacity-0 group-hover/name:opacity-100 transition-all -translate-x-1 group-hover/name:translate-x-0">chevron_right</span>
+                                        </Link>
                                         <div className="flex items-center gap-1.5 opacity-60">
                                             <span className="size-1.5 bg-green-500 rounded-full animate-blink" />
                                             <span className="text-[10px] font-black uppercase tracking-widest leading-none">
-                                                {activeRequest.status} • Online
+                                                Online
                                             </span>
                                         </div>
                                     </div>
@@ -316,8 +322,16 @@ const CustomerMessages = () => {
                                 </div>
                             </div>
 
-                            {/* Messaging Canvas */}
-                            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] bg-[size:24px_24px]">
+                            {/* Messaging Canvas with Premium Background */}
+                            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 relative" 
+                                 style={{ 
+                                    backgroundColor: 'transparent',
+                                    backgroundImage: `
+                                        radial-gradient(circle at 2px 2px, rgba(148, 163, 184, 0.08) 1px, transparent 0),
+                                        linear-gradient(to bottom, rgba(248, 250, 252, 0.5), rgba(241, 245, 249, 0.5))
+                                    `,
+                                    backgroundSize: '32px 32px, 100% 100%'
+                                 }}>
                                 <div className="flex justify-center my-2">
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm">
                                         Session Started • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "--"}
@@ -329,7 +343,7 @@ const CustomerMessages = () => {
                                 {/* Customer Initial Message (Real Description) */}
                                 <div className="flex justify-end animate-in fade-in slide-in-from-right-4">
                                     <div className="flex flex-col items-end gap-1.5 max-w-[85%]">
-                                        <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-br-sm px-4 py-3 bg-primary text-white shadow-lg shadow-primary/20">
+                                        <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-br-sm px-5 py-4 bg-primary text-white shadow-lg shadow-primary/20">
                                             {activeRequest.description || "Hello! I'd like to request your services for my project."}
                                         </div>
                                         <span className="text-slate-400 text-[9px] font-black uppercase tracking-tighter mr-1">
@@ -349,7 +363,7 @@ const CustomerMessages = () => {
                                             )}
                                         </div>
                                         <div className="flex flex-col gap-1.5">
-                                            <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-bl-sm px-4 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700">
+                                            <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-bl-sm px-5 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700">
                                                 {activeRequest.status === 'accepted' || activeRequest.status === 'assigned'
                                                     ? `Hello! I've reviewed your request and I'm happy to help. I've accepted the project!`
                                                     : activeRequest.status === 'done'
@@ -503,6 +517,57 @@ const CustomerMessages = () => {
                                             </div>
                                         );
                                     })}
+                                </div>
+                            </div>
+
+                            {/* Job Details Card */}
+                            <div className="max-w-lg mx-auto w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-6 shadow-xl shadow-slate-200/50 dark:shadow-none animate-in fade-in slide-in-from-top-4 duration-500">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="size-2 bg-primary rounded-full animate-pulse" />
+                                        <h3 className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-[0.2em]">Job Details</h3>
+                                    </div>
+                                    <span className="text-[10px] font-black text-primary bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10 tracking-widest">VERIFIED</span>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 italic">
+                                        <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+                                            "{activeRequest.description || "Project request details..."}"
+                                        </p>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center gap-4 px-4 py-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
+                                            <span className="material-symbols-outlined text-primary text-xl">location_on</span>
+                                            <div className="min-w-0">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">Your Location</p>
+                                                <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">
+                                                    {activeRequest.address || activeRequest.location || "Addis Ababa"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4 px-4 py-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
+                                            <span className="material-symbols-outlined text-green-500 text-xl">payments</span>
+                                            <div className="min-w-0">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">Estimated Budget</p>
+                                                <p className="text-sm font-black text-green-600 dark:text-green-400">
+                                                    {activeRequest.budget || "TBD"} ETB
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {(activeRequest.scheduled_at || activeRequest.preferredDate) && (
+                                            <div className="flex items-center gap-4 px-4 py-3 bg-primary/5 rounded-xl border border-primary/10">
+                                                <span className="material-symbols-outlined text-primary text-xl">event_available</span>
+                                                <div className="min-w-0">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-primary opacity-60">Scheduled For</p>
+                                                    <p className="text-sm font-black text-primary">
+                                                        {new Date(activeRequest.scheduled_at || activeRequest.preferredDate).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 

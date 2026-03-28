@@ -1,5 +1,4 @@
 const actions = [
-    { icon: "search", label: "View Available Jobs" },
     { icon: "event_available", label: "Update Availability" },
     { icon: "account_balance_wallet", label: "Withdraw Earnings" },
     { icon: "rocket_launch", label: "Promote My Profile", highlight: true },
