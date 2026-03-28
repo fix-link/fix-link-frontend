@@ -72,12 +72,12 @@ const ProfessionalMessages = () => {
 
     // Active Chat Hydration (for Header/Project info)
     const urlRequestId = searchParams.get('requestId');
+    const urlConversationId = searchParams.get('conversationId');
     const urlJobTitle = searchParams.get('jobTitle');
 
-    // 1. Try to find by ID
-    // 2. Try to find by Title (fallback for buggy backend notifications)
-    // 3. Default to first
-    const activeRequest = hydratedRequests.find(r => r.id === urlRequestId) || 
+    // Priority: conversationId > requestId > jobTitle > first item
+    const activeRequest = (urlConversationId ? hydratedRequests.find(r => r.conversation_id === urlConversationId || r.id === urlConversationId) : null) ||
+                          hydratedRequests.find(r => r.id === urlRequestId) || 
                           (urlJobTitle ? hydratedRequests.find(r => {
                               const match = r.title?.toLowerCase() === urlJobTitle.toLowerCase();
                               if (urlJobTitle) console.log(`Comparing Pro Job "${r.title?.toLowerCase()}" vs "${urlJobTitle.toLowerCase()}": ${match}`);
@@ -85,7 +85,9 @@ const ProfessionalMessages = () => {
                           }) : null) ||
                           hydratedRequests[0];
                           
-    if (urlJobTitle && activeRequest && !urlRequestId) {
+    if (urlConversationId && activeRequest) {
+        console.log("ProfessionalMessages: Matched job by conversationId:", activeRequest.id);
+    } else if (urlJobTitle && activeRequest && !urlRequestId) {
         console.log("ProfessionalMatched job by title fallback:", activeRequest.title);
     }
     const requestId = activeRequest?.id;

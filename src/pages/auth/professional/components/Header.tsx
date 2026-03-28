@@ -138,9 +138,11 @@ const Header: React.FC = () => {
                                                     ));
                                                     console.warn("Mark-as-read failed (local update applied):", err);
                                                 });
-                                                // Navigate
+                                                // Navigate — prioritise conversation_id for reliable deep linking
                                                 const type = (n.type || '').toLowerCase();
-                                                if (n.link && !n.link.includes('/1')) {
+                                                if (n.conversation_id) {
+                                                  navigate(`/professional/messages?conversationId=${n.conversation_id}`);
+                                                } else if (n.link && !n.link.includes('/1')) {
                                                   navigate(n.link);
                                                 } else if (n.job_id || n.message_id || n.message_session_id) {
                                                   const targetId = n.job_id || n.message_id || n.message_session_id;

@@ -273,9 +273,11 @@ const CustomerNavbar = () => {
                             notif.id === n.id ? { ...notif, is_read: true } : notif
                           ));
                         });
-                        // Navigate
+                        // Navigate — prioritise conversation_id for reliable deep linking
                         const type = (n.type || '').toLowerCase();
-                        if (n.link && !n.link.includes('/1')) {
+                        if (n.conversation_id) {
+                          navigate(`/customer/messages?conversationId=${n.conversation_id}`);
+                        } else if (n.link && !n.link.includes('/1')) {
                           navigate(n.link);
                         } else if (n.job_id || n.message_id || n.message_session_id) {
                           const targetId = n.job_id || n.message_id || n.message_session_id;

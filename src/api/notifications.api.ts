@@ -10,6 +10,7 @@ export interface Notification {
     message_session_id?: string;
     link?: string;
     job_id?: string;       // job/request UUID for navigation
+    conversation_id?: string; // reliable conversation ID for direct deep linking
     sender_name?: string;  // name of the person who triggered the notification
     title?: string;
     body?: string;
@@ -41,6 +42,8 @@ export const getNotifications = async (): Promise<Notification[]> => {
             link: n.link || n.action_url,
             // Capture job/request ID for deep navigation
             job_id: n.job_id || n.job || n.request_id || extractIdFromLink(n.link || n.action_url),
+            // Reliable conversation ID from the backend for direct deep linking
+            conversation_id: n.conversation_id || n.conversationId || n.conversation || undefined,
             sender_name: n.sender_name || n.sender?.first_name
                 ? (n.sender_name || `${n.sender?.first_name || ''} ${n.sender?.last_name || ''}`.trim())
                 : null,

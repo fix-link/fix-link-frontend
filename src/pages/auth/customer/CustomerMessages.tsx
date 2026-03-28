@@ -74,12 +74,12 @@ const CustomerMessages = () => {
 
     // Get active request from URL or default to first
     const urlRequestId = searchParams.get('requestId');
+    const urlConversationId = searchParams.get('conversationId');
     const urlJobTitle = searchParams.get('jobTitle');
     
-    // 1. Try to find by ID
-    // 2. Try to find by Title (fallback for buggy backend notifications)
-    // 3. Default to first
-    const activeRequest = hydratedRequests.find(r => r.id === urlRequestId) || 
+    // Priority: conversationId > requestId > jobTitle > first item
+    const activeRequest = (urlConversationId ? hydratedRequests.find(r => r.conversation_id === urlConversationId || r.id === urlConversationId) : null) ||
+                          hydratedRequests.find(r => r.id === urlRequestId) || 
                           (urlJobTitle ? hydratedRequests.find(r => {
                               const match = r.title?.toLowerCase() === urlJobTitle.toLowerCase();
                               if (urlJobTitle) console.log(`Comparing "${r.title?.toLowerCase()}" vs "${urlJobTitle.toLowerCase()}": ${match}`);
@@ -87,7 +87,9 @@ const CustomerMessages = () => {
                           }) : null) ||
                           hydratedRequests[0];
                           
-    if (urlJobTitle && activeRequest && !urlRequestId) {
+    if (urlConversationId && activeRequest) {
+        console.log("Matched job by conversationId:", activeRequest.id);
+    } else if (urlJobTitle && activeRequest && !urlRequestId) {
         console.log("Matched job by title fallback:", activeRequest.title);
     }
     const requestId = activeRequest?.id;
