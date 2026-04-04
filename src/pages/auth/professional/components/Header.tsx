@@ -139,23 +139,46 @@ const Header: React.FC = () => {
                                                     console.warn("Mark-as-read failed (local update applied):", err);
                                                 });
                                                 // Navigate — prioritise conversation_id for reliable deep linking
-                                                const type = (n.type || '').toLowerCase();
-                                                if (n.conversation_id) {
-                                                  navigate(`/professional/messages?conversationId=${n.conversation_id}`);
-                                                } else if (n.link && !n.link.includes('/1')) {
-                                                  navigate(n.link);
-                                                } else if (n.job_id || n.message_id || n.message_session_id) {
-                                                  const targetId = n.job_id || n.message_id || n.message_session_id;
-                                                  navigate(`/professional/messages?requestId=${targetId}`);
-                                                } else if (type.includes('job') || type.includes('request') || type.includes('accepted') || type.includes('done') || type.includes('message')) {
-                                                  // Fallback: If no ID, try to pass the title to help the messages page find it
-                                                  const msg = n.message || n.body || n.title || "";
-                                                  const titleMatch = msg.match(/'([^']+)'/) || msg.match(/"([^"]+)"/) || msg.match(/:(.*)$/);
-                                                  const extractedTitle = titleMatch ? titleMatch[1].trim() : "";
-                                                  navigate(extractedTitle ? `/professional/messages?jobTitle=${encodeURIComponent(extractedTitle)}` : '/professional/messages');
-                                                } else {
-                                                  navigate('/professional/home');
-                                                }
+                                                const linkTarget = (() => {
+                                                  console.log("Professional notification click data:");
+                                                  console.table({
+                                                    id: n.id,
+                                                    conversation_id: n.conversation_id,
+                                                    message_session_id: n.message_session_id,
+                                                    job_id: n.job_id,
+                                                    message_id: n.message_id,
+                                                    link: n.link,
+                                                    title: n.title,
+                                                    body: n.body
+                                                  });
+
+                                                  if (n.conversation_id) {
+                                                    return `/professional/messages?conversationId=${n.conversation_id}`;
+                                                  }
+                                                  if (n.message_session_id) {
+                                                    return `/professional/messages?messageSessionId=${n.message_session_id}`;
+                                                  }
+                                                  if (n.job_id) {
+                                                    return `/professional/messages?requestId=${n.job_id}`;
+                                                  }
+                                                  if (n.message_id) {
+                                                    return `/professional/messages?requestId=${n.message_id}`;
+                                                  }
+                                                  if (n.link) {
+                                                    try {
+                                                      const parsed = new URL(n.link, window.location.origin);
+                                                      const isMessagePath = parsed.pathname.includes('/messages');
+                                                      const hasChatParam = parsed.searchParams.has('conversationId') || parsed.searchParams.has('requestId') || parsed.searchParams.has('messageSessionId');
+                                                      if (isMessagePath || hasChatParam) return n.link;
+                                                    } catch (err) {
+                                                      // ignore invalid URLs and fall back
+                                                    }
+                                                  }
+                                                  return '/professional/messages';
+                                                })();
+
+                                                console.log("Professional notification navigating to:", linkTarget);
+                                                navigate(linkTarget);
                                               }}
                                         >
                                             <div className="flex gap-3">

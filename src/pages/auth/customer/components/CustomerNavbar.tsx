@@ -273,24 +273,47 @@ const CustomerNavbar = () => {
                             notif.id === n.id ? { ...notif, is_read: true } : notif
                           ));
                         });
-                        // Navigate — prioritise conversation_id for reliable deep linking
-                        const type = (n.type || '').toLowerCase();
-                        if (n.conversation_id) {
-                          navigate(`/customer/messages?conversationId=${n.conversation_id}`);
-                        } else if (n.link && !n.link.includes('/1')) {
-                          navigate(n.link);
-                        } else if (n.job_id || n.message_id || n.message_session_id) {
-                          const targetId = n.job_id || n.message_id || n.message_session_id;
-                          navigate(`/customer/messages?requestId=${targetId}`);
-                        } else if (type.includes('job') || type.includes('request') || type.includes('accepted') || type.includes('done') || type.includes('message')) {
-                          // Fallback: If no ID, try to pass the title to help the messages page find it
-                          const msg = n.message || n.body || n.title || "";
-                          const titleMatch = msg.match(/'([^']+)'/) || msg.match(/"([^"]+)"/) || msg.match(/:(.*)$/);
-                          const extractedTitle = titleMatch ? titleMatch[1].trim() : "";
-                          navigate(extractedTitle ? `/customer/messages?jobTitle=${encodeURIComponent(extractedTitle)}` : '/customer/messages');
-                        } else {
-                          navigate('/customer/home');
-                        }
+
+                        const linkTarget = (() => {
+                          console.log("Customer notification click data:");
+                          console.table({
+                            id: n.id,
+                            conversation_id: n.conversation_id,
+                            message_session_id: n.message_session_id,
+                            job_id: n.job_id,
+                            message_id: n.message_id,
+                            link: n.link,
+                            title: n.title,
+                            body: n.body
+                          });
+
+                          if (n.conversation_id) {
+                            return `/customer/messages?conversationId=${n.conversation_id}`;
+                          }
+                          if (n.message_session_id) {
+                            return `/customer/messages?messageSessionId=${n.message_session_id}`;
+                          }
+                          if (n.job_id) {
+                            return `/customer/messages?requestId=${n.job_id}`;
+                          }
+                          if (n.message_id) {
+                            return `/customer/messages?requestId=${n.message_id}`;
+                          }
+                          if (n.link) {
+                            try {
+                              const parsed = new URL(n.link, window.location.origin);
+                              const isMessagePath = parsed.pathname.includes('/messages');
+                              const hasChatParam = parsed.searchParams.has('conversationId') || parsed.searchParams.has('requestId') || parsed.searchParams.has('messageSessionId');
+                              if (isMessagePath || hasChatParam) return n.link;
+                            } catch (err) {
+                              // ignore invalid URLs and fall back
+                            }
+                          }
+                          return '/customer/messages';
+                        })();
+
+                        console.log("Customer notification navigating to:", linkTarget);
+                        navigate(linkTarget);
                       }}
                     >
                       <div className="flex gap-3">

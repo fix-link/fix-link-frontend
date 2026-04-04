@@ -6,6 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { listJobs, updateJobStatus } from '../../../api/jobs.api';
 import { getNotifications, type Notification } from '../../../api/notifications.api';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
+import { getConversationById } from '../../../api/conversations.api';
 
 const ProfessionalMessages = () => {
     const { user } = useAuth();
@@ -86,22 +87,53 @@ const ProfessionalMessages = () => {
     // Active Chat Hydration (for Header/Project info)
     const urlRequestId = searchParams.get('requestId');
     const urlConversationId = searchParams.get('conversationId');
-    const urlJobTitle = searchParams.get('jobTitle');
+    const urlMessageSessionId = searchParams.get('messageSessionId');
+    const [conversationJobId, setConversationJobId] = useState<string | null>(null);
 
-    // Priority: conversationId > requestId > jobTitle > first item
-    const activeRequest = (urlConversationId ? hydratedRequests.find(r => r.conversation_id === urlConversationId || r.id === urlConversationId) : null) ||
-                          hydratedRequests.find(r => r.id === urlRequestId) || 
-                          (urlJobTitle ? hydratedRequests.find(r => {
-                              const match = r.title?.toLowerCase() === urlJobTitle.toLowerCase();
-                              if (urlJobTitle) console.log(`Comparing Pro Job "${r.title?.toLowerCase()}" vs "${urlJobTitle.toLowerCase()}": ${match}`);
-                              return match;
-                          }) : null) ||
-                          hydratedRequests[0];
-                          
+    useEffect(() => {
+        if (!urlConversationId) {
+            setConversationJobId(null);
+            return;
+        }
+
+        const fetchConversationJob = async () => {
+            try {
+                const conversation = await getConversationById(urlConversationId);
+                setConversationJobId(conversation.job || conversation.job_id || null);
+                console.log("ProfessionalMessages: conversation fetched for conversationId", urlConversationId, "job", conversation.job || conversation.job_id);
+            } catch (error) {
+                console.warn("ProfessionalMessages: unable to resolve conversation to job", urlConversationId, error);
+                setConversationJobId(null);
+            }
+        };
+
+        fetchConversationJob();
+    }, [urlConversationId]);
+
+    const findActiveRequest = (id?: string) => {
+        if (!id) return undefined;
+        return hydratedRequests.find((r) => [
+            r.id,
+            r.conversation_id,
+            r.message_session_id,
+            r.job_id,
+            r.request_id,
+        ].includes(id));
+    };
+
+    const activeRequest =
+        (urlConversationId && findActiveRequest(urlConversationId)) ||
+        (conversationJobId && findActiveRequest(conversationJobId)) ||
+        (urlMessageSessionId && findActiveRequest(urlMessageSessionId)) ||
+        (urlRequestId && findActiveRequest(urlRequestId)) ||
+        hydratedRequests[0];
+
     if (urlConversationId && activeRequest) {
-        console.log("ProfessionalMessages: Matched job by conversationId:", activeRequest.id);
-    } else if (urlJobTitle && activeRequest && !urlRequestId) {
-        console.log("ProfessionalMatched job by title fallback:", activeRequest.title);
+        console.log("ProfessionalMessages: Matched chat by conversationId:", activeRequest.id);
+    } else if (conversationJobId && activeRequest) {
+        console.log("ProfessionalMessages: Matched chat by conversationJobId:", activeRequest.id);
+    } else if (urlMessageSessionId && activeRequest) {
+        console.log("ProfessionalMessages: Matched chat by messageSessionId:", activeRequest.id);
     }
     const requestId = activeRequest?.id;
     const activeRequestId = activeRequest?.id;

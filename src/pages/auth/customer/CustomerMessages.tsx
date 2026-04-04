@@ -4,8 +4,7 @@ import CustomerNavbar from './components/CustomerNavbar';
 import { useAuth } from '../../../context/AuthContext';
 import { listJobs, updateJobStatus } from '../../../api/jobs.api';
 import { getNotifications, type Notification } from '../../../api/notifications.api';
-import { getImageUrl, getUserDetails } from '../../../api/auth.api';
-
+import { getImageUrl, getUserDetails } from '../../../api/auth.api';import { getConversationById } from '../../../api/conversations.api';
 const CustomerMessages = () => {
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -88,22 +87,53 @@ const CustomerMessages = () => {
     // Get active request from URL or default to first
     const urlRequestId = searchParams.get('requestId');
     const urlConversationId = searchParams.get('conversationId');
-    const urlJobTitle = searchParams.get('jobTitle');
-    
-    // Priority: conversationId > requestId > jobTitle > first item
-    const activeRequest = (urlConversationId ? hydratedRequests.find(r => r.conversation_id === urlConversationId || r.id === urlConversationId) : null) ||
-                          hydratedRequests.find(r => r.id === urlRequestId) || 
-                          (urlJobTitle ? hydratedRequests.find(r => {
-                              const match = r.title?.toLowerCase() === urlJobTitle.toLowerCase();
-                              if (urlJobTitle) console.log(`Comparing "${r.title?.toLowerCase()}" vs "${urlJobTitle.toLowerCase()}": ${match}`);
-                              return match;
-                          }) : null) ||
-                          hydratedRequests[0];
-                          
+    const urlMessageSessionId = searchParams.get('messageSessionId');
+    const [conversationJobId, setConversationJobId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!urlConversationId) {
+            setConversationJobId(null);
+            return;
+        }
+
+        const fetchConversationJob = async () => {
+            try {
+                const conversation = await getConversationById(urlConversationId);
+                setConversationJobId(conversation.job || conversation.job_id || null);
+                console.log("CustomerMessages: conversation fetched for conversationId", urlConversationId, "job", conversation.job || conversation.job_id);
+            } catch (error) {
+                console.warn("CustomerMessages: unable to resolve conversation to job", urlConversationId, error);
+                setConversationJobId(null);
+            }
+        };
+
+        fetchConversationJob();
+    }, [urlConversationId]);
+
+    const findActiveRequest = (id?: string) => {
+        if (!id) return undefined;
+        return hydratedRequests.find((r) => [
+            r.id,
+            r.conversation_id,
+            r.message_session_id,
+            r.job_id,
+            r.request_id,
+        ].includes(id));
+    };
+
+    const activeRequest =
+        (urlConversationId && findActiveRequest(urlConversationId)) ||
+        (conversationJobId && findActiveRequest(conversationJobId)) ||
+        (urlMessageSessionId && findActiveRequest(urlMessageSessionId)) ||
+        (urlRequestId && findActiveRequest(urlRequestId)) ||
+        hydratedRequests[0];
+
     if (urlConversationId && activeRequest) {
-        console.log("Matched job by conversationId:", activeRequest.id);
-    } else if (urlJobTitle && activeRequest && !urlRequestId) {
-        console.log("Matched job by title fallback:", activeRequest.title);
+        console.log("Matched chat by conversationId:", activeRequest.id);
+    } else if (conversationJobId && activeRequest) {
+        console.log("Matched chat by conversationJobId:", activeRequest.id);
+    } else if (urlMessageSessionId && activeRequest) {
+        console.log("Matched chat by messageSessionId:", activeRequest.id);
     }
     const requestId = activeRequest?.id;
     const activeRequestId = activeRequest?.id;
@@ -353,13 +383,10 @@ const CustomerMessages = () => {
                             </div>
 
                             {/* Messaging Canvas with Premium Background */}
-                            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 relative" 
-                                 style={{ 
+                            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 relative"
+                                 style={{
                                     backgroundColor: 'transparent',
-                                    backgroundImage: `
-                                        radial-gradient(circle at 2px 2px, rgba(148, 163, 184, 0.08) 1px, transparent 0),
-                                        linear-gradient(to bottom, rgba(248, 250, 252, 0.5), rgba(241, 245, 249, 0.5))
-                                    `,
+                                    backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(148, 163, 184, 0.08) 1px, transparent 0), linear-gradient(to bottom, rgba(248, 250, 252, 0.5), rgba(241, 245, 249, 0.5))',
                                     backgroundSize: '32px 32px, 100% 100%'
                                  }}>
                                 <div className="flex justify-center my-2">
