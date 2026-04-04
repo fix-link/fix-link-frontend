@@ -1,19 +1,26 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import CustomerNavbar from './components/CustomerNavbar';
 import { useAuth } from '../../../context/AuthContext';
 import { updateJobStatus } from '../../../api/jobs.api';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
-import { getConversationById } from '../../../api/conversations.api';
+import { getMessages, sendMessage, markAsRead, getOrCreateConversation, getConversationById } from '../../../api/conversations.api';
 import { useData } from '../../../context/DataContext';
+
 const CustomerMessages = () => {
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [userRequests, setUserRequests] = useState<any[]>([]);
     const [activeUserDetails, setActiveUserDetails] = useState<any>(null);
+    const [messages, setMessages] = useState<any[]>([]);
+    const [messageInput, setMessageInput] = useState("");
+    const [conversationId, setConversationId] = useState<string | null>(null);
+    const [isSending, setIsSending] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
     const { jobs, notifications, jobsLoading, notificationsLoading } = useData();
 
-    const isLoading = jobsLoading || notificationsLoading;
+    // Prevent blocking UI flash during background context polling
+    const isLoading = (jobsLoading || notificationsLoading) && jobs.length === 0;
 
     useEffect(() => {
         if (!user?.id) {
@@ -21,10 +28,11 @@ const CustomerMessages = () => {
             return;
         }
 
-        const myRequests = jobs.filter((job: any) =>
-            job.customer === user?.id &&
-            job.status !== 'pending'
-        );
+        // Removed status filter to show all chats including pending/previous
+        const myRequests = jobs.filter((job: any) => {
+            const customerId = job.customer?.id || job.customer || job.customer_id || job.customer_detail?.id;
+            return customerId === user?.id;
+        });
 
         console.log("CustomerMessages: My Requests:", myRequests);
         setUserRequests(myRequests);
@@ -75,65 +83,113 @@ const CustomerMessages = () => {
     const urlRequestId = searchParams.get('requestId');
     const urlConversationId = searchParams.get('conversationId');
     const urlMessageSessionId = searchParams.get('messageSessionId');
-    const [conversationJobId, setConversationJobId] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!urlConversationId) {
-            setConversationJobId(null);
-            return;
-        }
-
-        const fetchConversationJob = async () => {
-            console.log("CustomerMessages: fetching conversation for", urlConversationId);
-            try {
-                const conversation = await getConversationById(urlConversationId);
-                const jobId = conversation.job || conversation.job_id || null;
-                console.log("CustomerMessages: conversation fetched", { conversationId: urlConversationId, jobId });
-                setConversationJobId(jobId);
-            } catch (error) {
-                console.warn("CustomerMessages: unable to resolve conversation to job", urlConversationId, error);
-                setConversationJobId(null);
-            }
-        };
-
-        fetchConversationJob();
-    }, [urlConversationId]);
 
     const findActiveRequest = useCallback((id?: string) => {
         if (!id) return undefined;
-        return hydratedRequests.find((r) => [
+        // Search raw jobs pool immediately to ensure deep-links resolve without waiting for hydration
+        return jobs.find((r: any) => [
             r.id,
             r.conversation_id,
             r.message_session_id,
             r.job_id,
             r.request_id,
         ].includes(id));
-    }, [hydratedRequests]);
+    }, [jobs]);
 
     const activeRequest = useMemo(() => {
         const found =
             (urlConversationId && findActiveRequest(urlConversationId)) ||
-            (conversationJobId && findActiveRequest(conversationJobId)) ||
             (urlMessageSessionId && findActiveRequest(urlMessageSessionId)) ||
             (urlRequestId && findActiveRequest(urlRequestId)) ||
-            hydratedRequests[0];
+            null;
 
         return found;
-    }, [findActiveRequest, urlConversationId, conversationJobId, urlMessageSessionId, urlRequestId, hydratedRequests[0]?.id]);
+    }, [findActiveRequest, urlConversationId, urlMessageSessionId, urlRequestId]);
+
+    const activeRequestId = activeRequest?.id;
+    const requestId = activeRequestId;
+
+    useEffect(() => {
+        if (urlConversationId && !activeRequest) {
+            getConversationById(urlConversationId)
+                .then(conv => {
+                    const mappedJobId = conv.job || conv.job_id;
+                    if (mappedJobId) {
+                        setSearchParams(prev => {
+                            const params = new URLSearchParams(prev);
+                            params.set('requestId', mappedJobId);
+                            return params;
+                        });
+                    }
+                })
+                .catch(err => console.error("CustomerMessages: Failed to map conversation to job:", err));
+        }
+    }, [urlConversationId, activeRequest, setSearchParams]);
+
+    useEffect(() => {
+        const urlId = searchParams.get('conversationId');
+        if (urlId) {
+            setConversationId(urlId);
+        } else if (activeRequest?.conversation_id) {
+            setConversationId(activeRequest.conversation_id);
+        } else if (activeRequest?.id) {
+             const proId = activeRequest.professional || activeRequest.assigned_to;
+             if (proId) {
+                 // Fallback for new jobs without conversation_id cached yet
+                 getOrCreateConversation(proId, activeRequest.id)
+                    .then(conv => setConversationId(conv.id))
+                    .catch(err => console.error("CustomerMessages: Sync error", err));
+             }
+        }
+    }, [activeRequestId, activeRequest?.conversation_id, activeRequest?.professional, activeRequest?.assigned_to, searchParams.get('conversationId')]);
+
+    // Polling for messages
+    useEffect(() => {
+        if (!conversationId) return;
+
+        const fetchMessages = async () => {
+            try {
+                const list = await getMessages(conversationId);
+                setMessages(prev => {
+                    if (JSON.stringify(prev) === JSON.stringify(list)) return prev;
+                    return list;
+                });
+                // Mark as read
+                if (list.some(m => !m.is_read && m.sender !== user?.id)) {
+                    markAsRead(conversationId);
+                }
+            } catch (err) {
+                console.error("CustomerMessages: Polling error", err);
+            }
+        };
+
+        fetchMessages();
+        const interval = setInterval(fetchMessages, 5000);
+        return () => clearInterval(interval);
+    }, [conversationId, user?.id]);
+
+    // Auto-scroll to bottom (most recent message)
+    useEffect(() => {
+        if (conversationId && messages.length > 0) {
+            const timer = setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [messages, conversationId]);
 
     // Debug activeRequest changes
     useEffect(() => {
-        console.log("CustomerMessages: activeRequest changed", {
-            activeRequest: activeRequest?.id,
-            urlRequestId,
-            urlConversationId,
-            conversationJobId,
-            urlMessageSessionId,
-            hydratedRequestsCount: hydratedRequests.length
-        });
-    }, [activeRequest?.id, urlRequestId, urlConversationId, conversationJobId, urlMessageSessionId, hydratedRequests.length]);
-    const requestId = activeRequest?.id;
-    const activeRequestId = activeRequest?.id;
+        if (urlRequestId || urlConversationId || urlMessageSessionId) {
+            console.log("CustomerMessages: Deep-linking detected", {
+                activeRequest: activeRequest?.id,
+                urlRequestId,
+                urlConversationId,
+                urlMessageSessionId,
+                hydratedRequestsCount: hydratedRequests.length
+            });
+        }
+    }, [activeRequest?.id, urlRequestId, urlConversationId, urlMessageSessionId, hydratedRequests.length]);
 
     // Fetch details for active professional
     useEffect(() => {
@@ -151,12 +207,28 @@ const CustomerMessages = () => {
         setSearchParams({ requestId: id });
     };
 
-    const [messageInput, setMessageInput] = useState("");
+    const handleSendMessage = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const text = messageInput.trim();
+        if (!text || !conversationId || isSending) return;
+
+        try {
+            setIsSending(true);
+            setMessageInput(""); // Optimistic clear
+            const newMsg = await sendMessage(conversationId, text);
+            setMessages(prev => [...prev, newMsg]);
+        } catch (error) {
+            console.error("CustomerMessages: Send failed", error);
+            alert("Failed to send message.");
+        } finally {
+            setIsSending(false);
+        }
+    };
+
     const [showStatus, setShowStatus] = useState(false);
 
     const getStepStatus = (stepIndex: number, jobStatus: string) => {
         const s = jobStatus.toLowerCase();
-        // Updated stages: pending -> accepted -> assigned/booked -> done -> completed
         const statuses = ['pending', 'accepted', 'assigned', 'done', 'completed'];
         const currentIndex = statuses.indexOf(s);
         
@@ -192,6 +264,32 @@ const CustomerMessages = () => {
         }
     ];
 
+    const formatTime = (dateInput: any) => {
+        if (!dateInput) return "--:--";
+        let dateStr = dateInput;
+        if (typeof dateStr === 'object' && !(dateStr instanceof Date)) {
+            // Explicit checks first
+            dateStr = dateStr.created_at || dateStr.createdAt || dateStr.timestamp || dateStr.updated_at || dateStr.updatedAt;
+            // Fallback key scanner
+            if (!dateStr) {
+                const keys = Object.keys(dateInput);
+                const dateKey = keys.find(k => k.toLowerCase().includes('time') || k.toLowerCase().includes('date') || k.toLowerCase().includes('created'));
+                if (dateKey) dateStr = dateInput[dateKey];
+            }
+        }
+        if (!dateStr) return "?:??"; // Indicates no date field was found natively
+        try {
+            if (typeof dateStr === 'string' && dateStr.includes(' ') && !dateStr.includes('T')) {
+                dateStr = dateStr.replace(' ', 'T');
+            }
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return "INV!"; // Indicates valid field found, but unparseable format
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch {
+            return "ERR";
+        }
+    };
+
     return (
         <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950 font-display text-text-primary dark:text-white overflow-hidden">
             <CustomerNavbar />
@@ -214,7 +312,7 @@ const CustomerMessages = () => {
                                         {userRequests.length} Total
                                     </span>
                                     {notifications.filter(n => !n.is_read).length > 0 && (
-                                        <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                        <span className="bg-red-500 text-white text-[10px) font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
                                             {notifications.filter(n => !n.is_read).length} New
                                         </span>
                                     )}
@@ -231,7 +329,7 @@ const CustomerMessages = () => {
                             <div className="p-10 text-center space-y-3 opacity-40">
                                 <span className="material-symbols-outlined text-4xl block">forum</span>
                                 <p className="text-xs font-black uppercase tracking-widest">No conversation yet</p>
-                                <p className="text-[10px] font-bold leading-relaxed">Pending requests will appear here once accepted.</p>
+                                <p className="text-[10px] font-bold leading-relaxed">Request services from professionals to start chatting.</p>
                             </div>
                         ) : (
                             hydratedRequests.map(req => (
@@ -301,19 +399,47 @@ const CustomerMessages = () => {
                             </div>
                         </div>
                     ) : !activeRequest ? (
-                        <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-40 p-10 animate-in fade-in zoom-in">
-                            <div className="size-24 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-6xl">chat_paste_go</span>
-                            </div>
-                            <div className="max-w-xs">
-                                <h3 className="text-xl font-black tracking-tight mb-2">Pick a Conversation</h3>
-                                <p className="text-sm font-medium leading-relaxed">Select a professional from the list to view your project status and messages.</p>
-                            </div>
-                        </div>
+                        (() => {
+                            const isDeepLinking = !!(urlRequestId || urlConversationId || urlMessageSessionId);
+                            if (isDeepLinking) {
+                                return (
+                                    <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-60 p-10 animate-in fade-in">
+                                        <span className="material-symbols-outlined text-4xl animate-spin text-primary">sync</span>
+                                        <div className="space-y-2">
+                                            <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">Opening conversation...</h3>
+                                            <p className="text-sm font-medium text-text-secondary dark:text-gray-400 max-w-xs">Connecting you with your professional.</p>
+                                        </div>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div className="flex flex-col items-center justify-center h-full text-center space-y-8 p-12 animate-in fade-in zoom-in duration-700 bg-slate-50/50 dark:bg-slate-900/20">
+                                    <div className="relative">
+                                        <div className="size-32 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-2xl shadow-primary/20 border border-slate-100 dark:border-slate-700 relative z-10">
+                                            <span className="material-symbols-outlined text-6xl text-primary animate-pulse">forum</span>
+                                        </div>
+                                        <div className="absolute -top-2 -right-2 size-10 bg-primary rounded-full border-4 border-white dark:border-slate-900 shadow-lg z-20 flex items-center justify-center">
+                                            <span className="material-symbols-outlined text-white text-lg font-black">bolt</span>
+                                        </div>
+                                    </div>
+                                    <div className="max-w-sm space-y-3">
+                                        <h3 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">Select a Conversation</h3>
+                                        <p className="text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+                                            Select a professional from your request list to view the project timeline and start a conversation.
+                                        </p>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 w-full max-w-xs opacity-20 capitalize text-[10px] font-black tracking-widest text-slate-400">
+                                        <div className="flex flex-col items-center gap-2"><span className="material-symbols-outlined">security</span>Secure</div>
+                                        <div className="flex flex-col items-center gap-2"><span className="material-symbols-outlined">bolt</span>Fast</div>
+                                        <div className="flex flex-col items-center gap-2"><span className="material-symbols-outlined">verified</span>Verified</div>
+                                    </div>
+                                </div>
+                            );
+                        })()
                     ) : (
                         <>
                             {/* Chat Header */}
-                            <div className="flex items-center justify-between p-3 md:p-4 border-b border-slate-100/60 dark:border-slate-800/50 bg-white/80 dark:bg-card-dark/80 backdrop-blur-md sticky top-0 z-10 transition-all">
+                            <div className="flex items-center justify-between p-3 md:p-4 border-b border-slate-100/60 dark:border-slate-800/50 bg-white/90 dark:bg-card-dark/90 backdrop-blur-xl sticky top-0 z-20 transition-all shadow-sm">
                                 <div className="flex items-center gap-3 md:gap-4">
                                     <button
                                         onClick={() => setSearchParams({})}
@@ -329,7 +455,7 @@ const CustomerMessages = () => {
                                                 <span className="material-symbols-outlined">person</span>
                                             )}
                                         </div>
-                                        <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm" />
+                                        <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm ring-2 ring-white dark:ring-slate-950" />
                                     </div>
                                     <div className="flex flex-col gap-0.5">
                                         <Link 
@@ -355,19 +481,19 @@ const CustomerMessages = () => {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="hidden sm:flex items-center gap-3">
+                                <div className="hidden sm:flex items-center gap-2">
                                     {(activeRequest.status === 'booked' || activeRequest.status === 'in_progress' || activeRequest.status === 'done' || activeRequest.status === 'completed') && (
-                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 rounded-full border border-primary/20 animate-in fade-in zoom-in">
+                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 rounded-full border border-primary/20 animate-in fade-in zoom-in mr-2">
                                             <span className="material-symbols-outlined text-sm text-primary">call</span>
-                                            <span className="text-xs font-black text-primary">
+                                            <span className="text-xs font-black text-primary tracking-tight">
                                                 {activeUserDetails?.phone || activeRequest.professional_detail?.phone || "+251 9XX XXX XXX"}
                                             </span>
                                         </div>
                                     )}
-                                    <button className="size-10 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all border border-slate-100 dark:border-slate-800">
+                                    <button className="size-10 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-white dark:hover:bg-slate-800/80 rounded-xl transition-all border border-slate-100 dark:border-slate-800 shadow-sm">
                                         <span className="material-symbols-outlined text-xl">videocam</span>
                                     </button>
-                                    <button className="size-10 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all border border-slate-100 dark:border-slate-800">
+                                    <button className="size-10 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-white dark:hover:bg-slate-800/80 rounded-xl transition-all border border-slate-100 dark:border-slate-800 shadow-sm">
                                         <span className="material-symbols-outlined text-xl">call</span>
                                     </button>
                                     <button
@@ -383,8 +509,8 @@ const CustomerMessages = () => {
                             <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 relative"
                                  style={{
                                     backgroundColor: 'transparent',
-                                    backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(148, 163, 184, 0.08) 1px, transparent 0), linear-gradient(to bottom, rgba(248, 250, 252, 0.5), rgba(241, 245, 249, 0.5))',
-                                    backgroundSize: '32px 32px, 100% 100%'
+                                    backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.1) 1.5px, transparent 0)',
+                                    backgroundSize: '24px 24px'
                                  }}>
                                 <div className="flex justify-center my-2">
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm">
@@ -392,83 +518,109 @@ const CustomerMessages = () => {
                                     </span>
                                 </div>
 
-
-
-                                {/* Customer Initial Message (Real Description) */}
-                                <div className="flex justify-end animate-in fade-in slide-in-from-right-4">
-                                    <div className="flex flex-col items-end gap-1.5 max-w-[85%]">
-                                        <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-br-sm px-5 py-4 bg-primary text-white shadow-lg shadow-primary/20">
-                                            {activeRequest.description || "Hello! I'd like to request your services for my project."}
-                                        </div>
-                                        <span className="text-slate-400 text-[9px] font-black uppercase tracking-tighter mr-1">
-                                            Sent • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--"}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Pro Response (Only after Accept) */}
-                                {activeRequest.status !== 'pending' && (
-                                    <div className="flex items-end gap-3 max-w-[85%] animate-in fade-in slide-in-from-left-4 duration-500">
-                                        <div className="size-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
-                                            {activeRequest.professional_detail?.profile_picture || activeRequest.professional_detail?.profile_photo ? (
-                                                <img src={getImageUrl(activeRequest.professional_detail.profile_picture || activeRequest.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <span className="material-symbols-outlined text-xs">person</span>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-bl-sm px-5 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700">
-                                                {activeRequest.status === 'accepted' || activeRequest.status === 'assigned'
-                                                    ? `Hello! I've reviewed your request and I'm happy to help. I've accepted the project!`
-                                                    : activeRequest.status === 'done'
-                                                    ? "I've finished the job! Please review the work and approve the payment when you're ready."
-                                                    : "The job has been updated to: " + activeRequest.status}
+                                {/* Real Message Thread */}
+                                <div className="flex flex-col gap-4 py-4 min-h-full">
+                                    {/* Virtual Message: Original Request Description (Customer View: Right) */}
+                                    <div className="flex justify-end animate-in fade-in slide-in-from-right-4">
+                                        <div className="flex flex-col items-end gap-1.5 max-w-[85%] group">
+                                            <div className="relative text-sm font-medium leading-relaxed rounded-2xl rounded-tr-none px-5 pt-4 pb-7 bg-primary text-white shadow-xl shadow-primary/10 border border-primary/20">
+                                                {activeRequest.description || "Hello! I'd like to request your services for my project."}
+                                                <div className="absolute bottom-1.5 right-4 flex items-center gap-1.5 opacity-80 text-[10px] font-bold tracking-tight">
+                                                    {formatTime(activeRequest)}
+                                                    <span className="material-symbols-outlined text-[11px]">done_all</span>
+                                                </div>
                                             </div>
-                                            <span className="text-slate-400 text-[9px] font-black uppercase tracking-tighter ml-1">
-                                                Received • {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
+                                            <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest mr-1 opacity-0 group-hover:opacity-100 transition-opacity">Initial Request</span>
                                         </div>
                                     </div>
-                                )}
 
-                                {/* Status Update Overlay */}
-                                {activeRequest.status === 'accepted' && (
-                                    <div className="mx-auto max-w-sm w-full bg-green-500/10 border border-green-500/20 rounded-2xl p-4 flex items-center gap-4 animate-in zoom-in duration-500">
-                                        <div className="size-10 bg-green-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-green-500/40">
-                                            <span className="material-symbols-outlined font-black">verified</span>
+                                    {/* Virtual Message: Pro Acceptance (Customer View: Left) */}
+                                    {activeRequest.status !== 'pending' && (
+                                        <div className="flex items-end gap-3 max-w-[85%] animate-in fade-in slide-in-from-left-4 duration-500 group">
+                                            <div className="size-9 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden transform group-hover:scale-110 transition-transform">
+                                                {activeRequest.professional_detail?.profile_picture || activeRequest.professional_detail?.profile_photo ? (
+                                                    <img src={getImageUrl(activeRequest.professional_detail.profile_picture || activeRequest.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="material-symbols-outlined text-primary text-lg font-black">construction</span>
+                                                )}
+                                            </div>
+                                            <div className="flex flex-col gap-1.5">
+                                                <div className="relative text-sm font-medium leading-relaxed rounded-2xl rounded-tl-none px-5 pt-4 pb-7 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700">
+                                                    {activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'booked'
+                                                        ? `Hello! I've reviewed your request and I'm happy to help. I've accepted the project!`
+                                                        : activeRequest.status === 'done' || activeRequest.status === 'completed'
+                                                        ? "I've finished the job! Please review the work and approve the payment when you're ready."
+                                                        : "The job has been updated to: " + activeRequest.status}
+                                                    <div className="absolute bottom-1.5 right-4 opacity-40 text-[10px] font-bold tracking-tight">
+                                                        {formatTime(activeRequest.updated_at || activeRequest.updatedAt || activeRequest)}
+                                                    </div>
+                                                </div>
+                                                <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest ml-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Professional Action</span>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h5 className="text-xs font-black text-green-700 dark:text-green-400 uppercase tracking-tight">Project Accepted</h5>
-                                            <p className="text-[10px] font-bold text-green-600/80 leading-tight mt-0.5">The professional is ready to start! Review the status steps to proceed.</p>
-                                        </div>
-                                    </div>
-                                )}
+                                    )}
+
+                                    {/* Message History */}
+                                    {messages.map((msg, i) => {
+                                        const isMe = msg.sender === user?.id || msg.is_me;
+                                        return (
+                                            <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
+                                                {!isMe && (
+                                                    <div className="size-9 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden mr-3">
+                                                         {activeRequest.professional_detail?.profile_picture ? (
+                                                            <img src={getImageUrl(activeRequest.professional_detail.profile_picture)} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="material-symbols-outlined text-xs">person</span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                <div className={`relative max-w-[85%] md:max-w-[75%] rounded-2xl px-5 pt-3.5 pb-7 shadow-xl ${isMe ? 'bg-primary text-white rounded-tr-none shadow-primary/10' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 rounded-tl-none shadow-slate-200/50 dark:shadow-none'}`}>
+                                                    <p className="text-sm font-medium leading-relaxed">{msg.body || msg.text || msg.content}</p>
+                                                    <div className={`absolute bottom-1.5 right-4 flex items-center gap-1 text-[10px] font-bold tracking-tight ${isMe ? 'text-white/80' : 'text-slate-400'}`}>
+                                                        {formatTime(msg)}
+                                                        {isMe && <span className="material-symbols-outlined text-[12px] font-black">{msg.is_read || msg.isRead ? 'done_all' : 'done'}</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    <div ref={messagesEndRef} />
+                                </div>
                             </div>
 
-                            {/* Premium Bottom Bar */}
-                            <div className="p-4 bg-white dark:bg-card-dark border-t border-slate-100 dark:border-slate-800 px-6 pb-6">
+                            {/* Messaging Input */}
+                            <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-card-dark border-t border-slate-100 dark:border-slate-800 px-6 pb-6">
                                 <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl px-4 py-2 ring-1 ring-slate-100 dark:ring-slate-800 focus-within:ring-primary focus-within:ring-2 transition-all">
-                                    <button className="text-slate-400 hover:text-primary transition-all transform hover:rotate-12">
+                                    <button type="button" className="text-slate-400 hover:text-primary transition-all transform hover:rotate-12">
                                         <span className="material-symbols-outlined text-2xl">add_circle</span>
                                     </button>
                                     <input
-                                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 dark:text-white placeholder-slate-400"
+                                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none"
                                         placeholder="Type your reply here..."
                                         type="text"
                                         value={messageInput}
                                         onChange={(e) => setMessageInput(e.target.value)}
+                                        disabled={isSending}
                                     />
-                                    <button className="flex items-center justify-center bg-primary text-white rounded-xl px-5 py-2.5 gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/30">
-                                        <span className="text-xs font-black uppercase tracking-wider">Send</span>
-                                        <span className="material-symbols-outlined text-sm">send</span>
+                                    <button
+                                        type="submit"
+                                        className="flex items-center justify-center bg-primary text-white rounded-xl px-5 py-2.5 gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                                        disabled={!messageInput.trim() || isSending || !conversationId}
+                                    >
+                                        <span className="text-xs font-black uppercase tracking-wider">{isSending || !conversationId ? '...' : 'Send'}</span>
+                                        {isSending ? (
+                                            <span className="material-symbols-outlined text-sm animate-spin">refresh</span>
+                                        ) : (
+                                            <span className="material-symbols-outlined text-sm">send</span>
+                                        )}
                                     </button>
                                 </div>
-                            </div>
+                            </form>
                         </>
                     )}
                 </div>
 
-                {/* Right Column: Dynamic Project Status */}
+                {/* Right Column: Project Insights */}
                 <div className={`
                     ${showStatus ? 'fixed inset-0 z-[60] flex bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-sm p-6 animate-in fade-in slide-in-from-right duration-300' : 'hidden'} 
                     xl:relative xl:inset-auto xl:z-0 xl:flex xl:bg-transparent xl:dark:bg-transparent xl:backdrop-blur-none xl:p-0 
@@ -484,22 +636,18 @@ const CustomerMessages = () => {
                     )}
                     {activeRequest ? (
                         <>
-
-                            {/* Attractive Stepper */}
+                            {/* Stepper */}
                             <div className="bg-white dark:bg-card-dark rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/60 dark:border-slate-800 p-8">
                                 <h3 className="text-sm font-black text-text-primary dark:text-white uppercase tracking-[0.15em] mb-10 text-center">Project Timeline</h3>
 
                                 <div className="relative flex flex-col gap-12">
-                                    {/* Progress Line */}
                                     <div className="absolute left-[11px] top-6 bottom-6 w-1 bg-slate-100 dark:bg-slate-800 rounded-full" />
-
                                     {jobSteps.map((step, index) => {
                                         const isCompleted = step.status === 'completed';
                                         const isCurrent = step.status === 'current';
 
                                         return (
                                             <div key={index} className={`flex gap-6 relative group transition-all duration-500 ${!isCompleted && !isCurrent ? 'opacity-40 grayscale' : ''}`}>
-                                                {/* Stepper Node */}
                                                 <div className="relative shrink-0 z-10">
                                                     {isCompleted ? (
                                                         <div className="size-[26px] bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-green-500/40 ring-4 ring-white dark:ring-slate-900">
@@ -574,7 +722,7 @@ const CustomerMessages = () => {
                                 </div>
                             </div>
 
-                            {/* Job Details Card */}
+                            {/* Job Details */}
                             <div className="max-w-lg mx-auto w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-6 shadow-xl shadow-slate-200/50 dark:shadow-none animate-in fade-in slide-in-from-top-4 duration-500">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
@@ -625,7 +773,7 @@ const CustomerMessages = () => {
                                 </div>
                             </div>
 
-                            {/* Security Helper */}
+                            {/* Escrow Banner */}
                             <div className="bg-slate-900 dark:bg-primary/20 p-5 rounded-2xl flex gap-4 overflow-hidden relative shadow-lg shadow-slate-900/20">
                                 <span className="material-symbols-outlined text-3xl text-primary shrink-0 opacity-80">verified_user</span>
                                 <div className="relative z-10">

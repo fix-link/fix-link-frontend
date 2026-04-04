@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import { useAuth } from '../../../context/AuthContext';
 import { updateJobStatus } from '../../../api/jobs.api';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
-import { getConversationById } from '../../../api/conversations.api';
+import { getMessages, sendMessage, getOrCreateConversation, markAsRead, getConversationById } from '../../../api/conversations.api';
 import { useData } from '../../../context/DataContext';
 
 const ProfessionalMessages = () => {
@@ -13,9 +13,14 @@ const ProfessionalMessages = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [professionalRequests, setProfessionalRequests] = useState<any[]>([]);
     const [activeUserDetails, setActiveUserDetails] = useState<any>(null);
+    const [messages, setMessages] = useState<any[]>([]);
+    const [conversationId, setConversationId] = useState<string | null>(null);
+    const [isSending, setIsSending] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
     const { jobs, notifications, jobsLoading, notificationsLoading } = useData();
 
-    const isLoading = jobsLoading || notificationsLoading;
+    // Prevent blocking UI flash during background context polling
+    const isLoading = (jobsLoading || notificationsLoading) && jobs.length === 0;
 
     useEffect(() => {
         if (!user?.id) {
@@ -73,27 +78,6 @@ const ProfessionalMessages = () => {
     const urlRequestId = searchParams.get('requestId');
     const urlConversationId = searchParams.get('conversationId');
     const urlMessageSessionId = searchParams.get('messageSessionId');
-    const [conversationJobId, setConversationJobId] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!urlConversationId) {
-            setConversationJobId(null);
-            return;
-        }
-
-        const fetchConversationJob = async () => {
-            try {
-                const conversation = await getConversationById(urlConversationId);
-                setConversationJobId(conversation.job || conversation.job_id || null);
-                console.log("ProfessionalMessages: conversation fetched for conversationId", urlConversationId, "job", conversation.job || conversation.job_id);
-            } catch (error) {
-                console.warn("ProfessionalMessages: unable to resolve conversation to job", urlConversationId, error);
-                setConversationJobId(null);
-            }
-        };
-
-        fetchConversationJob();
-    }, [urlConversationId]);
 
     const findActiveRequest = useCallback((id?: string) => {
         if (!id) return undefined;
@@ -109,36 +93,90 @@ const ProfessionalMessages = () => {
     const activeRequest = useMemo(() => {
         const found =
             (urlConversationId && findActiveRequest(urlConversationId)) ||
-            (conversationJobId && findActiveRequest(conversationJobId)) ||
             (urlMessageSessionId && findActiveRequest(urlMessageSessionId)) ||
             (urlRequestId && findActiveRequest(urlRequestId)) ||
-            hydratedRequests[0];
+            null;
 
         return found;
-    }, [findActiveRequest, urlConversationId, conversationJobId, urlMessageSessionId, urlRequestId, hydratedRequests[0]?.id]);
+    }, [findActiveRequest, urlConversationId, urlMessageSessionId, urlRequestId]);
 
-    if (urlConversationId && activeRequest) {
-        console.log("ProfessionalMessages: Matched chat by conversationId:", activeRequest.id);
-    } else if (conversationJobId && activeRequest) {
-        console.log("ProfessionalMessages: Matched chat by conversationJobId:", activeRequest.id);
-    } else if (urlMessageSessionId && activeRequest) {
-        console.log("ProfessionalMessages: Matched chat by messageSessionId:", activeRequest.id);
-    }
-    const requestId = activeRequest?.id;
     const activeRequestId = activeRequest?.id;
+    const requestId = activeRequestId;
 
-    // When jobs finish loading, make sure the URL's requestId is still honoured.
-    // This handles the case where a notification click navigates before data loads.
     useEffect(() => {
-        const urlRequestId = searchParams.get('requestId');
-        if (urlRequestId && hydratedRequests.length > 0) {
-            const match = hydratedRequests.find(r => r.id === urlRequestId);
-            if (!match) {
-                console.warn('ProfessionalMessages: requestId from URL not found in job list:', urlRequestId);
-            }
+        if (urlConversationId && !activeRequest) {
+            getConversationById(urlConversationId)
+                .then(conv => {
+                    const mappedJobId = conv.job || conv.job_id;
+                    if (mappedJobId) {
+                        setSearchParams(prev => {
+                            const params = new URLSearchParams(prev);
+                            params.set('requestId', mappedJobId);
+                            return params;
+                        });
+                    }
+                })
+                .catch(err => console.error("ProfessionalMessages: Failed to map conversation to job:", err));
         }
-    }, [hydratedRequests]);
+    }, [urlConversationId, activeRequest, setSearchParams]);
 
+    useEffect(() => {
+        const urlId = searchParams.get('conversationId');
+        if (urlId) {
+            setConversationId(urlId);
+        } else if (activeRequest?.conversation_id) {
+            setConversationId(activeRequest.conversation_id);
+        } else if (activeRequest?.id) {
+            // Need to get or create
+            getOrCreateConversation(activeRequest.customer, activeRequest.id)
+                .then(conv => setConversationId(conv.id))
+                .catch(err => console.error("ProfessionalMessages: Sync error", err));
+        }
+    }, [activeRequestId, searchParams.get('conversationId')]);
+
+    // Polling for messages
+    useEffect(() => {
+        if (!conversationId) return;
+
+        const fetchMessages = async () => {
+            try {
+                const list = await getMessages(conversationId);
+                setMessages(prev => {
+                    if (JSON.stringify(prev) === JSON.stringify(list)) return prev;
+                    return list;
+                });
+                // Mark as read
+                if (list.some(m => !m.is_read && m.sender !== user?.id)) {
+                    markAsRead(conversationId);
+                }
+            } catch (err) {
+                console.error("ProfessionalMessages: Polling error", err);
+            }
+        };
+
+        fetchMessages();
+        const interval = setInterval(fetchMessages, 5000);
+        return () => clearInterval(interval);
+    }, [conversationId, user?.id]);
+
+    // Auto-scroll to bottom
+    useEffect(() => {
+        if (conversationId && messages.length > 0) {
+            const timer = setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [messages, conversationId]);
+
+    // Debugging active request matches
+    useEffect(() => {
+        if (activeRequest) {
+            console.log("ProfessionalMessages: Active request identified:", activeRequest.id);
+        }
+    }, [activeRequest?.id]);
+
+    // UseEffect to fetch customer details if missing
     useEffect(() => {
         if (activeRequest?.customer_detail) {
             setActiveUserDetails(activeRequest.customer_detail);
@@ -150,6 +188,24 @@ const ProfessionalMessages = () => {
     const [messageInput, setMessageInput] = useState("");
     const [showStatus, setShowStatus] = useState(false);
     const [showCustomerProfile, setShowCustomerProfile] = useState(false);
+
+    const handleSendMessage = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const text = messageInput.trim();
+        if (!text || !conversationId || isSending) return;
+
+        try {
+            setIsSending(true);
+            setMessageInput(""); // Optimistic clear
+            const newMsg = await sendMessage(conversationId, text);
+            setMessages(prev => [...prev, newMsg]);
+        } catch (error) {
+            console.error("ProfessionalMessages: Send failed", error);
+            alert("Failed to send message.");
+        } finally {
+            setIsSending(false);
+        }
+    };
 
     const handleSelectRequest = (id: string) => {
         setSearchParams({ requestId: id });
@@ -249,6 +305,32 @@ const ProfessionalMessages = () => {
             ));
         } catch (error: any) {
             alert("Failed to decline: " + error.message);
+        }
+    };
+
+    const formatTime = (dateInput: any) => {
+        if (!dateInput) return "--:--";
+        let dateStr = dateInput;
+        if (typeof dateStr === 'object' && !(dateStr instanceof Date)) {
+            // Explicit checks first
+            dateStr = dateStr.created_at || dateStr.createdAt || dateStr.timestamp || dateStr.updated_at || dateStr.updatedAt;
+            // Fallback key scanner
+            if (!dateStr) {
+                const keys = Object.keys(dateInput);
+                const dateKey = keys.find(k => k.toLowerCase().includes('time') || k.toLowerCase().includes('date') || k.toLowerCase().includes('created'));
+                if (dateKey) dateStr = dateInput[dateKey];
+            }
+        }
+        if (!dateStr) return "?:??"; // Indicates no date field was found natively
+        try {
+            if (typeof dateStr === 'string' && dateStr.includes(' ') && !dateStr.includes('T')) {
+                dateStr = dateStr.replace(' ', 'T');
+            }
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return "INV!"; // Indicates valid field found, but unparseable format
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        } catch {
+            return "ERR";
         }
     };
 
@@ -363,19 +445,42 @@ const ProfessionalMessages = () => {
                                 </div>
                             </div>
                         ) : !activeRequest ? (
-                            <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-40 p-10 animate-in fade-in zoom-in">
-                                <div className="size-24 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-6xl">quick_reference_all</span>
-                                </div>
-                                <div className="max-w-xs">
-                                    <h3 className="text-xl font-black tracking-tight mb-2">Review Inbound Work</h3>
-                                    <p className="text-sm font-medium leading-relaxed">Select a customer request from the list to view project details and start messaging.</p>
-                                </div>
-                            </div>
+                            (() => {
+                                const isDeepLinking = !!(urlRequestId || urlConversationId || urlMessageSessionId);
+                                if (isDeepLinking) {
+                                    return (
+                                        <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-60 p-10 animate-in fade-in">
+                                            <span className="material-symbols-outlined text-4xl animate-spin text-primary">sync</span>
+                                            <div className="space-y-2">
+                                                <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">Opening conversation...</h3>
+                                                <p className="text-sm font-medium text-text-secondary dark:text-gray-400 max-w-xs">Connecting you with your customer.</p>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                                return (
+                                    <div className="flex flex-col items-center justify-center h-full text-center space-y-8 p-12 animate-in fade-in zoom-in duration-700 bg-slate-50/50 dark:bg-slate-900/20">
+                                        <div className="relative">
+                                            <div className="size-32 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-2xl shadow-primary/20 border border-slate-100 dark:border-slate-700 relative z-10">
+                                                <span className="material-symbols-outlined text-6xl text-primary animate-pulse">quick_reference_all</span>
+                                            </div>
+                                            <div className="absolute -top-2 -right-2 size-10 bg-primary rounded-full border-4 border-white dark:border-slate-900 shadow-lg z-20 flex items-center justify-center">
+                                                <span className="material-symbols-outlined text-white text-lg font-black">bolt</span>
+                                            </div>
+                                        </div>
+                                        <div className="max-w-sm space-y-3">
+                                            <h3 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">Professional Inbox</h3>
+                                            <p className="text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
+                                                Select a customer request from the sidebar to view project requirements, address details, and start messaging.
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })()
                         ) : (
                             <>
                                 {/* Chat Header */}
-                                <div className="flex items-center justify-between p-3 md:p-4 border-b border-slate-100/60 dark:border-slate-800/50 bg-white/80 dark:bg-card-dark/80 backdrop-blur-md sticky top-0 z-10">
+                                <div className="flex items-center justify-between p-3 md:p-4 border-b border-slate-100/60 dark:border-slate-800/50 bg-white/90 dark:bg-card-dark/90 backdrop-blur-xl sticky top-0 z-20 shadow-sm transition-all">
                                     <div className="flex items-center gap-3 md:gap-4">
                                         <button
                                             onClick={() => setSearchParams({})}
@@ -383,23 +488,23 @@ const ProfessionalMessages = () => {
                                         >
                                             <span className="material-symbols-outlined text-xl">arrow_back</span>
                                         </button>
-                                        {/* Clickable customer identity — opens mini profile */}
+                                        {/* Clickable customer identity */}
                                         <button
                                             onClick={() => setShowCustomerProfile(p => !p)}
                                             className="flex items-center gap-3 md:gap-4 hover:opacity-80 transition-opacity"
                                         >
                                         <div className="relative group cursor-pointer">
-                                            <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-md overflow-hidden">
+                                            <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-md transform group-hover:scale-105 transition-transform overflow-hidden">
                                                 {(activeUserDetails?.profile_picture || activeRequest.customer_detail?.profile_picture) ? (
                                                     <img src={getImageUrl(activeUserDetails?.profile_picture || activeRequest.customer_detail.profile_picture)} alt="" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <span className="material-symbols-outlined">person</span>
                                                 )}
                                             </div>
-                                            <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm" />
+                                            <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm ring-2 ring-white dark:ring-slate-950" />
                                         </div>
                                         <div className="flex flex-col gap-0.5 text-left">
-                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none underline-offset-2 hover:underline">
+                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none">
                                                 {(() => {
                                                     const detail = activeUserDetails || activeRequest.customer_detail;
                                                     if (!detail) return "Customer";
@@ -418,10 +523,10 @@ const ProfessionalMessages = () => {
                                         {/* Customer Mini-Profile Popup */}
                                         {showCustomerProfile && (() => {
                                             const detail = activeUserDetails || activeRequest.customer_detail;
+                                            const photo = detail?.profile_picture || detail?.user?.profile_picture;
                                             const first = detail?.first_name || detail?.user?.first_name || "Customer";
                                             const last = detail?.last_name || detail?.user?.last_name || "";
                                             const fullName = `${first} ${last}`.trim();
-                                            const photo = detail?.profile_picture || detail?.user?.profile_picture;
                                             const email = detail?.email || detail?.user?.email;
                                             const phone = detail?.phonenumber || detail?.phone || detail?.user?.phonenumber;
                                             const location = detail?.city || detail?.location || detail?.user?.city;
@@ -430,7 +535,6 @@ const ProfessionalMessages = () => {
                                                     className="absolute left-4 top-[4.5rem] z-[100] w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
                                                     onClick={e => e.stopPropagation()}
                                                 >
-                                                    {/* Mini cover */}
                                                     <div className="h-16 bg-gradient-to-r from-primary/30 to-primary/10 relative" />
                                                     <div className="px-5 pb-5 -mt-8">
                                                         <div className="size-16 rounded-full border-4 border-white dark:border-slate-800 overflow-hidden bg-primary/10 flex items-center justify-center shadow-lg mb-3">
@@ -486,21 +590,25 @@ const ProfessionalMessages = () => {
                                     </div>
                                 </div>
 
-                                {/* Messaging Canvas with Premium Background */}
-                                <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 relative" 
+                                {/* Messaging Canvas */}
+                                <div className="flex-1 overflow-y-auto p-4 md:p-6 flex flex-col gap-6 relative custom-scrollbar scroll-smooth" 
                                      style={{ 
                                         backgroundColor: 'transparent',
-                                        backgroundImage: `
-                                            radial-gradient(circle at 2px 2px, rgba(148, 163, 184, 0.05) 1px, transparent 0),
-                                            linear-gradient(to bottom, rgba(248, 250, 252, 0.8), rgba(241, 245, 249, 0.8))
-                                        `,
-                                        backgroundSize: '32px 32px, 100% 100%'
-                                     }}>                                    {/* Project Insight Card - Simplified */}
+                                        backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.1) 1.5px, transparent 0)',
+                                        backgroundSize: '24px 24px'
+                                     }}>
+                                    <div className="flex justify-center my-4 sticky top-0 z-10 pointer-events-none">
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-5 py-2 rounded-full border border-slate-100 dark:border-slate-800 shadow-md">
+                                            Chat Sync Enabled • {formatTime(activeRequest.created_at || activeRequest.createdAt)}
+                                        </span>
+                                    </div>
+
+                                    {/* Inbound Summary Card */}
                                     <div className="max-w-lg mx-auto w-full bg-white dark:bg-card-dark rounded-2xl border border-slate-200 dark:border-slate-800 p-6 shadow-sm animate-in fade-in slide-in-from-top-4">
                                         <div className="flex items-center justify-between mb-4 border-b border-slate-50 dark:border-slate-800 pb-4">
                                             <div className="flex items-center gap-2 text-slate-900 dark:text-white">
                                                 <span className="material-symbols-outlined text-xl">assignment_late</span>
-                                                <h4 className="font-bold text-sm tracking-tight text-text-primary dark:text-white">Inbound Proposal</h4>
+                                                <h4 className="font-bold text-sm tracking-tight">Inbound Proposal</h4>
                                             </div>
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                                 ID-{activeRequest.id.substring(0, 6)}
@@ -526,18 +634,6 @@ const ProfessionalMessages = () => {
                                                     </span>
                                                 </div>
                                             </div>
-
-                                            {(activeRequest.scheduled_at || activeRequest.preferredDate) && (
-                                                <div className="bg-primary/5 p-3 rounded-xl flex items-center gap-3 border border-primary/10">
-                                                    <span className="material-symbols-outlined text-primary text-lg">event_upcoming</span>
-                                                    <div className="min-w-0">
-                                                        <p className="text-[9px] font-bold uppercase tracking-wide opacity-50 leading-none mb-1 text-primary">Target Completion</p>
-                                                        <p className="text-xs font-bold text-primary">
-                                                            {new Date(activeRequest.scheduled_at || activeRequest.preferredDate).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
 
                                         <div className="mt-6">
@@ -556,7 +652,7 @@ const ProfessionalMessages = () => {
                                                         Decline
                                                     </button>
                                                 </div>
-                                            ) : (activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'in_progress') ? (
+                                            ) : (activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'in_progress' || activeRequest.status === 'booked') ? (
                                                 <button
                                                     onClick={handleMarkDone}
                                                     className="w-full py-3 bg-emerald-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest transition-all hover:bg-emerald-700 shadow-lg shadow-emerald-600/20"
@@ -571,72 +667,105 @@ const ProfessionalMessages = () => {
                                         </div>
                                     </div>
 
-                                    {/* Timeline Marker */}
-                                    <div className="flex justify-center my-4">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 bg-white/50 dark:bg-slate-900/50 px-4 py-1 rounded-full border border-slate-100 dark:border-slate-800">
-                                            Chat Started • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "--"}
-                                        </span>
-                                    </div>
-
-                                    {/* Inbound Customer Message */}
-                                    <div className="flex justify-start animate-in fade-in slide-in-from-left-4">
-                                        <div className="flex flex-col gap-1.5 max-w-[85%]">
-                                            <div className="bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-2xl rounded-bl-none px-4 py-3 text-sm font-medium shadow-sm border border-slate-100 dark:border-slate-700">
-                                                {activeRequest.description || "Hello! Looking forward to working with you."}
-                                            </div>
-                                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter ml-1">
-                                                Received • {new Date(activeRequest.created_at || activeRequest.createdAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Professional Response */}
-                                    {activeRequest.status !== 'pending' && (
-                                        <div className="flex justify-end animate-in fade-in slide-in-from-right-4">
-                                            <div className="flex flex-col items-end gap-1.5 max-w-[85%]">
-                                                <div className="bg-primary text-white rounded-2xl rounded-br-none px-4 py-3 text-sm font-medium shadow-lg shadow-primary/20">
-                                                    {activeRequest.status === 'accepted' || activeRequest.status === 'assigned'
-                                                        ? "I've reviewed your request and accepted the project! Let's get started."
-                                                        : activeRequest.status === 'done'
-                                                        ? "I've marked the job as completed. Please review and release payment."
-                                                        : "Status updated to: " + activeRequest.status}
+                                    {/* Message History Thread */}
+                                    <div className="flex flex-col gap-4 py-4 min-h-full">
+                                        {/* Original Request (Left) */}
+                                        <div className="flex justify-start animate-in fade-in slide-in-from-left-4">
+                                            <div className="flex items-end gap-3 max-w-[85%]">
+                                                <div className="size-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                                                    {activeUserDetails?.profile_picture || activeUserDetails?.profilePhoto ? (
+                                                        <img src={getImageUrl(activeUserDetails.profile_picture || activeUserDetails.profilePhoto)} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <span className="material-symbols-outlined text-xs">person</span>
+                                                    )}
                                                 </div>
-                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mr-1">
-                                                    Sent • Just now
-                                                </span>
+                                                <div className="flex flex-col gap-1.5">
+                                                    <div className="text-sm font-medium leading-relaxed rounded-2xl rounded-bl-none px-5 pt-4 pb-7 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-sm border border-slate-100 dark:border-slate-700 relative">
+                                                        {activeRequest.description || "I'd like to request your services for my project."}
+                                                        <div className="absolute bottom-1.5 right-4 text-[9px] font-black uppercase tracking-tighter opacity-40">
+                                                            {formatTime(activeRequest)}
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    )}
+
+                                        {/* System Notification: Acceptance (Right) */}
+                                        {activeRequest.status !== 'pending' && (
+                                            <div className="flex justify-end animate-in fade-in slide-in-from-right-4 duration-500">
+                                                <div className="flex flex-col items-end gap-1.5 max-w-[85%]">
+                                                    <div className="relative text-sm font-medium leading-relaxed rounded-2xl rounded-tr-none px-5 pt-4 pb-7 bg-primary text-white shadow-xl shadow-primary/10 border border-primary/20 italic">
+                                                        {activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'booked'
+                                                            ? `I've reviewed this request and accepted the project. Chatting with customer now!`
+                                                            : activeRequest.status === 'done' || activeRequest.status === 'completed'
+                                                            ? "I've marked this job as finished. Awaiting customer confirmation and payment."
+                                                            : "Job status updated to: " + activeRequest.status}
+                                                        <div className="absolute bottom-1.5 right-4 flex items-center gap-1.5 opacity-80 text-[10px] font-bold tracking-tight">
+                                                            {formatTime(activeRequest.updated_at || activeRequest.updatedAt || activeRequest)}
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest mr-1 opacity-0 group-hover:opacity-100 transition-opacity">System Notification</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Real Time Messages */}
+                                        {messages.map((msg, i) => {
+                                            const isMe = msg.sender === user?.id || msg.is_me;
+                                            return (
+                                                <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
+                                                    {!isMe && (
+                                                        <div className="size-9 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden mr-3">
+                                                            {activeUserDetails?.profile_picture ? (
+                                                                <img src={getImageUrl(activeUserDetails.profile_picture)} alt="" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span className="material-symbols-outlined text-xs">person</span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    <div className={`relative max-w-[85%] md:max-w-[75%] rounded-2xl px-5 pt-3.5 pb-7 shadow-xl ${isMe ? 'bg-primary text-white rounded-tr-none shadow-primary/10' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 rounded-tl-none shadow-slate-200/50 dark:shadow-none'}`}>
+                                                        <p className="text-sm font-medium leading-relaxed">{msg.body || msg.text || msg.content}</p>
+                                                        <div className={`absolute bottom-1.5 right-4 flex items-center gap-1 text-[10px] font-bold tracking-tight ${isMe ? 'text-white/80' : 'text-slate-400'}`}>
+                                                            {formatTime(msg)}
+                                                            {isMe && <span className="material-symbols-outlined text-[12px] font-black">{msg.is_read || msg.isRead ? 'done_all' : 'done'}</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        <div ref={messagesEndRef} />
+                                    </div>
                                 </div>
 
-                                {/* Chat Input Area */}
-                                <div className="p-4 bg-white dark:bg-card-dark border-t border-slate-100 dark:border-slate-800 px-6 pb-6">
+                                {/* Send Bar */}
+                                <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-card-dark border-t border-slate-100 dark:border-slate-800 px-6 pb-6">
                                     <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl px-4 py-2 ring-1 ring-slate-100 dark:ring-slate-800 focus-within:ring-primary focus-within:ring-2 transition-all">
-                                        <button className="text-slate-400 hover:text-primary transition-all">
+                                        <button type="button" className="text-slate-400 hover:text-primary transition-all">
                                             <span className="material-symbols-outlined text-2xl">add_circle</span>
                                         </button>
                                         <input
-                                            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 dark:text-white placeholder-slate-400 py-3"
-                                            placeholder={['accepted', 'assigned', 'in_progress'].includes(activeRequest.status) ? "Reply to customer..." : "Accept request to start messaging"}
+                                            className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 dark:text-white placeholder-slate-400 py-3 outline-none"
+                                            placeholder={['accepted', 'assigned', 'in_progress', 'booked'].includes(activeRequest.status) ? "Reply to customer..." : "Accept request to start messaging"}
                                             type="text"
                                             value={messageInput}
                                             onChange={(e) => setMessageInput(e.target.value)}
-                                            disabled={!['accepted', 'assigned', 'in_progress'].includes(activeRequest.status)}
+                                            disabled={!['accepted', 'assigned', 'in_progress', 'booked'].includes(activeRequest.status) || isSending}
                                         />
                                         <button
+                                            type="submit"
                                             className="flex items-center justify-center bg-primary text-white rounded-xl px-5 py-2.5 gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/30 disabled:opacity-40"
-                                            disabled={!['accepted', 'assigned', 'in_progress'].includes(activeRequest.status)}
+                                            disabled={!['accepted', 'assigned', 'in_progress', 'booked'].includes(activeRequest.status) || !messageInput.trim() || isSending}
                                         >
-                                            <span className="text-xs font-bold uppercase tracking-wider">Send</span>
+                                            <span className="text-xs font-black uppercase tracking-wider">Send</span>
                                             <span className="material-symbols-outlined text-sm">send</span>
                                         </button>
                                     </div>
-                                </div>
+                                </form>
                             </>
                         )}
                     </div>
 
-                    {/* Right Column: Dynamic Project Status */}
+                    {/* Right Column: Dynamic Status */}
                     <div className={`
                         ${showStatus ? 'fixed inset-0 z-[60] flex bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-sm p-6 animate-in fade-in slide-in-from-right duration-300' : 'hidden'} 
                         xl:relative xl:inset-auto xl:z-0 xl:flex xl:bg-transparent xl:dark:bg-transparent xl:backdrop-blur-none xl:p-0 
@@ -652,12 +781,10 @@ const ProfessionalMessages = () => {
                         )}
                         {activeRequest ? (
                             <div className="flex flex-col gap-6">
-                                {/* Clean Timeline */}
                                 <div className="bg-white dark:bg-card-dark rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/60 dark:border-slate-800 p-8">
                                     <h3 className="text-sm font-black text-text-primary dark:text-white uppercase tracking-[0.15em] mb-10 text-center">Project Timeline</h3>
     
                                     <div className="relative flex flex-col gap-12">
-                                        {/* Progress Line */}
                                         <div className="absolute left-[11px] top-6 bottom-6 w-1 bg-slate-100 dark:bg-slate-800 rounded-full" />
     
                                         {jobSteps.map((step, index) => {
@@ -666,7 +793,6 @@ const ProfessionalMessages = () => {
     
                                             return (
                                                 <div key={index} className={`flex gap-6 relative group transition-all duration-500 ${!isCompleted && !isCurrent ? 'opacity-40 grayscale' : ''}`}>
-                                                    {/* Stepper Node */}
                                                     <div className="relative shrink-0 z-10">
                                                         {isCompleted ? (
                                                             <div className="size-[26px] bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-green-500/40 ring-4 ring-white dark:ring-slate-900">
@@ -722,7 +848,7 @@ const ProfessionalMessages = () => {
                                         })}
                                     </div>
                                 </div>
-
+    
                                 {activeRequest?.status === 'completed' && (
                                     <div className="mt-8 p-4 bg-amber-500/10 rounded-xl border border-amber-500/20 animate-in zoom-in">
                                         <div className="flex items-center gap-2 mb-2 text-amber-600">
