@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 import { getServiceCategories } from "../../../../api/jobs.api";
-import { getNotifications, markNotificationAsRead, type Notification } from "../../../../api/notifications.api";
+import { markNotificationAsRead, type Notification } from "../../../../api/notifications.api";
+import { useData } from "../../../../context/DataContext";
 import { getImageUrl } from "../../../../api/auth.api";
 
 const LOCATIONS = [
@@ -34,7 +35,7 @@ const CustomerNavbar = () => {
   const notificationRef = useRef<HTMLDivElement>(null);
 
   // Notification State
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { notifications, refreshNotifications } = useData();
   const unreadNotifications = notifications.filter(n => !n.is_read);
 
   useEffect(() => {
@@ -47,21 +48,7 @@ const CustomerNavbar = () => {
       }
     };
 
-    const fetchNotifications = async () => {
-        try {
-            const data = await getNotifications();
-            setNotifications(data);
-        } catch (err) {
-            console.error("Failed to fetch notifications:", err);
-        }
-    };
-
     fetchCategories();
-    fetchNotifications();
-    
-    // Refresh notifications every minute
-    const interval = setInterval(fetchNotifications, 60000);
-    return () => clearInterval(interval);
   }, []);
 
   const handleLogout = () => {
@@ -263,15 +250,11 @@ const CustomerNavbar = () => {
                       className={`px-5 py-4 border-b border-slate-50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors cursor-pointer ${!n.is_read ? 'bg-primary/-[0.02]' : ''}`}
                       onClick={async () => {
                         setShowNotifications(false);
-                        // Mark as read non-blocking — still clear badge locally on failure
+                        // Mark as read non-blocking and refresh shared notifications
                         markNotificationAsRead(n.id).then(() => {
-                          setNotifications(prev => prev.map(notif =>
-                            notif.id === n.id ? { ...notif, is_read: true } : notif
-                          ));
+                          refreshNotifications();
                         }).catch(() => {
-                          setNotifications(prev => prev.map(notif =>
-                            notif.id === n.id ? { ...notif, is_read: true } : notif
-                          ));
+                          refreshNotifications();
                         });
 
                         const linkTarget = (() => {

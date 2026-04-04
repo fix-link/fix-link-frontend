@@ -1,88 +1,73 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import { useAuth } from '../../../context/AuthContext';
-import { listJobs, updateJobStatus } from '../../../api/jobs.api';
-import { getNotifications, type Notification } from '../../../api/notifications.api';
+import { updateJobStatus } from '../../../api/jobs.api';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
 import { getConversationById } from '../../../api/conversations.api';
+import { useData } from '../../../context/DataContext';
 
 const ProfessionalMessages = () => {
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [professionalRequests, setProfessionalRequests] = useState<any[]>([]);
-    const [notifications, setNotifications] = useState<Notification[]>([]);
     const [activeUserDetails, setActiveUserDetails] = useState<any>(null);
+    const { jobs, notifications, jobsLoading, notificationsLoading } = useData();
 
-    const [isLoading, setIsLoading] = useState(true);
-    const [isInitialFetchComplete, setIsInitialFetchComplete] = useState(false);
+    const isLoading = jobsLoading || notificationsLoading;
 
     useEffect(() => {
-        const fetchData = async () => {
-            // Only set loading true if we haven't completed the initial fetch yet
-            if (!isInitialFetchComplete) setIsLoading(true);
-            try {
-                const [allJobs, allNotifications] = await Promise.all([
-                    listJobs(),
-                    getNotifications()
-                ]);
-                
-                // Filter jobs assigned to this pro
-                const myRequests = allJobs.filter((job: any) => 
-                    job.assigned_to === user?.id || job.professional === user?.id
-                );
-                
-                console.log("ProfessionalMessages: My Jobs:", myRequests);
-                setProfessionalRequests(myRequests);
-                setNotifications(allNotifications);
-            } catch (error) {
-                console.error("Error fetching pro data:", error);
-                setIsLoading(false); // don't spin forever
-            } finally {
-                setIsInitialFetchComplete(true);
-            }
-        };
-
-        if (user?.id) {
-            fetchData();
-            const interval = setInterval(fetchData, 30000);
-            return () => clearInterval(interval);
+        if (!user?.id) {
+            setProfessionalRequests([]);
+            return;
         }
-    }, [user]);
+
+        const myRequests = jobs.filter((job: any) =>
+            job.assigned_to === user?.id || job.professional === user?.id
+        );
+
+        console.log("ProfessionalMessages: My Jobs:", myRequests);
+        setProfessionalRequests(myRequests);
+    }, [jobs, user?.id]);
 
     // Sidebar Hydration: Fetch details for ALL customers in the list
     const [hydratedRequests, setHydratedRequests] = useState<any[]>([]);
 
     useEffect(() => {
         const hydrate = async () => {
-            // Don't hydrate or stop loading if we haven't finished the initial API call
-            if (!isInitialFetchComplete) return;
+            if (jobsLoading) return;
 
             if (professionalRequests.length === 0) {
                 setHydratedRequests([]);
-                setIsLoading(false);
                 return;
             }
 
-            const jobsWithDetails = await Promise.all(professionalRequests.map(async (job) => {
-                // If backend already provides detail, use it; otherwise fetch.
-                if (job.customer_detail?.first_name || job.customer_detail?.user?.first_name) {
-                    return job;
-                }
+            const customerIds = Array.from(new Set(
+                professionalRequests
+                    .map(job => job.customer)
+                    .filter(Boolean)
+            )) as string[];
+
+            const detailsById: Record<string, any> = {};
+            await Promise.all(customerIds.map(async (customerId) => {
                 try {
-                    const details = await getUserDetails(job.customer);
-                    return { ...job, customer_detail: details };
+                    detailsById[customerId] = await getUserDetails(customerId);
                 } catch (err) {
-                    console.error("Failed to hydrate job customer:", job.id, err);
-                    return job;
+                    console.error("ProfessionalMessages: Failed to hydrate customer details:", customerId, err);
+                    detailsById[customerId] = null;
                 }
             }));
+
+            const jobsWithDetails = professionalRequests.map((job) => ({
+                ...job,
+                customer_detail: job.customer_detail || detailsById[job.customer] || job.customer_detail,
+            }));
+
             setHydratedRequests(jobsWithDetails);
-            setIsLoading(false);
         };
         hydrate();
-    }, [professionalRequests, isInitialFetchComplete]);
+    }, [professionalRequests, jobsLoading]);
 
     // Active Chat Hydration (for Header/Project info)
     const urlRequestId = searchParams.get('requestId');
@@ -110,7 +95,7 @@ const ProfessionalMessages = () => {
         fetchConversationJob();
     }, [urlConversationId]);
 
-    const findActiveRequest = (id?: string) => {
+    const findActiveRequest = useCallback((id?: string) => {
         if (!id) return undefined;
         return hydratedRequests.find((r) => [
             r.id,
@@ -119,14 +104,18 @@ const ProfessionalMessages = () => {
             r.job_id,
             r.request_id,
         ].includes(id));
-    };
+    }, [hydratedRequests]);
 
-    const activeRequest =
-        (urlConversationId && findActiveRequest(urlConversationId)) ||
-        (conversationJobId && findActiveRequest(conversationJobId)) ||
-        (urlMessageSessionId && findActiveRequest(urlMessageSessionId)) ||
-        (urlRequestId && findActiveRequest(urlRequestId)) ||
-        hydratedRequests[0];
+    const activeRequest = useMemo(() => {
+        const found =
+            (urlConversationId && findActiveRequest(urlConversationId)) ||
+            (conversationJobId && findActiveRequest(conversationJobId)) ||
+            (urlMessageSessionId && findActiveRequest(urlMessageSessionId)) ||
+            (urlRequestId && findActiveRequest(urlRequestId)) ||
+            hydratedRequests[0];
+
+        return found;
+    }, [findActiveRequest, urlConversationId, conversationJobId, urlMessageSessionId, urlRequestId, hydratedRequests[0]?.id]);
 
     if (urlConversationId && activeRequest) {
         console.log("ProfessionalMessages: Matched chat by conversationId:", activeRequest.id);

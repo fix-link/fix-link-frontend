@@ -1,33 +1,22 @@
-import React, { useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { getNotifications, markNotificationAsRead, type Notification } from "../../../../api/notifications.api";
+import { markNotificationAsRead, type Notification } from "../../../../api/notifications.api";
+import { useData } from "../../../../context/DataContext";
 import { getImageUrl } from "../../../../api/auth.api";
-import { useRef, useEffect } from "react";
 
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const { notifications, refreshNotifications } = useData();
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
-    const [notifications, setNotifications] = useState<Notification[]>([]);
     const unreadNotifications = notifications.filter(n => !n.is_read);
 
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const notificationRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const fetchNotifications = async () => {
-            try {
-                const data = await getNotifications();
-                setNotifications(data);
-            } catch (err) {
-                console.error("Header: Failed to fetch notifications:", err);
-            }
-        };
-        fetchNotifications();
-        const interval = setInterval(fetchNotifications, 30000); 
-
         const handleClickOutside = (event: MouseEvent) => {
             if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
                 setShowProfileMenu(false);
@@ -39,7 +28,6 @@ const Header: React.FC = () => {
         document.addEventListener("mousedown", handleClickOutside);
 
         return () => {
-            clearInterval(interval);
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
@@ -128,15 +116,10 @@ const Header: React.FC = () => {
                                                 setShowNotifications(false);
                                                 // Mark as read first (don't block navigation on failure)
                                                 markNotificationAsRead(n.id).then(() => {
-                                                    setNotifications(prev => prev.map(notif => 
-                                                        notif.id === n.id ? { ...notif, is_read: true } : notif
-                                                    ));
+                                                    refreshNotifications();
                                                 }).catch(err => {
-                                                    // Still update locally so badge clears
-                                                    setNotifications(prev => prev.map(notif => 
-                                                        notif.id === n.id ? { ...notif, is_read: true } : notif
-                                                    ));
-                                                    console.warn("Mark-as-read failed (local update applied):", err);
+                                                    refreshNotifications();
+                                                    console.warn("Mark-as-read failed, refreshing notifications:", err);
                                                 });
                                                 // Navigate — prioritise conversation_id for reliable deep linking
                                                 const linkTarget = (() => {

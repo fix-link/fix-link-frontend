@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 const user = JSON.parse(savedUser);
                 setUser(user);
                 setIsAuthenticated(true);
-                
+
                 // CRITICAL: Ensure the axios instance is aware of this token immediately
                 // This prevents race conditions where the first API call fails before the interceptor can react
                 import("../api/auth.api").then(({ api }) => {
@@ -39,6 +39,71 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         }
         setIsLoading(false);
+
+        // Listen for auth changes in other tabs
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === "access_token" || e.key === "user") {
+                console.log("AuthContext: Storage change detected", e.key);
+                const newToken = localStorage.getItem("access_token");
+                const newUser = localStorage.getItem("user");
+
+                if (!newToken || !newUser) {
+                    // User logged out in another tab
+                    console.log("AuthContext: User logged out in another tab");
+                    setUser(null);
+                    setIsAuthenticated(false);
+                } else {
+                    try {
+                        const newUserData = JSON.parse(newUser);
+                        console.log("AuthContext: User changed in another tab", newUserData.role);
+
+                        // Check if this is a different user than current
+                        if (user && newUserData.id !== user.id) {
+                            console.log("AuthContext: Different user logged in another tab - updating session");
+                            // Show a brief notification to user about the session change
+                            const notification = document.createElement('div');
+                            notification.style.cssText = `
+                                position: fixed;
+                                top: 20px;
+                                right: 20px;
+                                background: #3b82f6;
+                                color: white;
+                                padding: 12px 16px;
+                                border-radius: 8px;
+                                font-size: 14px;
+                                font-weight: 500;
+                                z-index: 9999;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                                max-width: 300px;
+                            `;
+                            notification.textContent = `Switched to ${newUserData.role} session from another tab`;
+                            document.body.appendChild(notification);
+
+                            // Remove notification after 3 seconds
+                            setTimeout(() => {
+                                if (notification.parentNode) {
+                                    notification.parentNode.removeChild(notification);
+                                }
+                            }, 3000);
+                        }
+
+                        setUser(newUserData);
+                        setIsAuthenticated(true);
+
+                        // Update axios headers for the new session
+                        import("../api/auth.api").then(({ api }) => {
+                            api.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+                        });
+                    } catch (err) {
+                        console.error("AuthContext: Failed to parse user from storage event", err);
+                        logout();
+                    }
+                }
+            }
+        };
+
+        window.addEventListener("storage", handleStorageChange);
+        return () => window.removeEventListener("storage", handleStorageChange);
     }, []);
 
     const login = (access: string, refresh: string, userData: User) => {

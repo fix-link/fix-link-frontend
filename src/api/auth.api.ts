@@ -310,15 +310,32 @@ export const loginUser = async (email: string, password: string) => {
 };
 
 /**
- * Get User Details by ID
+ * In-memory cache for user details fetched during this session.
+ * This prevents repeated GET /users/{id}/ calls when the same profile is reused.
  */
+const userDetailsCache = new Map<string, { data: any; timestamp: number }>();
+const USER_DETAILS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+const isUserCacheFresh = (timestamp: number) => Date.now() - timestamp < USER_DETAILS_CACHE_TTL;
+
 export const getUserDetails = async (id: string) => {
+  const cached = userDetailsCache.get(id);
+  if (cached && isUserCacheFresh(cached.timestamp)) {
+    return cached.data;
+  }
+
   try {
     const response = await api.get(`/users/${id}/`);
-    return response.data;
+    const payload = response.data;
+    userDetailsCache.set(id, { data: payload, timestamp: Date.now() });
+    return payload;
   } catch (error: any) {
     throw new Error(parseError(error));
   }
+};
+
+export const clearUserDetailsCache = () => {
+  userDetailsCache.clear();
 };
 
 /**

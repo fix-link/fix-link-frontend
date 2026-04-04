@@ -1,88 +1,75 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import CustomerNavbar from './components/CustomerNavbar';
 import { useAuth } from '../../../context/AuthContext';
-import { listJobs, updateJobStatus } from '../../../api/jobs.api';
-import { getNotifications, type Notification } from '../../../api/notifications.api';
-import { getImageUrl, getUserDetails } from '../../../api/auth.api';import { getConversationById } from '../../../api/conversations.api';
+import { updateJobStatus } from '../../../api/jobs.api';
+import { getImageUrl, getUserDetails } from '../../../api/auth.api';
+import { getConversationById } from '../../../api/conversations.api';
+import { useData } from '../../../context/DataContext';
 const CustomerMessages = () => {
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [userRequests, setUserRequests] = useState<any[]>([]);
-    const [notifications, setNotifications] = useState<Notification[]>([]);
     const [activeUserDetails, setActiveUserDetails] = useState<any>(null);
+    const { jobs, notifications, jobsLoading, notificationsLoading } = useData();
 
-    const [isLoading, setIsLoading] = useState(true);
-    const [isInitialFetchComplete, setIsInitialFetchComplete] = useState(false);
+    const isLoading = jobsLoading || notificationsLoading;
 
     useEffect(() => {
-        const fetchData = async () => {
-            // Only set loading true if we haven't completed the initial fetch yet
-            if (!isInitialFetchComplete) setIsLoading(true);
-            try {
-                const [allJobs, allNotifications] = await Promise.all([
-                    listJobs(),
-                    getNotifications()
-                ]);
-                
-                const myRequests = allJobs.filter((job: any) => 
-                    job.customer === user?.id && 
-                    job.status !== 'pending'
-                );
-                
-                console.log("CustomerMessages: My Requests:", myRequests);
-                setUserRequests(myRequests);
-                setNotifications(allNotifications);
-            } catch (error) {
-                console.error("Error fetching customer data:", error);
-                setIsLoading(false); // Make sure we don't spin forever on error
-            } finally {
-                setIsInitialFetchComplete(true);
-            }
-        };
-
-        if (user?.id) {
-            fetchData();
-            const interval = setInterval(fetchData, 30000);
-            return () => clearInterval(interval);
+        if (!user?.id) {
+            setUserRequests([]);
+            return;
         }
-    }, [user]);
+
+        const myRequests = jobs.filter((job: any) =>
+            job.customer === user?.id &&
+            job.status !== 'pending'
+        );
+
+        console.log("CustomerMessages: My Requests:", myRequests);
+        setUserRequests(myRequests);
+    }, [jobs, user?.id]);
 
     // Sidebar Hydration: Fetch details for ALL professionals in the list
     const [hydratedRequests, setHydratedRequests] = useState<any[]>([]);
 
     useEffect(() => {
         const hydrate = async () => {
-            // Don't hydrate or stop loading if we haven't finished the initial API call
-            if (!isInitialFetchComplete) return;
+            if (jobsLoading) return;
 
             if (userRequests.length === 0) {
                 setHydratedRequests([]);
-                setIsLoading(false);
                 return;
             }
 
-            const jobsWithDetails = await Promise.all(userRequests.map(async (job) => {
-                // If backend already provides detail, use it; otherwise fetch.
-                if (job.professional_detail?.first_name || job.professional_detail?.user?.first_name) {
-                    return job;
-                }
-                const proId = job.professional || job.assigned_to;
-                if (!proId) return job;
+            const professionalIds = Array.from(new Set(
+                userRequests
+                    .map(job => job.professional || job.assigned_to)
+                    .filter(Boolean)
+            )) as string[];
 
+            const detailsById: Record<string, any> = {};
+            await Promise.all(professionalIds.map(async (proId) => {
                 try {
-                    const details = await getUserDetails(proId);
-                    return { ...job, professional_detail: details };
+                    detailsById[proId] = await getUserDetails(proId);
                 } catch (err) {
-                    console.error("Failed to hydrate job professional:", job.id, err);
-                    return job;
+                    console.error("CustomerMessages: Failed to hydrate professional details:", proId, err);
+                    detailsById[proId] = null;
                 }
             }));
+
+            const jobsWithDetails = userRequests.map((job) => {
+                const proId = job.professional || job.assigned_to;
+                return {
+                    ...job,
+                    professional_detail: job.professional_detail || detailsById[proId] || job.professional_detail,
+                };
+            });
+
             setHydratedRequests(jobsWithDetails);
-            setIsLoading(false);
         };
         hydrate();
-    }, [userRequests, isInitialFetchComplete]);
+    }, [userRequests, jobsLoading]);
 
     // Get active request from URL or default to first
     const urlRequestId = searchParams.get('requestId');
@@ -97,10 +84,12 @@ const CustomerMessages = () => {
         }
 
         const fetchConversationJob = async () => {
+            console.log("CustomerMessages: fetching conversation for", urlConversationId);
             try {
                 const conversation = await getConversationById(urlConversationId);
-                setConversationJobId(conversation.job || conversation.job_id || null);
-                console.log("CustomerMessages: conversation fetched for conversationId", urlConversationId, "job", conversation.job || conversation.job_id);
+                const jobId = conversation.job || conversation.job_id || null;
+                console.log("CustomerMessages: conversation fetched", { conversationId: urlConversationId, jobId });
+                setConversationJobId(jobId);
             } catch (error) {
                 console.warn("CustomerMessages: unable to resolve conversation to job", urlConversationId, error);
                 setConversationJobId(null);
@@ -110,7 +99,7 @@ const CustomerMessages = () => {
         fetchConversationJob();
     }, [urlConversationId]);
 
-    const findActiveRequest = (id?: string) => {
+    const findActiveRequest = useCallback((id?: string) => {
         if (!id) return undefined;
         return hydratedRequests.find((r) => [
             r.id,
@@ -119,22 +108,30 @@ const CustomerMessages = () => {
             r.job_id,
             r.request_id,
         ].includes(id));
-    };
+    }, [hydratedRequests]);
 
-    const activeRequest =
-        (urlConversationId && findActiveRequest(urlConversationId)) ||
-        (conversationJobId && findActiveRequest(conversationJobId)) ||
-        (urlMessageSessionId && findActiveRequest(urlMessageSessionId)) ||
-        (urlRequestId && findActiveRequest(urlRequestId)) ||
-        hydratedRequests[0];
+    const activeRequest = useMemo(() => {
+        const found =
+            (urlConversationId && findActiveRequest(urlConversationId)) ||
+            (conversationJobId && findActiveRequest(conversationJobId)) ||
+            (urlMessageSessionId && findActiveRequest(urlMessageSessionId)) ||
+            (urlRequestId && findActiveRequest(urlRequestId)) ||
+            hydratedRequests[0];
 
-    if (urlConversationId && activeRequest) {
-        console.log("Matched chat by conversationId:", activeRequest.id);
-    } else if (conversationJobId && activeRequest) {
-        console.log("Matched chat by conversationJobId:", activeRequest.id);
-    } else if (urlMessageSessionId && activeRequest) {
-        console.log("Matched chat by messageSessionId:", activeRequest.id);
-    }
+        return found;
+    }, [findActiveRequest, urlConversationId, conversationJobId, urlMessageSessionId, urlRequestId, hydratedRequests[0]?.id]);
+
+    // Debug activeRequest changes
+    useEffect(() => {
+        console.log("CustomerMessages: activeRequest changed", {
+            activeRequest: activeRequest?.id,
+            urlRequestId,
+            urlConversationId,
+            conversationJobId,
+            urlMessageSessionId,
+            hydratedRequestsCount: hydratedRequests.length
+        });
+    }, [activeRequest?.id, urlRequestId, urlConversationId, conversationJobId, urlMessageSessionId, hydratedRequests.length]);
     const requestId = activeRequest?.id;
     const activeRequestId = activeRequest?.id;
 
