@@ -377,7 +377,11 @@ const ProfessionalMessages = () => {
                                     <p className="text-xs font-bold leading-relaxed">No requests yet.<br />Your profile is live and visible!</p>
                                 </div>
                             ) : (
-                                hydratedRequests.map(req => (
+                                [...hydratedRequests].sort((a, b) => {
+                                    const aTime = new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt || 0).getTime();
+                                    const bTime = new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt || 0).getTime();
+                                    return bTime - aTime;
+                                }).map(req => (
                                     <div
                                         key={req.id}
                                         onClick={() => handleSelectRequest(req.id)}
