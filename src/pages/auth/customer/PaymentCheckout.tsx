@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../../../context/DataContext';
+import { useAuth } from '../../../context/AuthContext';
 import { initializePayment } from '../../../api/payments.api';
 import CustomerNavbar from './components/CustomerNavbar';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
@@ -8,6 +9,7 @@ import { getImageUrl, getUserDetails } from '../../../api/auth.api';
 const PaymentCheckout = () => {
     const { jobId } = useParams<{ jobId: string }>();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { jobs, jobsLoading } = useData();
     
     const [selectedProvider, setSelectedProvider] = useState<'chapa' | 'telebirr' | 'cbebirr'>('chapa');
@@ -54,16 +56,37 @@ const PaymentCheckout = () => {
         }
 
         setIsProcessing(true);
+        
+        // Normalize Ethiopian phone number if needed (convert 09... to +2519...)
+        let normalizedAccount = accountNumber;
+        if (selectedProvider === 'telebirr' && accountNumber.startsWith('0')) {
+            normalizedAccount = '+251' + accountNumber.substring(1);
+        } else if (selectedProvider === 'telebirr' && !accountNumber.startsWith('+') && accountNumber.startsWith('9')) {
+             normalizedAccount = '+251' + accountNumber;
+        }
+
         try {
-            const resp = await initializePayment(job.id, selectedProvider, accountNumber);
+            const resp = await initializePayment(job.id, selectedProvider, normalizedAccount, {
+                amount: job.budget,
+                currency: "ETB",
+                email: user?.email,
+                first_name: user?.first_name || user?.username,
+                last_name: user?.last_name || "",
+                title: job.title || "Fix-Link Service",
+                description: job.description || "Escrow payment for professional services."
+            });
             if (resp.checkout_url) {
                 window.location.replace(resp.checkout_url);
             } else {
                 alert("Payment initiation failed: The server didn't provide a checkout link.");
             }
         } catch (error: any) {
-            alert(error.message || "Failed to initialize secure payment.");
-            setIsProcessing(false); // Only reset if failed, successful redirects don't need reset
+            console.error("PaymentCheckout: FULL ERROR", error?.response?.data || error);
+            const serverMsg = error?.response?.data?.message || error?.response?.data?.detail;
+            const fullError = JSON.stringify(error?.response?.data || { error: error.message }, null, 2);
+            
+            alert(`Payment Initialization Failed:\n\n${serverMsg || "Unknown Error"}\n\nTECHNICAL DETAIL:\n${fullError}`);
+            setIsProcessing(false);
         }
     };
 
