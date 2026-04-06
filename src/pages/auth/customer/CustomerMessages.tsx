@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import CustomerNavbar from './components/CustomerNavbar';
 import { useAuth } from '../../../context/AuthContext';
 import { updateJobStatus } from '../../../api/jobs.api';
@@ -18,6 +18,7 @@ const CustomerMessages = () => {
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { jobs, notifications, jobsLoading, notificationsLoading } = useData();
+    const navigate = useNavigate();
 
     // Prevent blocking UI flash during background context polling
     const isLoading = (jobsLoading || notificationsLoading) && jobs.length === 0;
@@ -291,15 +292,15 @@ const CustomerMessages = () => {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950 font-display text-text-primary dark:text-white overflow-hidden">
+        <div className="flex flex-col h-screen bg-white dark:bg-slate-950 font-display text-text-primary dark:text-white overflow-hidden transition-all duration-500">
             <CustomerNavbar />
 
-            <main className="flex w-full max-w-[1600px] mx-auto p-0 md:p-6 gap-0 md:gap-4 flex-1 overflow-hidden items-stretch">
+            <main className="flex w-full h-full p-0 gap-0 flex-1 overflow-hidden items-stretch">
 
                 {/* Left Column: Conversation List */}
                 <div className={`
-                    w-full md:w-80 flex-col bg-white dark:bg-card-dark rounded-none md:rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border-b md:border border-slate-200/60 dark:border-slate-800 overflow-hidden shrink-0
-                    ${requestId || (!isLoading && hydratedRequests.length > 0) ? 'hidden md:flex' : 'flex'}
+                    flex flex-col w-full md:w-80 lg:w-96 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 shrink-0 transition-all duration-300
+                    ${requestId ? 'hidden md:flex' : 'flex'}
                 `}>
                     <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <h3 className="text-sm font-black flex items-center gap-2 tracking-tight">
@@ -389,7 +390,7 @@ const CustomerMessages = () => {
 
                 {/* Middle Column: Chat Experience */}
                 <div className={`
-                    flex flex-col flex-1 bg-white dark:bg-card-dark rounded-none md:rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border-x md:border border-slate-200/60 dark:border-slate-800 relative z-0 overflow-hidden
+                    flex flex-col flex-1 bg-white dark:bg-slate-950 relative z-0 overflow-hidden
                     ${!requestId ? 'hidden md:flex' : 'flex'}
                 `}>
                     {isLoading ? (
@@ -509,57 +510,61 @@ const CustomerMessages = () => {
                                 </div>
                             </div>
 
-                            {/* Messaging Canvas with Premium Background */}
-                            <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 relative"
+                            <div className="flex-1 overflow-y-auto px-4 md:px-12 py-6 flex flex-col gap-6 relative scroll-smooth custom-scrollbar"
                                  style={{
-                                    backgroundColor: 'transparent',
-                                    backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.1) 1.5px, transparent 0)',
-                                    backgroundSize: '24px 24px'
+                                    backgroundColor: '#efeae2', // Creamy Ivory
+                                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23000' stroke-width='0.4' stroke-linecap='round' opacity='0.09'%3E%3C!-- Bear Face --%3E%3Cpath d='M20 20a5 5 0 1110 0 5 5 0 01-10 0zM18 16a2 2 0 114 0 2 2 0 01-4 0zM28 16a2 2 0 114 0 2 2 0 01-4 0zM23 21a1 1 0 112 0 1 1 0 01-2 0z'/%3E%3C!-- Heart --%3E%3Cpath d='M60 30c-2-2-5-2-7 0s-2 5 0 7l7 7 7-7c2-2 2-5 0-7s-5-2-7 0z'/%3E%3C!-- Sparkle --%3E%3Cpath d='M100 20l2 4 4 2-4 2-2 4-2-4-4-2 4-2z'/%3E%3C!-- Small Paw --%3E%3Ccircle cx='140' cy='30' r='3'/%3E%3Ccircle cx='136' cy='24' r='1.5'/%3E%3Ccircle cx='140' cy='22' r='1.5'/%3E%3Ccircle cx='144' cy='24' r='1.5'/%3E%3C!-- Chat Bubble --%3E%3Cpath d='M30 80a5 5 0 0110 0v5l-3-2-2 2z'/%3E%3C!-- Flower --%3E%3Ccircle cx='80' cy='80' r='2'/%3E%3Cpath d='M80 76a2 2 0 110 4 2 2 0 010-4zM84 80a2 2 0 11-4 0 2 2 0 014 0zM80 84a2 2 0 110-4 2 2 0 010 4zM76 80a2 2 0 114 0 2 2 0 01-4 0z'/%3E%3C!-- Star --%3E%3Cpath d='M120 70l2 5h5l-4 3 1 5-4-3-4 3 1-5-4-3h5z'/%3E%3C!-- Bone/Tool --%3E%3Cpath d='M160 80h10M158 78c1-2 3-2 4 0l-4 4zM172 78c-1-2-3-2-4 0l4 4z'/%3E%3C!-- More Hearts/Sparkles --%3E%3Cpath d='M40 130c-1-1-2.5-1-3.5 0s-1 2.5 0 3.5l3.5 3.5 3.5-3.5c1-1 1-2.5 0-3.5s-2.5-1-3.5 0z'/%3E%3Cpath d='M90 120l1 3 3 1-3 1-1 3-1-3-3-1 3-1z'/%3E%3Cpath d='M140 140c-2-2-4-2-6 0s-2 4 0 6 4 2 6 0 2-4 0-6z'/%3E%3C/g%3E%3C/svg%3E")`,
+                                    backgroundSize: '240px 240px',
+                                    backgroundAttachment: 'local'
                                  }}>
-                                <div className="flex justify-center my-2">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900 px-4 py-1.5 rounded-full border border-slate-100 dark:border-slate-800 shadow-sm">
-                                        Session Started • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "--"}
+                                <div className="flex justify-center mb-4">
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md px-5 py-2 rounded-full border border-slate-200/50 dark:border-slate-800/50 shadow-sm">
+                                        Secure Channel Started • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "Just Now"}
                                     </span>
                                 </div>
 
                                 {/* Real Message Thread */}
                                 <div className="flex flex-col gap-4 py-4 min-h-full">
-                                    {/* Virtual Message: Original Request Description (Customer View: Right) */}
+                                    {/* Virtual Message: Original Request Description (Customer View: Right/Outgoing) */}
                                     <div className="flex justify-end animate-in fade-in slide-in-from-right-4">
-                                        <div className="flex flex-col items-end gap-1.5 max-w-[85%] group">
-                                            <div className="relative text-sm font-medium leading-relaxed rounded-2xl rounded-tr-none px-5 pt-4 pb-7 bg-primary text-white shadow-xl shadow-primary/10 border border-primary/20">
-                                                {activeRequest.description || "Hello! I'd like to request your services for my project."}
-                                                <div className="absolute bottom-1.5 right-4 flex items-center gap-1.5 opacity-80 text-[10px] font-bold tracking-tight">
+                                        <div className="flex flex-col items-end gap-1.5 max-w-[80%] md:max-w-[70%] group">
+                                            <div className="relative text-sm font-medium leading-relaxed rounded-[20px] rounded-tr-none px-4 py-3 bg-primary text-white shadow-lg shadow-primary/10 border border-primary/20 transition-all hover:shadow-xl">
+                                                <div className="pr-12 md:pr-14">
+                                                    {activeRequest.description || "Hello! I'd like to request your services."}
+                                                </div>
+                                                <div className="absolute bottom-1 right-3 flex items-center gap-1 opacity-70 text-[9px] font-bold tracking-tight select-none">
                                                     {formatTime(activeRequest)}
-                                                    <span className="material-symbols-outlined text-[11px]">done_all</span>
+                                                    <span className="material-symbols-outlined text-[10px] font-black">done_all</span>
                                                 </div>
                                             </div>
-                                            <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest mr-1 opacity-0 group-hover:opacity-100 transition-opacity">Initial Request</span>
+                                            <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest mr-2 opacity-0 group-hover:opacity-100 transition-opacity">Initial Request</span>
                                         </div>
                                     </div>
 
                                     {/* Virtual Message: Pro Acceptance (Customer View: Left) */}
                                     {activeRequest.status !== 'pending' && (
-                                        <div className="flex items-end gap-3 max-w-[85%] animate-in fade-in slide-in-from-left-4 duration-500 group">
-                                            <div className="size-9 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden transform group-hover:scale-110 transition-transform">
+                                        <div className="flex items-end gap-2.5 max-w-[85%] animate-in fade-in slide-in-from-left-4 duration-500 group">
+                                            <div className="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden mb-1">
                                                 {activeRequest.professional_detail?.profile_picture || activeRequest.professional_detail?.profile_photo ? (
                                                     <img src={getImageUrl(activeRequest.professional_detail.profile_picture || activeRequest.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <span className="material-symbols-outlined text-primary text-lg font-black">construction</span>
+                                                    <span className="material-symbols-outlined text-primary text-base font-black">construction</span>
                                                 )}
                                             </div>
-                                            <div className="flex flex-col gap-1.5">
-                                                <div className="relative text-sm font-medium leading-relaxed rounded-2xl rounded-tl-none px-5 pt-4 pb-7 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-700">
-                                                    {activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'booked'
-                                                        ? `Hello! I've reviewed your request and I'm happy to help. I've accepted the project!`
-                                                        : activeRequest.status === 'done' || activeRequest.status === 'completed'
-                                                        ? "I've finished the job! Please review the work and approve the payment when you're ready."
-                                                        : "The job has been updated to: " + activeRequest.status}
-                                                    <div className="absolute bottom-1.5 right-4 opacity-40 text-[10px] font-bold tracking-tight">
+                                            <div className="flex flex-col gap-1 text-left">
+                                                <div className="relative text-sm font-medium leading-relaxed rounded-[20px] rounded-tl-none px-4 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-md border border-slate-100 dark:border-slate-700 transition-all hover:shadow-lg">
+                                                    <div className="pr-10 md:pr-12">
+                                                        {activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'booked'
+                                                            ? `Hello! I've reviewed your request and I'm happy to help. I've accepted the project!`
+                                                            : activeRequest.status === 'done' || activeRequest.status === 'completed'
+                                                            ? "I've finished the job! Please review the work and approve the payment when you're ready."
+                                                            : "The job has been updated to: " + activeRequest.status}
+                                                    </div>
+                                                    <div className="absolute bottom-1 right-3 opacity-40 text-[9px] font-bold tracking-tight select-none">
                                                         {formatTime(activeRequest.updated_at || activeRequest.updatedAt || activeRequest)}
                                                     </div>
                                                 </div>
-                                                <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest ml-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Professional Action</span>
+                                                <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest ml-2 opacity-0 group-hover:opacity-100 transition-opacity">Professional Action</span>
                                             </div>
                                         </div>
                                     )}
@@ -568,9 +573,9 @@ const CustomerMessages = () => {
                                     {messages.map((msg, i) => {
                                         const isMe = msg.sender === user?.id || msg.is_me;
                                         return (
-                                            <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2`}>
+                                            <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-2.5'} animate-in fade-in slide-in-from-bottom-2`}>
                                                 {!isMe && (
-                                                    <div className="size-9 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-lg border border-slate-100 dark:border-slate-700 overflow-hidden mr-3">
+                                                    <div className="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden mb-1 transition-transform hover:scale-105">
                                                          {activeRequest.professional_detail?.profile_picture ? (
                                                             <img src={getImageUrl(activeRequest.professional_detail.profile_picture)} alt="" className="w-full h-full object-cover" />
                                                         ) : (
@@ -578,11 +583,17 @@ const CustomerMessages = () => {
                                                         )}
                                                     </div>
                                                 )}
-                                                <div className={`relative max-w-[85%] md:max-w-[75%] rounded-2xl px-5 pt-3.5 pb-7 shadow-xl ${isMe ? 'bg-primary text-white rounded-tr-none shadow-primary/10' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 rounded-tl-none shadow-slate-200/50 dark:shadow-none'}`}>
-                                                    <p className="text-sm font-medium leading-relaxed">{msg.body || msg.text || msg.content}</p>
-                                                    <div className={`absolute bottom-1.5 right-4 flex items-center gap-1 text-[10px] font-bold tracking-tight ${isMe ? 'text-white/80' : 'text-slate-400'}`}>
+                                                <div className={`relative max-w-[75%] md:max-w-[65%] px-4 py-2.5 shadow-md transition-all hover:shadow-lg ${
+                                                    isMe 
+                                                    ? 'bg-primary text-white rounded-[18px] rounded-tr-none shadow-primary/5' 
+                                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-[18px] rounded-tl-none shadow-slate-100/5'
+                                                }`}>
+                                                    <div className="pr-12 md:pr-14">
+                                                        <p className="text-sm font-medium leading-relaxed break-words">{msg.body || msg.text || msg.content}</p>
+                                                    </div>
+                                                    <div className={`absolute bottom-1 right-3 flex items-center gap-1 text-[9px] font-bold tracking-tight select-none ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
                                                         {formatTime(msg)}
-                                                        {isMe && <span className="material-symbols-outlined text-[12px] font-black">{msg.is_read || msg.isRead ? 'done_all' : 'done'}</span>}
+                                                        {isMe && <span className="material-symbols-outlined text-[10px] font-black">{msg.is_read || msg.isRead ? 'done_all' : 'done'}</span>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -592,43 +603,47 @@ const CustomerMessages = () => {
                                 </div>
                             </div>
 
-                            {/* Messaging Input */}
-                            <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-card-dark border-t border-slate-100 dark:border-slate-800 px-6 pb-6">
-                                <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl px-4 py-2 ring-1 ring-slate-100 dark:ring-slate-800 focus-within:ring-primary focus-within:ring-2 transition-all">
-                                    <button type="button" className="text-slate-400 hover:text-primary transition-all transform hover:rotate-12">
-                                        <span className="material-symbols-outlined text-2xl">add_circle</span>
-                                    </button>
-                                    <input
-                                        className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none"
-                                        placeholder="Type your reply here..."
-                                        type="text"
-                                        value={messageInput}
-                                        onChange={(e) => setMessageInput(e.target.value)}
-                                        disabled={isSending}
-                                    />
-                                    <button
-                                        type="submit"
-                                        className="flex items-center justify-center bg-primary text-white rounded-xl px-5 py-2.5 gap-2 hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/30 disabled:opacity-40 disabled:cursor-not-allowed"
-                                        disabled={!messageInput.trim() || isSending || !conversationId}
-                                    >
-                                        <span className="text-xs font-black uppercase tracking-wider">{isSending || !conversationId ? '...' : 'Send'}</span>
-                                        {isSending ? (
-                                            <span className="material-symbols-outlined text-sm animate-spin">refresh</span>
-                                        ) : (
-                                            <span className="material-symbols-outlined text-sm">send</span>
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
+                            {/* Messaging Input with WhatsApp Clean UI */}
+                             <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-6 pb-6">
+                                 <div className="flex items-center gap-2 max-w-5xl mx-auto">
+                                     <div className="flex-1 flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-1.5 ring-1 ring-slate-200/50 dark:ring-slate-700 shadow-sm focus-within:bg-white dark:focus-within:bg-slate-800 transition-all focus-within:ring-primary/20">
+                                         <button type="button" className="text-slate-400 hover:text-primary transition-all p-1">
+                                             <span className="material-symbols-outlined text-2xl">sentiment_satisfied</span>
+                                         </button>
+                                         <input
+                                             className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2 px-2"
+                                             placeholder="Message..."
+                                             type="text"
+                                             value={messageInput}
+                                             onChange={(e) => setMessageInput(e.target.value)}
+                                             disabled={isSending}
+                                         />
+                                         <button type="button" className="text-slate-400 hover:text-primary transition-all p-1">
+                                             <span className="material-symbols-outlined text-2xl">attachment</span>
+                                         </button>
+                                     </div>
+                                     <button
+                                         type="submit"
+                                         className="size-11 flex items-center justify-center bg-primary text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/30 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                                         disabled={!messageInput.trim() || isSending || !conversationId}
+                                     >
+                                         {isSending ? (
+                                             <span className="material-symbols-outlined text-xl animate-spin">refresh</span>
+                                         ) : (
+                                             <span className="material-symbols-outlined text-xl ml-1">send</span>
+                                         )}
+                                     </button>
+                                 </div>
+                             </form>
                         </>
                     )}
                 </div>
 
                 {/* Right Column: Project Insights */}
                 <div className={`
-                    ${showStatus ? 'fixed inset-0 z-[60] flex bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-sm p-6 animate-in fade-in slide-in-from-right duration-300' : 'hidden'} 
-                    xl:relative xl:inset-auto xl:z-0 xl:flex xl:bg-transparent xl:dark:bg-transparent xl:backdrop-blur-none xl:p-0 
-                    w-full xl:w-80 2xl:w-96 flex-col gap-4 overflow-y-auto custom-scrollbar pr-1 shrink-0 lg:pt-2
+                    ${showStatus ? 'fixed inset-0 z-[60] flex bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm p-6 animate-in fade-in slide-in-from-right duration-300' : 'hidden'} 
+                    xl:relative xl:inset-auto xl:z-0 xl:flex xl:bg-white xl:dark:bg-slate-900 border-l border-slate-100 dark:border-slate-800 xl:p-0 
+                    w-full xl:w-80 2xl:w-96 flex-col gap-0 overflow-y-auto custom-scrollbar pr-0 shrink-0
                 `}>
                     {showStatus && (
                         <button
@@ -684,7 +699,7 @@ const CustomerMessages = () => {
                                                             </p>
                                                             {activeRequest.status === 'accepted' ? (
                                                                 <button 
-                                                                    onClick={() => updateJobStatus(activeRequestId, 'booked')}
+                                                                    onClick={() => navigate('/customer/checkout/' + activeRequestId)}
                                                                     className="w-full py-2 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:shadow-lg transition-all flex items-center justify-center gap-2"
                                                                 >
                                                                     <span className="material-symbols-outlined text-sm">payments</span>

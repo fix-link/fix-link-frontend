@@ -16,6 +16,7 @@ import ForgotPassword from "./pages/auth/login/ForgotPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
 import AccountSettings from "./pages/auth/customer/AccountSettings";
 import Bookings from "./pages/auth/customer/Bookings";
+import PaymentCheckout from "./pages/auth/customer/PaymentCheckout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -71,7 +72,11 @@ function App() {
             <CustomerMessages />
           </ProtectedRoute>
         } />
-
+        <Route path="/customer/checkout/:jobId" element={
+          <ProtectedRoute role="customer">
+            <PaymentCheckout />
+          </ProtectedRoute>
+        } />
         <Route path="/customer/bookings" element={
           <ProtectedRoute role="customer">
             <Bookings />
