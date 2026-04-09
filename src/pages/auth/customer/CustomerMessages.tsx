@@ -230,8 +230,18 @@ const CustomerMessages = () => {
 
     const getStepStatus = (stepIndex: number, jobStatus: string) => {
         const s = jobStatus.toLowerCase();
-        const statuses = ['pending', 'accepted', 'assigned', 'done', 'completed'];
-        const currentIndex = statuses.indexOf(s);
+        // Map all known backend statuses to the correct step index
+        const statusToIndex: Record<string, number> = {
+            'pending':    0,
+            'accepted':   1,
+            'assigned':   1, // alias for accepted
+            'booked':     2,
+            'in_progress':2, // alias for booked
+            'done':       3,
+            'completed':  4,
+            'cancelled':  -1,
+        };
+        const currentIndex = statusToIndex[s] ?? 0;
         
         if (currentIndex > stepIndex) return "completed";
         if (currentIndex === stepIndex) return "current";
@@ -247,12 +257,12 @@ const CustomerMessages = () => {
         {
             title: "Pro Accepted",
             status: getStepStatus(1, activeRequest?.status || 'pending'),
-            actionRequired: activeRequest?.status === 'accepted'
+            actionRequired: activeRequest?.status === 'accepted' || activeRequest?.status === 'assigned'
         },
         {
-            title: "Job Booked",
+            title: "Job Booked & In Progress",
             status: getStepStatus(2, activeRequest?.status || 'pending'),
-            actionRequired: activeRequest?.status === 'booked'
+            actionRequired: false // booking is done via PaymentCheckout, no action here
         },
         {
             title: "Work Finished",
@@ -260,7 +270,7 @@ const CustomerMessages = () => {
             actionRequired: activeRequest?.status === 'done'
         },
         {
-            title: "Paid & Released",
+            title: "Approved & Released",
             status: getStepStatus(4, activeRequest?.status || 'pending')
         }
     ];
@@ -695,9 +705,11 @@ const CustomerMessages = () => {
                                                     {isCurrent && step.actionRequired && (
                                                         <div className="mt-3 p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-2 animate-in fade-in slide-in-from-top-2">
                                                             <p className="text-[10px] font-black text-primary leading-snug">
-                                                                {activeRequest.status === 'accepted' ? "Pro accepted! Book now to secure your spot." : "Professional marked as Done. Confirm to release payment."}
+                                                                {activeRequest.status === 'accepted' || activeRequest.status === 'assigned'
+                                                                    ? "Pro accepted! Pay now to secure your booking."
+                                                                    : "The professional has finished the work. Please review and approve to release the escrow payment."}
                                                             </p>
-                                                            {activeRequest.status === 'accepted' ? (
+                                                            {(activeRequest.status === 'accepted' || activeRequest.status === 'assigned') ? (
                                                                 <button 
                                                                     onClick={() => navigate('/customer/checkout/' + activeRequestId)}
                                                                     className="w-full py-2 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:shadow-lg transition-all flex items-center justify-center gap-2"
@@ -709,15 +721,17 @@ const CustomerMessages = () => {
                                                                 <div className="flex flex-col gap-2">
                                                                     <button 
                                                                         onClick={() => updateJobStatus(activeRequestId, 'completed')}
-                                                                        className="w-full py-2 bg-emerald-500 text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-emerald-600 transition-all shadow-md"
+                                                                        className="w-full py-2 bg-emerald-500 text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-emerald-600 transition-all shadow-md flex items-center justify-center gap-2"
                                                                     >
-                                                                        Confirm Completion
+                                                                        <span className="material-symbols-outlined text-sm">verified</span>
+                                                                        Approve Job Done
                                                                     </button>
                                                                     <button 
-                                                                        onClick={() => alert("Re-do request sent.")}
-                                                                        className="w-full py-1.5 bg-slate-100 text-slate-600 text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-slate-200 transition-all"
+                                                                        onClick={() => alert("Report submitted. Our team will review this issue.")}
+                                                                        className="w-full py-1.5 bg-red-50 text-red-600 text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-red-100 transition-all flex items-center justify-center gap-2 border border-red-100"
                                                                     >
-                                                                        Ask to Re-do
+                                                                        <span className="material-symbols-outlined text-sm">flag</span>
+                                                                        Report an Issue
                                                                     </button>
                                                                 </div>
                                                             )}

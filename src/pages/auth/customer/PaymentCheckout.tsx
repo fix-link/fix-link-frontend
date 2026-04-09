@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../../../context/DataContext';
 import { useAuth } from '../../../context/AuthContext';
-import { initializePayment } from '../../../api/payments.api';
+import { initializePayment, getExistingPayment } from '../../../api/payments.api';
 import CustomerNavbar from './components/CustomerNavbar';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
 
@@ -66,14 +66,15 @@ const PaymentCheckout = () => {
         }
 
         try {
-            const resp = await initializePayment(job.id, selectedProvider, normalizedAccount, {
+            const resp = await initializePayment(job.id, normalizedAccount, {
                 amount: job.budget,
                 currency: "ETB",
                 email: user?.email,
                 first_name: user?.first_name || user?.username,
                 last_name: user?.last_name || "",
                 title: job.title || "Fix-Link Service",
-                description: job.description || "Escrow payment for professional services."
+                description: job.description || "Escrow payment for professional services.",
+                payment_method: selectedProvider
             });
             if (resp.checkout_url) {
                 window.location.replace(resp.checkout_url);
@@ -82,10 +83,27 @@ const PaymentCheckout = () => {
             }
         } catch (error: any) {
             console.error("PaymentCheckout: FULL ERROR", error?.response?.data || error);
-            const serverMsg = error?.response?.data?.message || error?.response?.data?.detail;
-            const fullError = JSON.stringify(error?.response?.data || { error: error.message }, null, 2);
+            const serverMsg = error?.response?.data?.message || error?.response?.data?.detail || error?.message;
             
-            alert(`Payment Initialization Failed:\n\n${serverMsg || "Unknown Error"}\n\nTECHNICAL DETAIL:\n${fullError}`);
+            if (serverMsg && serverMsg.toLowerCase().includes("already exists")) {
+                // Try to recover the existing checkout URL so user can resume
+                setIsProcessing(true);
+                const existing = await getExistingPayment(job.id);
+                if (existing?.checkout_url) {
+                    // Resume the existing payment session
+                    window.location.replace(existing.checkout_url);
+                    return;
+                }
+                // No URL found — tell user clearly what happened
+                alert(
+                    "⚠️ Unfinished Payment Session\n\n" +
+                    "A payment was already started for this job but wasn't completed. " +
+                    "Please ask the support team or the backend developer to clear the pending " +
+                    "escrow for this job so you can try again."
+                );
+            } else {
+                alert(`Payment Failed: ${serverMsg || "Unknown error. Please try again."}`);
+            }
             setIsProcessing(false);
         }
     };

@@ -112,3 +112,52 @@ export const markAllAsRead = async () => {
         throw new Error(parseError(error));
     }
 };
+
+/**
+ * Send a notification to a specific user (e.g. professional).
+ * Tries multiple common backend endpoint patterns.
+ * Silently fails if the backend doesn't support it.
+ */
+export const sendNotification = async (
+    recipientId: string,
+    message: string,
+    type: string = 'info',
+    jobId?: string
+): Promise<void> => {
+    const payload = {
+        recipient: recipientId,
+        user: recipientId,
+        message,
+        body: message,
+        title: 'Fix-Link Update',
+        notification_type: type,
+        type,
+        job_id: jobId,
+        job: jobId,
+    };
+
+    // Try multiple endpoint patterns the backend may support
+    const endpoints = [
+        '/notifications/send/',
+        '/notifications/',
+        '/notifications/create/',
+    ];
+
+    for (const endpoint of endpoints) {
+        try {
+            await api.post(endpoint, payload);
+            clearNotificationsCache();
+            console.log(`sendNotification: success via ${endpoint}`);
+            return;
+        } catch (err: any) {
+            // 404 = endpoint doesn't exist, try next
+            if (err?.response?.status === 404) continue;
+            // 405 = method not allowed, try next
+            if (err?.response?.status === 405) continue;
+            // Any other error (403, 400) — backend received it but rejected it, stop
+            console.warn(`sendNotification: failed via ${endpoint}`, err?.response?.data || err?.message);
+            return;
+        }
+    }
+    console.warn('sendNotification: no valid endpoint found — backend may handle notifications server-side.');
+};

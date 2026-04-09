@@ -16,7 +16,6 @@ export interface PaymentInitializationResponse {
  */
 export const initializePayment = async (
   jobId: string, 
-  provider: string = "chapa", 
   accountNumber?: string,
   details?: {
     amount?: number | string;
@@ -26,6 +25,7 @@ export const initializePayment = async (
     last_name?: string;
     description?: string;
     title?: string;
+    payment_method?: string;
   }
 ): Promise<PaymentInitializationResponse> => {
   try {
@@ -34,10 +34,11 @@ export const initializePayment = async (
       amount: String(details?.amount || "0"),
       currency: details?.currency || "ETB",
       phone_number: accountNumber || "",
-      callback_url: window.location.origin + "/customer/home",
-      return_url: window.location.origin + "/customer/home",
+      payment_method: details?.payment_method || "chapa",
+      callback_url: window.location.origin + "/customer/payment-success/" + jobId,
+      return_url: window.location.origin + "/customer/payment-success/" + jobId,
       description: details?.description || "Payment for job " + jobId,
-      title: details?.title || "Fix-Link Service",
+      title: (details?.title || "Fix-Link").substring(0, 16),
       logo_url: "https://fixlink.app/logo.png"
     };
     
@@ -46,6 +47,23 @@ export const initializePayment = async (
     return response.data;
   } catch (error: any) {
     console.error("initializePayment: failed for job", jobId, error?.response?.data || error?.message || error);
-    throw new Error(parseError(error));
+    throw error; // throw the raw error so callers can inspect error.response.data
+  }
+};
+
+/**
+ * Try to get an existing payment/escrow for a job.
+ * Used to recover a checkout URL when 'escrow already exists'.
+ */
+export const getExistingPayment = async (jobId: string): Promise<{ checkout_url?: string } | null> => {
+  try {
+    const response = await api.get(`/payments/?job_id=${jobId}`);
+    const results = response.data?.results || response.data;
+    if (Array.isArray(results) && results.length > 0) {
+      return results[0];
+    }
+    return null;
+  } catch {
+    return null;
   }
 };

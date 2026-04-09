@@ -17,6 +17,7 @@ import PendingApproval from "./pages/signup/PendingApproval";
 import AccountSettings from "./pages/auth/customer/AccountSettings";
 import Bookings from "./pages/auth/customer/Bookings";
 import PaymentCheckout from "./pages/auth/customer/PaymentCheckout";
+import PaymentSuccess from "./pages/auth/customer/PaymentSuccess";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
 
@@ -75,6 +76,11 @@ function App() {
         <Route path="/customer/checkout/:jobId" element={
           <ProtectedRoute role="customer">
             <PaymentCheckout />
+          </ProtectedRoute>
+        } />
+        <Route path="/customer/payment-success/:jobId" element={
+          <ProtectedRoute role="customer">
+            <PaymentSuccess />
           </ProtectedRoute>
         } />
         <Route path="/customer/bookings" element={
