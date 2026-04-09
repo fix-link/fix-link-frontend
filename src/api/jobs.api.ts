@@ -1,4 +1,4 @@
-﻿import api, { parseError } from "./auth.api";
+import api, { parseError } from "./auth.api";
 
 /**
  * Create a new job
@@ -143,15 +143,15 @@ export const assignProfessional = async (jobId: string, professionalId: string) 
     }
 };
 /**
- * Update job status using the correct backend action endpoints (confirmed from Swagger).
+ * Update job status using the correct backend action endpoints (confirmed from Swagger & Developer docs).
  *
  * Status transitions:
  *   accepted    - POST /jobs/{id}/accept-assigned/  (fallback: /accept-bid/)
  *   cancelled   - POST /jobs/{id}/cancel/
- *   in_progress - POST /jobs/{id}/start/
- *   done        - POST /jobs/{id}/mark-done/   <- PROFESSIONAL marks work finished
- *   completed   - POST /jobs/{id}/complete/    <- CUSTOMER approves & releases escrow
- *   booked      - POST /jobs/{id}/book/
+ *   in_progress - POST /jobs/{id}/start/           <- Professional starts work
+ *   done        - POST /jobs/{id}/request_complition/ <- Professional marks work finished
+ *   completed   - POST /jobs/{id}/confirm_completion/ <- Customer approves & releases escrow
+ *   booked      - POST /jobs/{id}/book/               <- Set after payment confirmed
  */
 export const updateJobStatus = async (jobId: string, status: string) => {
     console.log(`updateJobStatus: ${jobId} -> ${status}`);
@@ -160,8 +160,8 @@ export const updateJobStatus = async (jobId: string, status: string) => {
         'accepted':    'accept-assigned',
         'cancelled':   'cancel',
         'in_progress': 'start',
-        'done':        'mark-done',
-        'completed':   'complete',
+        'done':        'request_complition',
+        'completed':   'confirm_completion',
         'booked':      'book',
     };
 
@@ -177,14 +177,19 @@ export const updateJobStatus = async (jobId: string, status: string) => {
             if (status === 'accepted') {
                 try {
                     const res = await api.post(`/jobs/${jobId}/accept-bid/`);
-                    console.log('updateJobStatus: accept-bid fallback success', res.data);
                     return res.data;
-                } catch (e2: any) {
-                    const msg = e2?.response?.data?.detail || e2?.response?.data?.error || e2?.message;
-                    console.error('updateJobStatus: accept fallback failed', e2?.response?.data);
-                    throw new Error(msg || 'Failed to accept job');
-                }
+                } catch (e2: any) {} // let it fall through to generic fallback
             }
+
+            // Special fallback for 'done': try mark-done/ if request_complition/ fails (e.g. 404 constraints)
+            if (status === 'done') {
+                try {
+                    console.warn(`updateJobStatus: POST /${action}/ failed. Attempting mark-done fallback...`);
+                    const res = await api.post(`/jobs/${jobId}/mark-done/`);
+                    return res.data;
+                } catch (e3: any) {} // let it fall through to generic fallback
+            }
+            
             const msg = e1?.response?.data?.detail || e1?.response?.data?.error || e1?.message;
             console.error(`updateJobStatus: POST /${action}/ failed`, e1?.response?.data);
             throw new Error(msg || `Failed to update job to ${status}`);

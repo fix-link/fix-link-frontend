@@ -238,12 +238,11 @@ const ProfessionalMessages = () => {
 
     const getStepStatus = (index: number, currentStatus: string) => {
         const statusMap: Record<string, number> = {
-            'pending':      0,
-            'accepted':     1,
-            'assigned':     1,
-            'booked':       3, // Phase: Start Working
-            'in_progress':  4, // Phase: Mark work as finished
-            'done':         5, // Phase: Approved & Paid Out
+            'pending':      1, // Active: Accept Assignment
+            'accepted':     2, // Active: Customer Booking
+            'booked':       3, // Active: Start Working
+            'in_progress':  4, // Active: Mark Finished
+            'done':         5, // Active: Final Approval
             'completed':    6,
             'cancelled':   -1,
         };
@@ -260,12 +259,12 @@ const ProfessionalMessages = () => {
             date: activeRequest?.created_at ? new Date(activeRequest.created_at).toLocaleDateString([], { month: 'short', day: 'numeric'}) : null
         },
         {
-            title: "Request Accepted",
+            title: "Accept Assignment",
             status: getStepStatus(1, activeRequest?.status || 'pending'),
             actionRequired: activeRequest?.status === 'pending'
         },
         {
-            title: "Paid & Scheduled",
+            title: "Customer Booking",
             status: getStepStatus(2, activeRequest?.status || 'pending'),
             date: activeRequest?.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric'}) : null
         },
@@ -275,12 +274,12 @@ const ProfessionalMessages = () => {
             actionRequired: activeRequest?.status === 'booked'
         },
         {
-            title: "Mark Work Finished",
+            title: "Mark Finished",
             status: getStepStatus(4, activeRequest?.status || 'pending'),
             actionRequired: activeRequest?.status === 'in_progress'
         },
         {
-            title: "Approved & Paid Out",
+            title: "Final Approval",
             status: getStepStatus(5, activeRequest?.status || 'pending')
         }
     ];
@@ -801,18 +800,33 @@ const ProfessionalMessages = () => {
                                                                 <p className="text-[10px] font-black text-primary leading-tight">
                                                                     {activeRequest.status === 'pending'
                                                                         ? "New request! Review the details and accept to begin."
+                                                                        : (activeRequest.status === 'accepted' || activeRequest.status === 'assigned')
+                                                                        ? "You accepted the job! Awaiting customer payment via Escrow."
                                                                         : activeRequest.status === 'booked'
-                                                                        ? "The customer has paid! Ready to start work?"
-                                                                        : "Work in progress. Mark finished when you're done!"}
+                                                                        ? "Payment Secured! You can now start the work."
+                                                                        : activeRequest.status === 'in_progress'
+                                                                        ? "Work in progress. Mark finished when you're done!"
+                                                                        : activeRequest.status === 'done'
+                                                                        ? "Work marked done! Awaiting customer's final approval."
+                                                                        : "Job successfully completed!"}
                                                                 </p>
-                                                                {activeRequest.status === 'pending' ? (
-                                                                    <button 
-                                                                        onClick={handleAccept}
-                                                                        className="w-full py-2.5 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-sm">handshake</span>
-                                                                        Accept Request
-                                                                    </button>
+                                                                {(activeRequest.status === 'pending' || activeRequest.status === 'assigned') ? (
+                                                                    <div className="flex flex-col gap-2 w-full mt-2">
+                                                                        <button 
+                                                                            onClick={handleAccept}
+                                                                            className="w-full py-2.5 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-sm">handshake</span>
+                                                                            Accept Request
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={handleDecline}
+                                                                            className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-sm">close</span>
+                                                                            Decline Request
+                                                                        </button>
+                                                                    </div>
                                                                 ) : activeRequest.status === 'booked' ? (
                                                                     <button 
                                                                         onClick={handleStartJob}

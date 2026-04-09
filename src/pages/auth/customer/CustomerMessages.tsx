@@ -232,13 +232,13 @@ const CustomerMessages = () => {
         const s = jobStatus.toLowerCase();
         // Map all known backend statuses to the correct step index
         const statusToIndex: Record<string, number> = {
-            'pending':    0,
-            'accepted':   1,
-            'assigned':   1, // alias for accepted
-            'booked':     2,
-            'in_progress':2, // alias for booked
-            'done':       3,
-            'completed':  4,
+            'pending':    0, // Request Sent Current
+            'accepted':   2, // Pro Accepted COMPLETE. Booking & Payment CURRENT
+            'assigned':   2, 
+            'booked':     3, // Booking COMPLETE. Work In Progress CURRENT
+            'in_progress':3, // Work In Progress CURRENT
+            'done':       4, // Work In Progress COMPLETE. Final Approval CURRENT
+            'completed':  5,
             'cancelled':  -1,
         };
         const currentIndex = statusToIndex[s] ?? 0;
@@ -251,27 +251,27 @@ const CustomerMessages = () => {
     const jobSteps = [
         {
             title: "Request Sent",
-            date: activeRequest?.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--",
-            status: getStepStatus(0, activeRequest?.status || 'pending')
+            status: getStepStatus(0, activeRequest?.status || 'pending'),
+            date: activeRequest?.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric'}) : "--"
         },
         {
             title: "Pro Accepted",
-            status: getStepStatus(1, activeRequest?.status || 'pending'),
-            actionRequired: activeRequest?.status === 'accepted' || activeRequest?.status === 'assigned'
+            status: getStepStatus(1, activeRequest?.status || 'pending')
         },
         {
-            title: "Job Booked & In Progress",
+            title: "Booking & Payment",
             status: getStepStatus(2, activeRequest?.status || 'pending'),
-            actionRequired: false // booking is done via PaymentCheckout, no action here
+            actionRequired: activeRequest?.status === 'accepted' || activeRequest?.status === 'assigned',
+            date: activeRequest?.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric'}) : null
         },
         {
-            title: "Work Finished",
-            status: getStepStatus(3, activeRequest?.status || 'pending'),
+            title: "Work In Progress",
+            status: getStepStatus(3, activeRequest?.status || 'pending')
+        },
+        {
+            title: "Final Approval",
+            status: getStepStatus(4, activeRequest?.status || 'pending'),
             actionRequired: activeRequest?.status === 'done'
-        },
-        {
-            title: "Approved & Released",
-            status: getStepStatus(4, activeRequest?.status || 'pending')
         }
     ];
 
@@ -706,10 +706,10 @@ const CustomerMessages = () => {
                                                         <div className="mt-3 p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-2 animate-in fade-in slide-in-from-top-2">
                                                             <p className="text-[10px] font-black text-primary leading-snug">
                                                                 {activeRequest.status === 'accepted' || activeRequest.status === 'assigned'
-                                                                    ? "Pro accepted! Pay now to secure your booking."
-                                                                    : "The professional has finished the work. Please review and approve to release the escrow payment."}
+                                                                    ? "The professional has accepted! Pay now to secure your booking in escrow."
+                                                                    : "The professional has finished the work. Please review and approve to finalize the project."}
                                                             </p>
-                                                            {(activeRequest.status === 'accepted' || activeRequest.status === 'assigned') ? (
+                                                            {activeRequest.status === 'accepted' || activeRequest.status === 'assigned' ? (
                                                                 <button 
                                                                     onClick={() => navigate('/customer/checkout/' + activeRequestId)}
                                                                     className="w-full py-2 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:shadow-lg transition-all flex items-center justify-center gap-2"
@@ -736,6 +736,8 @@ const CustomerMessages = () => {
                                                                 </div>
                                                             )}
                                                         </div>
+
+
                                                     )}
                                                     {isCurrent && activeRequest.status === 'completed' && (
                                                         <div className="mt-3">
