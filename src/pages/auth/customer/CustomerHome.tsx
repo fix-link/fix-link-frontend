@@ -159,7 +159,7 @@ const CustomerHome = () => {
             <div className="flex items-center gap-2">
               <span className="size-1.5 rounded-full bg-emerald-500"></span>
               <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                {filteredProfessionals.length} Experts Available in Addis Ababa
+                {loading ? 'Loading experts...' : `${filteredProfessionals.length} Experts Available in Addis Ababa`}
               </p>
             </div>
           </div>

@@ -143,62 +143,67 @@ export const assignProfessional = async (jobId: string, professionalId: string) 
     }
 };
 /**
- * Update job status using confirmed backend action endpoints.
- * - accept   -> POST /jobs/{id}/accept/  (fallback: accept-bid)
- * - cancel   -> POST /jobs/{id}/cancel/
- * - done     -> PATCH /jobs/{id}/  with {status: 'done'}
- * - completed -> PATCH /jobs/{id}/  with {status: 'completed'}
+ * Update job status using the correct backend action endpoints (confirmed from Swagger & Developer docs).
+ *
+ * Status transitions:
+ *   accepted    - POST /jobs/{id}/accept-assigned/  (fallback: /accept-bid/)
+ *   cancelled   - POST /jobs/{id}/cancel/
+ *   in_progress - POST /jobs/{id}/start/           <- Professional starts work
+ *   done        - POST /jobs/{id}/request_complition/ <- Professional marks work finished
+ *   completed   - POST /jobs/{id}/confirm_completion/ <- Customer approves & releases escrow
+ *   booked      - POST /jobs/{id}/book/               <- Set after payment confirmed
  */
 export const updateJobStatus = async (jobId: string, status: string) => {
     console.log(`updateJobStatus: ${jobId} -> ${status}`);
 
-    if (status === 'accepted') {
-        // Backend confirmed: POST /jobs/{id}/accept-assigned/
+    const actionMap: Record<string, string> = {
+        'accepted':    'accept-assigned',
+        'cancelled':   'cancel',
+        'in_progress': 'start',
+        'done':        'request_complition',
+        'completed':   'confirm_completion',
+        'booked':      'book',
+    };
+
+    const action = actionMap[status];
+
+    if (action) {
         try {
-            const res = await api.post(`/jobs/${jobId}/accept-assigned/`);
-            console.log('updateJobStatus: accept assign success', res.data);
+            const res = await api.post(`/jobs/${jobId}/${action}/`);
+            console.log(`updateJobStatus: POST /${action}/ success`, res.data);
             return res.data;
         } catch (e1: any) {
-            // Fallback: POST /jobs/{id}/accept-bid/
-            try {
-                const res = await api.post(`/jobs/${jobId}/accept-bid/`);
-                console.log('updateJobStatus: accept-bid success', res.data);
-                return res.data;
-            } catch (e2: any) {
-                const msg = e2?.response?.data?.detail || e2?.response?.data?.error || e2?.message;
-                console.error('updateJobStatus: accept failed', e2?.response?.data);
-                throw new Error(msg || 'Failed to accept job');
+            // Special fallback for 'accepted': try accept-bid/ if accept-assigned/ fails
+            if (status === 'accepted') {
+                try {
+                    const res = await api.post(`/jobs/${jobId}/accept-bid/`);
+                    return res.data;
+                } catch (e2: any) {} // let it fall through to generic fallback
             }
+
+            // Special fallback for 'done': try mark-done/ if request_complition/ fails (e.g. 404 constraints)
+            if (status === 'done') {
+                try {
+                    console.warn(`updateJobStatus: POST /${action}/ failed. Attempting mark-done fallback...`);
+                    const res = await api.post(`/jobs/${jobId}/mark-done/`);
+                    return res.data;
+                } catch (e3: any) {} // let it fall through to generic fallback
+            }
+            
+            const msg = e1?.response?.data?.detail || e1?.response?.data?.error || e1?.message;
+            console.error(`updateJobStatus: POST /${action}/ failed`, e1?.response?.data);
+            throw new Error(msg || `Failed to update job to ${status}`);
         }
     }
 
-    if (status === 'cancelled') {
-        // Backend confirmed: POST /jobs/{id}/cancel/
-        try {
-            const res = await api.post(`/jobs/${jobId}/cancel/`);
-            console.log('updateJobStatus: cancel success', res.data);
-            return res.data;
-        } catch (e: any) {
-            const msg = e?.response?.data?.detail || e?.response?.data?.error || e?.message;
-            console.error('updateJobStatus: cancel failed', e?.response?.data);
-            throw new Error(msg || 'Failed to decline job');
-        }
-    }
-
-    // For done/completed/booked — try PATCH first then PUT
+    // Fallback for any unmapped status: try PATCH
     try {
         const res = await api.patch(`/jobs/${jobId}/`, { status });
         console.log(`updateJobStatus: PATCH ${status} success`, res.data);
         return res.data;
-    } catch (patchErr: any) {
-        try {
-            const res = await api.put(`/jobs/${jobId}/`, { status });
-            console.log(`updateJobStatus: PUT ${status} success`, res.data);
-            return res.data;
-        } catch (e: any) {
-            const msg = e?.response?.data?.detail || e?.response?.data?.error || e?.message;
-            console.error(`updateJobStatus: ${status} failed`, e?.response?.data);
-            throw new Error(msg || `Failed to update job to ${status}`);
-        }
+    } catch (e: any) {
+        const msg = e?.response?.data?.detail || e?.response?.data?.error || e?.message;
+        console.error(`updateJobStatus: all methods failed for ${status}`, e?.response?.data);
+        throw new Error(msg || `Failed to update job to ${status}`);
     }
 };
