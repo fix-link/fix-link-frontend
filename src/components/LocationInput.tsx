@@ -57,11 +57,14 @@ const LocationInput = ({ value, onSelect, className, icon }: Props) => {
       />
 
       {show && filtered.length > 0 && (
-        <div className="absolute z-10 bg-white border w-full rounded shadow mt-1">
-          {filtered.map((loc) => (
-            <div
+        <div className="absolute z-[60] left-0 right-0 top-full mt-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          {filtered.map((loc, i) => (
+            <button
               key={loc}
-              className="px-4 py-2 cursor-pointer hover:bg-gray-100"
+              type="button"
+              className={`w-full text-left px-5 py-3 text-sm font-medium transition-colors hover:bg-primary hover:text-white dark:text-slate-200 dark:hover:text-white ${
+                i !== filtered.length - 1 ? 'border-b border-slate-100 dark:border-slate-800/50' : ''
+              }`}
               onClick={() => {
                 onSelect(loc);
                 setQuery(loc);
@@ -69,7 +72,7 @@ const LocationInput = ({ value, onSelect, className, icon }: Props) => {
               }}
             >
               {loc}
-            </div>
+            </button>
           ))}
         </div>
       )}
