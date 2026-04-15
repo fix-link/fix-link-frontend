@@ -1,4 +1,4 @@
-import api, { parseError } from "./auth.api";
+import api from "./auth.api";
 
 export interface PaymentInitializationResponse {
   checkout_url: string;
