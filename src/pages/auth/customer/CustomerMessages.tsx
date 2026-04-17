@@ -6,6 +6,12 @@ import { updateJobStatus } from '../../../api/jobs.api';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
 import { getMessages, sendMessage, markAsRead, getOrCreateConversation, getConversationById } from '../../../api/conversations.api';
 import { useData } from '../../../context/DataContext';
+import {
+  MessageSquare, User, ArrowLeft, ChevronRight, Phone, Video, 
+  Activity, X, CheckCheck, Check, Smile, Paperclip, Loader2, Send, 
+  CheckCircle2, CreditCard, ShieldCheck, Flag, Star, MapPin, Calendar, 
+  Shield, Zap, Lock, RefreshCw, Hammer
+} from "lucide-react";
 
 const CustomerMessages = () => {
     const { user } = useAuth();
@@ -314,7 +320,7 @@ const CustomerMessages = () => {
                 `}>
                     <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                         <h3 className="text-sm font-black flex items-center gap-2 tracking-tight">
-                            <span className="material-symbols-outlined text-primary text-xl">forum</span>
+                            <MessageSquare className="text-primary" size={20} />
                             Messages
                         </h3>
                         {userRequests.length > 0 && (
@@ -333,13 +339,13 @@ const CustomerMessages = () => {
                     <div className="flex-1 overflow-y-auto custom-scrollbar relative">
                         {isLoading ? (
                             <div className="flex flex-col items-center justify-center h-full opacity-60">
-                                <span className="material-symbols-outlined text-4xl animate-spin text-primary">autorenew</span>
+                                <Loader2 size={36} className="animate-spin text-primary" />
                                 <p className="text-xs font-bold mt-3">Loading conversations...</p>
                             </div>
                         ) : hydratedRequests.length === 0 ? (
                             <div className="p-10 text-center space-y-3 opacity-40">
-                                <span className="material-symbols-outlined text-4xl block">forum</span>
-                                <p className="text-xs font-black uppercase tracking-widest">No conversation yet</p>
+                                <MessageSquare size={36} className="mx-auto" />
+                                <p className="text-xs font-black uppercase tracking-widest mt-2">No conversation yet</p>
                                 <p className="text-[10px] font-bold leading-relaxed">Request services from professionals to start chatting.</p>
                             </div>
                         ) : (
@@ -359,7 +365,7 @@ const CustomerMessages = () => {
                                                 {req.professional_detail?.profile_picture || req.professional_detail?.profile_photo ? (
                                                     <img src={getImageUrl(req.professional_detail.profile_picture || req.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <span className="material-symbols-outlined text-slate-400">person</span>
+                                                    <User size={20} className="text-slate-400" />
                                                 )}
                                             </div>
                                             {notifications.some(n => n.link?.includes(req.id) && !n.is_read) && (
@@ -405,7 +411,7 @@ const CustomerMessages = () => {
                 `}>
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-60 p-10">
-                            <span className="material-symbols-outlined text-4xl animate-spin text-primary">autorenew</span>
+                            <Loader2 size={36} className="animate-spin text-primary" />
                             <div className="space-y-2">
                                 <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">Connecting to chat...</h3>
                                 <p className="text-sm font-medium text-text-secondary dark:text-gray-400 max-w-xs">
@@ -419,7 +425,7 @@ const CustomerMessages = () => {
                             if (isDeepLinking) {
                                 return (
                                     <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-60 p-10 animate-in fade-in">
-                                        <span className="material-symbols-outlined text-4xl animate-spin text-primary">sync</span>
+                                        <RefreshCw size={36} className="animate-spin text-primary" />
                                         <div className="space-y-2">
                                             <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">Opening conversation...</h3>
                                             <p className="text-sm font-medium text-text-secondary dark:text-gray-400 max-w-xs">Connecting you with your professional.</p>
@@ -431,10 +437,10 @@ const CustomerMessages = () => {
                                 <div className="flex flex-col items-center justify-center h-full text-center space-y-8 p-12 animate-in fade-in zoom-in duration-700 bg-slate-50/50 dark:bg-slate-900/20">
                                     <div className="relative">
                                         <div className="size-32 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-2xl shadow-primary/20 border border-slate-100 dark:border-slate-700 relative z-10">
-                                            <span className="material-symbols-outlined text-6xl text-primary animate-pulse">forum</span>
+                                            <MessageSquare size={48} className="text-primary animate-pulse" />
                                         </div>
-                                        <div className="absolute -top-2 -right-2 size-10 bg-primary rounded-full border-4 border-white dark:border-slate-900 shadow-lg z-20 flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-white text-lg font-black">bolt</span>
+                                        <div className="absolute -top-2 -right-2 size-10 bg-primary rounded-[12px] border-4 border-white dark:border-slate-900 shadow-lg z-20 flex items-center justify-center rotate-12">
+                                            <Zap size={18} fill="white" className="text-white" />
                                         </div>
                                     </div>
                                     <div className="max-w-sm space-y-3">
@@ -443,10 +449,10 @@ const CustomerMessages = () => {
                                             Select a professional from your request list to view the project timeline and start a conversation.
                                         </p>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-4 w-full max-w-xs opacity-20 capitalize text-[10px] font-black tracking-widest text-slate-400">
-                                        <div className="flex flex-col items-center gap-2"><span className="material-symbols-outlined">security</span>Secure</div>
-                                        <div className="flex flex-col items-center gap-2"><span className="material-symbols-outlined">bolt</span>Fast</div>
-                                        <div className="flex flex-col items-center gap-2"><span className="material-symbols-outlined">verified</span>Verified</div>
+                                    <div className="grid grid-cols-3 gap-4 w-full max-w-xs opacity-30 capitalize text-[10px] font-black tracking-widest text-slate-400">
+                                        <div className="flex flex-col items-center gap-2"><Shield size={18} />Secure</div>
+                                        <div className="flex flex-col items-center gap-2"><Zap size={18} />Fast</div>
+                                        <div className="flex flex-col items-center gap-2"><ShieldCheck size={18} />Verified</div>
                                     </div>
                                 </div>
                             );

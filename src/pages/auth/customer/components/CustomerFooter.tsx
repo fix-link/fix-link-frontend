@@ -1,21 +1,19 @@
-
-
 const CustomerFooter = () => {
     return (
-        <footer className="bg-white dark:bg-slate-900 py-8 border-t border-slate-200 dark:border-slate-800">
+        <footer className="mt-auto bg-transparent py-10 relative z-10 border-t border-slate-200 dark:border-slate-800/50">
             <div className="max-w-[1600px] mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
                 <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900 dark:text-white text-sm">Fix-Link</span>
+                    <span className="font-display font-black tracking-tight text-slate-900 dark:text-white text-lg group-hover:text-primary transition-colors">Fix-Link</span>
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                    © 2024 Fix-Link. Ethiopia's Leading Service Marketplace.
+                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">
+                    © 2026 Fix-Link. Ethiopia's Premium Service Marketplace.
                 </p>
-                <div className="flex gap-6 text-slate-400">
-                    <a className="hover:text-primary transition flex items-center gap-1 text-xs" href="#">
-                        <span className="material-symbols-outlined text-lg">language</span> English
+                <div className="flex gap-8 text-slate-400">
+                    <a className="text-xs font-bold uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-2" href="#">
+                        English
                     </a>
-                    <a className="hover:text-primary transition flex items-center gap-1 text-xs" href="#">
-                        <span className="material-symbols-outlined text-lg">help</span> Support
+                    <a className="text-xs font-bold uppercase tracking-widest hover:text-primary transition-colors flex items-center gap-2" href="#">
+                        Support Team
                     </a>
                 </div>
             </div>

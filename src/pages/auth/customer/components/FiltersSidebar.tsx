@@ -1,4 +1,5 @@
 import React from "react";
+import { FilterX } from "lucide-react";
 
 interface FiltersSidebarProps {
     priceMin: number;
@@ -48,29 +49,33 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
     };
 
     return (
-        <div className="bg-white dark:bg-background-dark p-6 rounded-lg shadow-card border border-border-color dark:border-slate-800">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-text-primary dark:text-white text-lg font-bold leading-tight tracking-[-0.015em]">
+        <div className="glass-panel p-6 rounded-[32px] shadow-sm border border-white/40 dark:border-slate-800/50 relative overflow-hidden">
+            {/* Subtle Gradient Overlay */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div className="flex justify-between items-center mb-8 relative z-10">
+                <h3 className="text-slate-900 dark:text-white text-xl font-black tracking-tight">
                     Filters
                 </h3>
                 <button
                     onClick={onClearAll}
-                    className="text-sm font-medium text-primary hover:underline"
+                    className="flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-primary dark:text-slate-400 dark:hover:text-primary transition-colors group px-3 py-1.5 rounded-full hover:bg-primary/5"
                 >
-                    Clear All
+                    <FilterX size={14} className="group-hover:scale-110 transition-transform" />
+                    <span>Clear All</span>
                 </button>
             </div>
 
             {/* Price Range */}
-            <div className="border-t border-border-color dark:border-white/10 pt-6">
-                <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">
+            <div className="border-t border-slate-100 dark:border-slate-800/50 pt-6 relative z-10">
+                <h4 className="text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest mb-4">
                     Price Range (ETB)
                 </h4>
 
-                <div className="space-y-4">
-                    <div className="relative h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700 mt-2">
+                <div className="space-y-6">
+                    <div className="relative h-2 w-full rounded-full bg-slate-100 dark:bg-slate-800">
                         <div
-                            className="absolute h-full bg-primary rounded-full"
+                            className="absolute h-full bg-gradient-to-r from-primary to-accent-cyan rounded-full"
                             style={{
                                 left: `${(priceMin / 10000) * 100}%`,
                                 right: `${100 - (priceMax / 10000) * 100}%`,
@@ -85,8 +90,7 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
                                 const val = Number(e.target.value);
                                 if (val < priceMax) setPriceMin(val);
                             }}
-                            className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
-                            style={{ zIndex: priceMin > 5000 ? 10 : 1 }}
+                            className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-20 pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto"
                         />
                         <input
                             type="range"
@@ -97,24 +101,27 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
                                 const val = Number(e.target.value);
                                 if (val > priceMin) setPriceMax(val);
                             }}
-                            className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+                            className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-10 pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto"
                         />
+                        {/* Custom Thumbs visually represented */}
+                        <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-primary rounded-full shadow-md pointer-events-none" style={{ left: `${(priceMin / 10000) * 100}%`, transform: 'translate(-50%, -50%)' }}></div>
+                        <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-primary rounded-full shadow-md pointer-events-none" style={{ left: `${(priceMax / 10000) * 100}%`, transform: 'translate(-50%, -50%)' }}></div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
                         <input
                             type="number"
                             value={priceMin}
                             onChange={(e) => setPriceMin(Number(e.target.value))}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30 text-sm font-bold py-2.5 px-4 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 text-slate-900 dark:text-white transition-all shadow-inner"
                             placeholder="Min"
                         />
-                        <span className="text-gray-400">-</span>
+                        <span className="text-slate-300 dark:text-slate-600">-</span>
                         <input
                             type="number"
                             value={priceMax}
                             onChange={(e) => setPriceMax(Number(e.target.value))}
-                            className="w-full rounded-md border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-primary/50 text-text-primary dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/30 text-sm font-bold py-2.5 px-4 focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 text-slate-900 dark:text-white transition-all shadow-inner"
                             placeholder="Max"
                         />
                     </div>
@@ -122,74 +129,58 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
             </div>
 
             {/* Rating */}
-            <div className="border-t border-border-color dark:border-white/10 pt-6 mt-6">
-                <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">
+            <div className="border-t border-slate-100 dark:border-slate-800/50 pt-6 mt-6">
+                <h4 className="text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest mb-4">
                     Rating
                 </h4>
                 <div className="flex flex-col gap-3">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            name="rating-filter"
-                            type="radio"
-                            checked={selectedRating === 4}
-                            onChange={() => setSelectedRating(4)}
-                            className="h-5 w-5 border-2 border-border-color dark:border-white/30 bg-transparent text-primary focus:ring-primary focus:ring-offset-0"
-                        />
-                        <div className="flex items-center gap-1">
-                            <span className="text-text-primary dark:text-white text-sm font-medium leading-normal">
-                                4★ and up
+                    {[
+                        { val: 4, label: "4★ and up" },
+                        { val: 3, label: "3★ and up" },
+                        { val: 0, label: "Any Rating" }
+                    ].map((opt) => (
+                        <label key={opt.val} className="flex items-center gap-3 cursor-pointer group">
+                            <div className="relative flex items-center justify-center">
+                                <input
+                                    name="rating-filter"
+                                    type="radio"
+                                    checked={selectedRating === opt.val}
+                                    onChange={() => setSelectedRating(opt.val)}
+                                    className="peer appearance-none w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded-full checked:border-primary checked:bg-primary transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-primary/20"
+                                />
+                                <div className="absolute w-2 h-2 rounded-full bg-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></div>
+                            </div>
+                            <span className={`text-sm font-bold transition-colors ${selectedRating === opt.val ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                                {opt.label}
                             </span>
-                        </div>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            name="rating-filter"
-                            type="radio"
-                            checked={selectedRating === 3}
-                            onChange={() => setSelectedRating(3)}
-                            className="h-5 w-5 border-2 border-border-color dark:border-white/30 bg-transparent text-primary focus:ring-primary focus:ring-offset-0"
-                        />
-                        <div className="flex items-center gap-1">
-                            <span className="text-text-primary dark:text-white text-sm font-medium leading-normal">
-                                3★ and up
-                            </span>
-                        </div>
-                    </label>
-                    <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                            name="rating-filter"
-                            type="radio"
-                            checked={selectedRating === 0}
-                            onChange={() => setSelectedRating(0)}
-                            className="h-5 w-5 border-2 border-border-color dark:border-white/30 bg-transparent text-primary focus:ring-primary focus:ring-offset-0"
-                        />
-                        <div className="flex items-center gap-1">
-                            <span className="text-text-primary dark:text-white text-sm font-medium leading-normal">
-                                Any
-                            </span>
-                        </div>
-                    </label>
+                        </label>
+                    ))}
                 </div>
             </div>
 
             {/* Experience */}
-            <div className="border-t border-border-color dark:border-white/10 pt-6 mt-6">
-                <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">
+            <div className="border-t border-slate-100 dark:border-slate-800/50 pt-6 mt-6">
+                <h4 className="text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest mb-4">
                     Experience Level
                 </h4>
                 <div className="flex flex-col gap-3">
                     {["Junior (1-2 yrs)", "Mid-level (3-5 yrs)", "Senior (5+ yrs)"].map(
                         (exp) => (
-                            <label key={exp} className="flex items-center gap-3 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedExperience.includes(exp)}
-                                    onChange={() =>
-                                        toggleFilter(selectedExperience, setSelectedExperience, exp)
-                                    }
-                                    className="h-5 w-5 rounded border-border-color dark:border-white/30 text-primary focus:ring-primary"
-                                />
-                                <span className="text-text-primary dark:text-white text-sm">
+                            <label key={exp} className="flex items-center gap-3 cursor-pointer group">
+                                <div className="relative flex items-center justify-center">
+                                  <input
+                                      type="checkbox"
+                                      checked={selectedExperience.includes(exp)}
+                                      onChange={() =>
+                                          toggleFilter(selectedExperience, setSelectedExperience, exp)
+                                      }
+                                      className="peer appearance-none w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded-lg checked:border-primary checked:bg-primary transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-primary/20"
+                                  />
+                                  <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" viewBox="0 0 14 10" fill="none">
+                                    <path d="M1 5L4.5 8.5L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                </div>
+                                <span className={`text-sm font-bold transition-colors ${selectedExperience.includes(exp) ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
                                     {exp}
                                 </span>
                             </label>
@@ -198,70 +189,72 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
                 </div>
             </div>
 
-            {/* Verified */}
-            <div className="border-t border-border-color dark:border-white/10 pt-6 mt-6">
-                <label className="flex cursor-pointer items-center justify-between">
-                    <span className="text-text-primary dark:text-white text-base font-bold">
-                        Verified Professionals
+            {/* Verified Only (Modern Switch) */}
+            <div className="border-t border-slate-100 dark:border-slate-800/50 pt-6 mt-6">
+                <label className="flex cursor-pointer items-center justify-between group">
+                    <span className="text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest">
+                        Verified Only
                     </span>
-                    <input
-                        type="checkbox"
-                        className="peer sr-only"
-                        checked={verifiedOnly}
-                        onChange={(e) => setVerifiedOnly(e.target.checked)}
-                    />
-                    <div className="relative h-6 w-11 rounded-full bg-gray-200 dark:bg-white/20 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 dark:after:border-gray-600 after:bg-white after:transition-all after:content-[''] peer-checked:bg-primary peer-checked:after:translate-x-full peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800"></div>
+                    <div className="relative">
+                        <input
+                            type="checkbox"
+                            className="peer sr-only"
+                            checked={verifiedOnly}
+                            onChange={(e) => setVerifiedOnly(e.target.checked)}
+                        />
+                        <div className="block w-12 h-7 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer-checked:bg-primary transition-colors duration-300"></div>
+                        <div className="absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform duration-300 peer-checked:translate-x-5 shadow-sm"></div>
+                    </div>
                 </label>
             </div>
 
             {/* Availability */}
-            <div className="border-t border-border-color dark:border-white/10 pt-6 mt-6">
-                <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">
+            <div className="border-t border-slate-100 dark:border-slate-800/50 pt-6 mt-6">
+                <h4 className="text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest mb-4">
                     Availability
                 </h4>
                 <div className="flex flex-col gap-3">
                     {["Today", "This Week"].map((avail) => (
-                        <label key={avail} className="flex items-center gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={selectedAvailability.includes(avail)}
-                                onChange={() =>
-                                    toggleFilter(
-                                        selectedAvailability,
-                                        setSelectedAvailability,
-                                        avail
-                                    )
-                                }
-                                className="h-5 w-5 rounded border-border-color dark:border-white/30 text-primary focus:ring-primary"
-                            />
-                            <span className="text-text-primary dark:text-white text-sm">
-                                {avail}
-                            </span>
+                        <label key={avail} className="flex items-center gap-3 cursor-pointer group">
+                             <div className="relative flex items-center justify-center">
+                                  <input
+                                      type="checkbox"
+                                      checked={selectedAvailability.includes(avail)}
+                                      onChange={() =>
+                                          toggleFilter(selectedAvailability, setSelectedAvailability, avail)
+                                      }
+                                      className="peer appearance-none w-5 h-5 border-2 border-slate-300 dark:border-slate-600 rounded-lg checked:border-primary checked:bg-primary transition-all cursor-pointer focus:outline-none focus:ring-4 focus:ring-primary/20"
+                                  />
+                                  <svg className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 pointer-events-none transition-opacity" viewBox="0 0 14 10" fill="none">
+                                    <path d="M1 5L4.5 8.5L13 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                </div>
+                                <span className={`text-sm font-bold transition-colors ${selectedAvailability.includes(avail) ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                                    {avail}
+                                </span>
                         </label>
                     ))}
                 </div>
             </div>
 
             {/* Languages */}
-            <div className="border-t border-border-color dark:border-white/10 pt-6 mt-6">
-                <h4 className="text-text-primary dark:text-white text-base font-bold leading-tight mb-4">
+            <div className="border-t border-slate-100 dark:border-slate-800/50 pt-6 mt-6 pb-2">
+                <h4 className="text-slate-900 dark:text-white text-sm font-black uppercase tracking-widest mb-4">
                     Language
                 </h4>
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-2">
                     {["English", "Amharic", "Oromiffa", "Tigrinya"].map((lang) => (
-                        <label key={lang} className="flex items-center gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={selectedLanguages.includes(lang)}
-                                onChange={() =>
-                                    toggleFilter(selectedLanguages, setSelectedLanguages, lang)
-                                }
-                                className="h-5 w-5 rounded border-border-color dark:border-white/30 text-primary focus:ring-primary"
-                            />
-                            <span className="text-text-primary dark:text-white text-sm">
-                                {lang}
-                            </span>
-                        </label>
+                        <button
+                            key={lang}
+                            onClick={() => toggleFilter(selectedLanguages, setSelectedLanguages, lang)}
+                            className={`px-4 py-2 text-xs font-bold rounded-xl transition-all duration-200 border ${
+                                selectedLanguages.includes(lang) 
+                                ? 'bg-primary text-white border-primary shadow-md shadow-primary/20' 
+                                : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-primary/50'
+                            }`}
+                        >
+                            {lang}
+                        </button>
                     ))}
                 </div>
             </div>
