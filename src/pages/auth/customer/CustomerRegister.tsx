@@ -122,27 +122,28 @@ const CustomerRegister = () => {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-6 bg-background-light dark:bg-background-dark overflow-hidden font-sans text-left">
+    <div className="relative min-h-screen flex items-center justify-center p-6 bg-background-light dark:bg-background-dark overflow-hidden font-display text-left">
       {/* Background Decorations */}
       <div className="absolute top-0 left-0 w-full h-full -z-10">
-        <div className="absolute top-[10%] left-[5%] w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-blob"></div>
-        <div className="absolute bottom-[20%] right-[10%] w-96 h-96 bg-accent-purple/15 rounded-full blur-3xl animate-blob" style={{ animationDelay: '2s' }}></div>
+        <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob"></div>
+        <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-accent-purple/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <div className="w-full max-w-xl animate-fade-in-up">
         {/* Brand Area */}
         <div className="text-center mb-10">
-          <Link to="/" className="inline-block">
-            <h1 className="text-4xl font-display font-extrabold text-gradient mb-2 tracking-tight">Fix-Link</h1>
+          <Link to="/" className="inline-block group">
+            <h1 className="text-5xl font-black text-slate-900 dark:text-white mb-2 tracking-tighter group-hover:text-primary transition-colors">Fix-Link</h1>
           </Link>
-          <p className="text-subtext-light dark:text-subtext-dark font-medium">Create your customer account to start hiring.</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Onboarding Portal v2.0</p>
         </div>
 
         {/* Card */}
-        <div className="glass-panel p-8 sm:p-10 rounded-3xl shadow-xl border border-white/40">
+        <div className="glass-panel p-10 rounded-[3rem] shadow-2xl border border-white/50 dark:border-slate-800/50 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
           <div className="flex flex-col items-center mb-10">
             <div className="relative group">
-              <div className="w-24 h-24 rounded-full border-4 border-white dark:border-gray-800 shadow-lg overflow-hidden relative bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+              <div className="size-28 rounded-[2rem] border-8 border-white dark:border-slate-800 shadow-2xl overflow-hidden relative bg-slate-50 dark:bg-slate-900 flex items-center justify-center group-hover:rotate-2 transition-transform duration-500">
                 {profilePhoto ? (
                   <img
                     src={URL.createObjectURL(profilePhoto)}
@@ -150,7 +151,7 @@ const CustomerRegister = () => {
                     alt="Profile Preview"
                   />
                 ) : (
-                  <User size={40} className="text-gray-400" />
+                  <User size={40} className="text-slate-300 dark:text-slate-600" />
                 )}
                 <label
                   htmlFor="photo-upload"
@@ -167,7 +168,7 @@ const CustomerRegister = () => {
                 onChange={handleChange}
               />
             </div>
-            <p className="text-xs font-bold text-subtext-light dark:text-subtext-dark mt-4 uppercase tracking-widest">Profile Photo (Optional)</p>
+            <p className="text-[10px] font-black text-slate-400 mt-6 uppercase tracking-[0.2em] border-b border-primary/20 pb-1">Identification Artifact</p>
           </div>
 
           <div className="space-y-6">
@@ -320,22 +321,27 @@ const CustomerRegister = () => {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="w-full h-14 bg-gradient-to-r from-primary to-primary-light text-white rounded-full font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 hover:-translate-y-0.5 active:scale-95 transition-all duration-300 disabled:opacity-70 flex items-center justify-center gap-2 group"
+              className="w-full h-16 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-3xl font-black uppercase tracking-[0.3em] text-xs shadow-2xl hover:bg-primary dark:hover:bg-primary hover:text-white hover:-translate-y-1 active:scale-95 transition-all duration-300 disabled:opacity-70 flex items-center justify-center gap-3 group"
             >
-              {loading ? <LoadingSpinner /> : (
+              {loading ? (
+                <div className="flex items-center gap-3">
+                    <LoadingSpinner />
+                    <span className="animate-pulse">Initializing Identity...</span>
+                </div>
+              ) : (
                 <>
                   <span>Create Account</span>
-                  <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight size={18} strokeWidth={3} className="group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </button>
           </div>
         </div>
 
-        <p className="mt-8 text-center text-sm text-subtext-light dark:text-subtext-dark">
-           Back to role selection?{" "}
-          <Link to="/signup/role" className="font-bold text-primary hover:text-primary-dark transition-colors">
-            Go back
+        <p className="mt-10 text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+           Need to reconsider?{" "}
+          <Link to="/signup/role" className="text-primary hover:underline transition-colors ml-2">
+            Change User Role
           </Link>
         </p>
       </div>

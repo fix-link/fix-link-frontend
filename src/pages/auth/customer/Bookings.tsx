@@ -4,6 +4,11 @@ import CustomerFooter from "./components/CustomerFooter";
 import { useAuth } from "../../../context/AuthContext";
 import { listJobs, updateJobStatus } from "../../../api/jobs.api";
 import { Link } from "react-router-dom";
+import { 
+  Plus, Calendar, User, MessageCircle, CheckCircle2, 
+  Hourglass, AlertCircle, ShieldCheck, XCircle, CreditCard,
+  ChevronRight, ArrowRight, Loader2
+} from "lucide-react";
 
 interface Job {
   id: string;
@@ -15,7 +20,7 @@ interface Job {
   assigned_to?: string;
   customer: string;
   budget?: string;
-  service_title?: string; // Optional if joined
+  service_title?: string;
 }
 
 const Bookings = () => {
@@ -26,7 +31,6 @@ const Bookings = () => {
   const fetchBookings = async () => {
     try {
       const allJobs = await listJobs();
-      // Filter out 'pending' jobs - only show bookings that are accepted or beyond
       const confirmedBookings = allJobs.filter((job: Job) => 
         job.customer === user?.id && 
         ['booked', 'in_progress', 'done', 'completed'].includes(job.status.toLowerCase())
@@ -48,7 +52,7 @@ const Bookings = () => {
   const handleApprove = async (jobId: string) => {
     try {
       await updateJobStatus(jobId, 'completed');
-      await fetchBookings(); // Refresh list
+      await fetchBookings();
     } catch (error: any) {
       alert("Failed to approve: " + error.message);
     }
@@ -60,184 +64,199 @@ const Bookings = () => {
       case "pending": 
         return { 
           label: "Request Sent", 
-          desc: "Awaiting professional's response", 
-          color: "bg-amber-100 text-amber-700 border-amber-200",
-          icon: "hourglass_empty"
+          desc: "Awaiting response", 
+          color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+          icon: Hourglass
         };
       case "accepted":
         return { 
-          label: "Request Accepted", 
-          desc: "Professional is ready! Pay to book.", 
-          color: "bg-amber-100 text-amber-700 border-amber-200",
-          icon: "pending_actions"
+          label: "Accepted", 
+          desc: "Pay to book now", 
+          color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+          icon: AlertCircle
         };
       case "assigned":
       case "booked":
         return { 
-          label: "Job Booked & Confirmed", 
-          desc: "Professional is confirmed for this date", 
-          color: "bg-emerald-100 text-emerald-700 border-emerald-200",
-          icon: "verified"
+          label: "Booked", 
+          desc: "Confirmed project", 
+          color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+          icon: ShieldCheck
         };
       case "in_progress":
         return { 
-          label: "Work in Progress", 
-          desc: "Professional is currently on the job", 
-          color: "bg-indigo-100 text-indigo-700 border-indigo-200",
-          icon: "engineering"
+          label: "In Progress", 
+          desc: "Pro is working", 
+          color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
+          icon: Loader2
         };
       case "done":
         return { 
-          label: "Job Completed", 
-          desc: "Awaiting your final approval", 
-          color: "bg-purple-100 text-purple-700 border-purple-200",
-          icon: "assignment_turned_in"
+          label: "Completed", 
+          desc: "Awaiting approval", 
+          color: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
+          icon: CheckCircle2
         };
       case "completed":
         return { 
-          label: "Approved & Paid", 
-          desc: "Funds released to professional", 
-          color: "bg-emerald-100 text-emerald-700 border-emerald-200",
-          icon: "verified"
+          label: "Published", 
+          desc: "Finished & Paid", 
+          color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+          icon: CheckCircle2
         };
       case "cancelled":
         return { 
           label: "Cancelled", 
-          desc: "This request was cancelled", 
-          color: "bg-red-100 text-red-700 border-red-200",
-          icon: "cancel"
+          desc: "Project stopped", 
+          color: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+          icon: XCircle
         };
       default:
         return { 
           label: status, 
-          desc: "Status update pending", 
-          color: "bg-slate-100 text-slate-700 border-slate-200",
-          icon: "info"
+          desc: "Update pending", 
+          color: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
+          icon: AlertCircle
         };
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-background-dark font-display">
+    <div className="min-h-screen bg-background-light dark:bg-background-dark font-display overflow-x-hidden relative">
+      {/* Background Blobs */}
+      <div className="fixed top-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+      <div className="fixed bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-accent-cyan/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+
       <CustomerNavbar />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
-          <div>
-            <h1 className="text-4xl font-black text-text-primary dark:text-white tracking-tight">My Bookings</h1>
-            <p className="text-text-secondary dark:text-gray-400 mt-2 font-medium">Track your service requests and professional assignments.</p>
+      <main className="max-w-7xl mx-auto px-4 md:px-8 py-12 relative z-10">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+          <div className="space-y-2">
+            <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+              My <span className="text-gradient">Bookings</span>
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">
+              Manage your project timeline and professional assignments.
+            </p>
           </div>
           <Link 
             to="/customer/search" 
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary text-white font-black rounded-2xl hover:bg-primary-hover transition-all shadow-lg shadow-primary/20"
+            className="group flex items-center justify-center gap-3 px-8 py-4 bg-primary text-white font-black rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20"
           >
-            <span className="material-symbols-outlined">add</span>
-            Request New Service
+            <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
+            Book New Service
           </Link>
         </div>
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-slate-400 font-bold mt-4">Fetching your bookings...</p>
+          <div className="flex flex-col items-center justify-center py-32 space-y-4">
+            <Loader2 size={48} className="text-primary animate-spin" />
+            <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Syncing your schedule...</p>
           </div>
         ) : bookings.length === 0 ? (
-          <div className="bg-white dark:bg-card-dark rounded-[2.5rem] p-12 text-center shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800">
-            <div className="w-24 h-24 bg-slate-50 dark:bg-slate-900 rounded-3xl flex items-center justify-center mx-auto mb-8">
-              <span className="material-symbols-outlined text-slate-300 text-5xl">calendar_today</span>
+          <div className="glass-panel rounded-[2.5rem] p-16 text-center border border-slate-200/50 dark:border-slate-800/50 max-w-3xl mx-auto">
+            <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner ring-1 ring-primary/20">
+              <Calendar size={40} className="text-primary" />
             </div>
-            <h2 className="text-2xl font-black text-text-primary dark:text-white mb-3">No bookings yet</h2>
-            <p className="text-text-secondary dark:text-gray-400 max-w-md mx-auto mb-10 font-medium">
-              You haven't requested any services yet. Find expert professionals in your area and get the job done!
+            <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-4">No Active Bookings</h2>
+            <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-10 font-medium text-lg leading-relaxed">
+              Experience the best service in town. Find expert professionals and get your project started today!
             </p>
             <Link 
               to="/customer/search" 
-              className="px-10 py-4 bg-slate-900 dark:bg-primary hover:bg-slate-800 text-white font-black rounded-2xl transition-all inline-block shadow-xl shadow-slate-200 dark:shadow-none"
+              className="px-12 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-2xl"
             >
-              Browse Services
+              Discover Services
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {bookings.map((booking) => {
               const status = getStatusDetails(booking.status);
+              const BookingIcon = status.icon;
+
               return (
                 <div 
                   key={booking.id} 
-                  className="bg-white dark:bg-card-dark rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all border border-slate-100 dark:border-slate-800 group relative flex flex-col"
+                  className="glass-panel group relative flex flex-col rounded-[32px] border border-slate-200/50 dark:border-slate-800/50 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500"
                 >
-                  <div className="p-6 flex-1">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border flex items-center gap-2 ${status.color}`}>
-                        <span className="material-symbols-outlined text-[14px]">{status.icon}</span>
+                  <div className="p-8 flex-1">
+                    <div className="flex justify-between items-start mb-8">
+                      <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border flex items-center gap-2 ${status.color}`}>
+                        <BookingIcon size={12} className={status.label === "In Progress" ? "animate-spin" : ""} />
                         {status.label}
                       </div>
-                      <p className="text-xs text-slate-400 font-bold">
-                        {new Date(booking.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </p>
+                      <div className="flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-tighter bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                        <Calendar size={12} />
+                        {new Date(booking.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </div>
                     </div>
                     
-                    <h3 className="text-xl font-black text-text-primary dark:text-white mb-2 line-clamp-1 group-hover:text-primary transition-colors">
+                    <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3 tracking-tight group-hover:text-primary transition-colors">
                       {booking.title}
                     </h3>
-                    <p className="text-sm text-text-secondary dark:text-gray-400 line-clamp-2 mb-6 font-medium italic leading-relaxed h-10">
-                      "{booking.description || "No description provided"}"
+                    <p className="text-[13px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-8 font-medium italic leading-relaxed h-[3rem]">
+                      "{booking.description || "Project initiated with high precision."}"
                     </p>
 
-                    <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                          <span className="material-symbols-outlined text-primary text-xl">
-                            {booking.assigned_to ? 'person' : 'contact_support'}
-                          </span>
+                    <div className="bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800/50 mb-8 transform transition-transform group-hover:translate-x-1">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shadow-sm border border-primary/10">
+                          {booking.assigned_to ? <User size={22} /> : <AlertCircle size={22} />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[10px] uppercase font-black tracking-widest text-slate-400">Professional</p>
-                          <p className="text-sm font-black text-text-primary dark:text-white truncate">
-                            {booking.assigned_to ? "Request Accepted" : "Awaiting Pro Response"}
+                          <p className="text-[9px] uppercase font-black tracking-widest text-slate-400 mb-0.5">Professional</p>
+                          <p className="text-sm font-black text-slate-800 dark:text-white truncate">
+                            {booking.assigned_to ? "Request Accepted" : "Matching Professional..."}
                           </p>
                         </div>
                         {booking.assigned_to && (
                           <Link 
                             to={`/customer/messages/${booking.id}`} 
-                            className="bg-white dark:bg-slate-800 p-2 rounded-lg border border-slate-100 dark:border-slate-700 hover:text-primary transition-colors"
+                            className="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 hover:text-primary hover:border-primary/30 transition-all shadow-sm group/msg"
                             title="Message Professional"
                           >
-                            <span className="material-symbols-outlined text-xl">chat</span>
+                            <MessageCircle size={18} className="group-hover/msg:scale-110 transition-transform" />
                           </Link>
                         )}
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <p className="text-xs font-bold text-slate-400 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
-                        Status: <span className="text-text-primary dark:text-white">{status.desc}</span>
-                      </p>
+                    <div className="flex items-center justify-between text-[11px] font-black uppercase tracking-widest text-slate-400">
+                      <div className="flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary pulse-small"></div>
+                        {status.desc}
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="px-6 py-5 bg-slate-50/50 dark:bg-slate-900/30 border-t border-slate-100 dark:border-slate-800">
+                  <div className="px-8 py-6 bg-slate-50/30 dark:bg-slate-900/20 border-t border-slate-100 dark:border-slate-800/50">
                     {booking.status.toLowerCase() === 'done' ? (
                       <button 
                         onClick={() => handleApprove(booking.id)}
-                        className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-xl shadow-lg shadow-emerald-200 dark:shadow-none transition-all flex items-center justify-center gap-2"
+                        className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 relative overflow-hidden group/btn"
                       >
-                        <span className="material-symbols-outlined">payments</span>
-                        Approve & Release Payment
+                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+                        <CreditCard size={18} />
+                        Release Payment
                       </button>
                     ) : (
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between items-center w-full">
                         <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-sm text-slate-400">payments</span>
-                            <span className="text-sm font-black text-text-primary dark:text-white">
-                              {booking.budget ? `ETB ${booking.budget}` : 'Flexible'}
+                            <div className="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                <CreditCard size={16} />
+                            </div>
+                            <span className="text-[15px] font-black text-slate-900 dark:text-white">
+                              {booking.budget ? `${booking.budget} ETB` : 'Flex Rates'}
                             </span>
                         </div>
-                        <button className="text-primary font-black text-sm hover:underline flex items-center gap-1">
+                        <Link 
+                          to={`/customer/bookings/${booking.id}`}
+                          className="flex items-center gap-1.5 text-primary text-[11px] font-black uppercase tracking-widest hover:translate-x-1 transition-transform"
+                        >
                             Details
-                            <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                        </button>
+                            <ChevronRight size={14} />
+                        </Link>
                       </div>
                     )}
                   </div>
@@ -247,9 +266,37 @@ const Bookings = () => {
           </div>
         )}
       </main>
-      <CustomerFooter />
+
+      <div className="py-12 relative z-10 border-t border-slate-100 dark:border-slate-800/50 mt-12 bg-white/30 dark:bg-transparent backdrop-blur-sm">
+        <CustomerFooter />
+      </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        .text-gradient {
+            background: linear-gradient(135deg, #0d93f2 0%, #075985 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .dark .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        @keyframes pulse-small {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.5); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pulse-small {
+            animation: pulse-small 2s infinite;
+        }
+      `}} />
     </div>
   );
 };
 
 export default Bookings;
+

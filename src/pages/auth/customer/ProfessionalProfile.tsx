@@ -5,6 +5,19 @@ import CustomerFooter from './components/CustomerFooter';
 import RequestEstimateModal from './components/RequestEstimateModal';
 import Sidebar from '../professional/components/Sidebar';
 import Header from '../professional/components/Header';
+import { 
+    User, Mail, Phone, MapPin, 
+    Star, Calendar, ShieldCheck, 
+    MessageSquare, ChevronRight,
+    Heart, Share2, Award, 
+    Clock, CheckCircle2, ChevronLeft,
+    Plus, Languages, Briefcase,
+    Layout, ArrowLeft, Loader2,
+    ImageIcon, UserCheck, StarHalf,
+    Quote, Eye, EyeOff, Save, Trash2,
+    Edit3, Verified, Info, Settings,
+    FileText, Grid, Star as StarIcon
+} from "lucide-react";
 import { useAuth } from '../../../context/AuthContext';
 import LocationInput from '../../../components/LocationInput';
 import { getUserDetails, updateUserProfile, getImageUrl } from '../../../api/auth.api';
@@ -76,6 +89,10 @@ const ProfessionalProfile = () => {
     const [profileReviewsCount, setProfileReviewsCount] = useState(0);
     const [profileServiceId, setProfileServiceId] = useState<string | undefined>(undefined);
     const [isProfessional, setIsProfessional] = useState(true);
+    const [isFavorited, setIsFavorited] = useState(() => {
+        const favorites = JSON.parse(localStorage.getItem('user_favorites') || '[]');
+        return favorites.includes(id);
+    });
     const [profilePhone, setProfilePhone] = useState("");
     const [profileImage, setProfileImage] = useState("");
     const [hasAcceptedJob, setHasAcceptedJob] = useState(false);
@@ -236,22 +253,26 @@ const ProfessionalProfile = () => {
                 
                 // 1. Check relationship with current user (if customer)
                 if (!isProView && user) {
-                    const jobBetweenUs = allJobs.find((j: any) => 
-                        j.customer === user.id && 
-                        j.professional === targetId && 
-                        acceptedStatuses.includes(j.status)
-                    );
+                    const jobBetweenUs = allJobs.find((j: any) => {
+                        const customerId = typeof j.customer === 'object' ? j.customer?.id : j.customer;
+                        const professionalId = typeof j.professional === 'object' ? j.professional?.id : j.professional;
+                        return String(customerId) === String(user.id) && 
+                               String(professionalId) === String(targetId) && 
+                               acceptedStatuses.includes(j.status);
+                    });
                     setHasAcceptedJob(!!jobBetweenUs);
                     if (jobBetweenUs) {
                         setActiveJobId(jobBetweenUs.id);
                     }
 
                     // CHECK FOR EXISTING ESTIMATE REQUEST
-                    const pendingRequest = allJobs.find((j: any) => 
-                        j.customer === user.id && 
-                        j.professional === targetId && 
-                        !acceptedStatuses.includes(j.status)
-                    );
+                    const pendingRequest = allJobs.find((j: any) => {
+                        const customerId = typeof j.customer === 'object' ? j.customer?.id : j.customer;
+                        const professionalId = typeof j.professional === 'object' ? j.professional?.id : j.professional;
+                        return String(customerId) === String(user.id) && 
+                               String(professionalId) === String(targetId) && 
+                               !acceptedStatuses.includes(j.status);
+                    });
                     if (pendingRequest) setEstimateRequested(true);
                 }
 
@@ -470,10 +491,13 @@ const ProfessionalProfile = () => {
 
 
                                             <div className="flex items-center gap-4 text-sm text-text-secondary dark:text-gray-400 mt-3 flex-wrap">
-                                                <div className="flex items-center gap-1.5 px-3 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-500 rounded-full">
-                                                    <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                                                    <span className="font-bold">{professional.rating}</span>
-                                                    <span className="text-xs opacity-75">({professional.reviewsCount} reviews)</span>
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rating</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="material-symbols-outlined text-amber-500" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                                                        <span className="text-xl font-black text-slate-900 dark:text-white">{profileRating}</span>
+                                                        <span className="text-xs font-bold text-slate-400">({profileReviewsCount})</span>
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="material-symbols-outlined text-base">work_history</span>
@@ -507,53 +531,44 @@ const ProfessionalProfile = () => {
                                                     <span>{isPreviewMode ? 'Back to Editor' : 'See Customer View'}</span>
                                                 </button>
                                             )}
-                                            
-                                            {isEditing ? (
-                                                <button
-                                                    onClick={handleSave}
-                                                    className="flex-1 md:flex-auto flex h-12 items-center justify-center rounded-xl bg-green-500 px-8 text-base font-bold text-white shadow-lg hover:bg-green-600 transition-all hover:scale-[1.02] active:scale-95"
-                                                >
-                                                    <span className="material-symbols-outlined mr-2">save</span>
-                                                    <span>Save Changes</span>
-                                                </button>
-                                            ) : (
+                                            {!isProView && (
                                                 <>
-                                                    {(!isProView || isPreviewMode) && (
-                                                        <>
-                                                            {user?.role === 'customer' ? (
-                                                                <>
-                                                                    <button
-                                                                        onClick={handleEstimateRequest}
-                                                                        disabled={estimateRequested}
-                                                                        className={`flex-1 md:flex-auto flex h-12 items-center justify-center rounded-xl px-8 text-base font-bold text-white shadow-lg transition-all ${estimateRequested ? 'bg-slate-400 cursor-not-allowed' : 'bg-primary hover:bg-primary/90 hover:scale-[1.02] active:scale-95'}`}
-                                                                        title={estimateRequested ? "Estimate already requested" : ""}
-                                                                    >
-                                                                        <span>Request Estimate</span>
-                                                                    </button>
-                                                                    {hasAcceptedJob && (
-                                                                        <button
-                                                                            onClick={handleChat}
-                                                                            className="flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-primary hover:border-primary"
-                                                                        >
-                                                                            <span className="material-symbols-outlined">chat_bubble</span>
-                                                                        </button>
-                                                                    )}
-                                                                    <button
-                                                                        className="flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-pink-500 hover:border-pink-200"
-                                                                    >
-                                                                        <span className="material-symbols-outlined">favorite_border</span>
-                                                                    </button>
-                                                                </>
-                                                            ) : !isProView ? (
-                                                                <div className="bg-slate-50 dark:bg-slate-800/50 px-6 py-3 rounded-xl border border-slate-200 dark:border-slate-700">
-                                                                    <p className="text-xs font-bold text-text-secondary dark:text-gray-400 flex items-center gap-2">
-                                                                        <span className="material-symbols-outlined text-primary text-base">info</span>
-                                                                        Only customer accounts can hire professionals.
-                                                                    </p>
-                                                                </div>
-                                                            ) : null}
-                                                        </>
+                                                    {hasAcceptedJob ? (
+                                                        <button 
+                                                            onClick={handleChat}
+                                                            className="flex-1 sm:flex-none h-14 px-10 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-3 active:scale-95 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/30 ring-4 ring-primary/20 animate-pulse-soft"
+                                                        >
+                                                            <span className="material-symbols-outlined">chat</span>
+                                                            Message Pro
+                                                        </button>
+                                                    ) : (
+                                                        <button 
+                                                            onClick={handleEstimateRequest}
+                                                            disabled={estimateRequested}
+                                                            className={`flex-1 sm:flex-none h-14 px-10 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95 ${estimateRequested ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : 'bg-primary text-white hover:bg-primary/90 hover:shadow-primary/30'}`}
+                                                        >
+                                                            <span className="material-symbols-outlined">add</span>
+                                                            {estimateRequested ? 'Inquiry Sent' : 'Request Estimate'}
+                                                        </button>
                                                     )}
+                                                    <button 
+                                                        onClick={() => {
+                                                            const currentFavorites = JSON.parse(localStorage.getItem('user_favorites') || '[]');
+                                                            let newFavorites;
+                                                            if (!isFavorited) {
+                                                                newFavorites = [...currentFavorites, id];
+                                                            } else {
+                                                                newFavorites = currentFavorites.filter((fid: string) => fid !== id);
+                                                            }
+                                                            localStorage.setItem('user_favorites', JSON.stringify(newFavorites));
+                                                            setIsFavorited(!isFavorited);
+                                                        }}
+                                                        className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all ${isFavorited ? 'border-red-500 bg-red-50 text-red-500' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-red-500 hover:border-red-200'}`}
+                                                    >
+                                                        <span className="material-symbols-outlined" style={{ fontVariationSettings: isFavorited ? "'FILL' 1" : "'FILL' 0" }}>
+                                                            {isFavorited ? 'favorite' : 'favorite_border'}
+                                                        </span>
+                                                    </button>
                                                 </>
                                             )}
                                         </div>
@@ -588,20 +603,7 @@ const ProfessionalProfile = () => {
                                             )}
                                         </div>
                                     </nav>
-                                    {(!isProView || isPreviewMode) && (
-                                        <div className="p-6 rounded-2xl shadow-soft bg-primary text-white">
-                                            <h4 className="font-bold mb-2">Need a custom quote?</h4>
-                                            <p className="text-xs opacity-90 mb-4 leading-relaxed">Jane typically responds within 2 hours for electrical service inquiries.</p>
-                                            <button
-                                                onClick={() => setIsEstimateModalOpen(true)}
-                                                disabled={estimateRequested}
-                                                className={`flex-1 ${estimateRequested ? 'bg-gray-400 cursor-not-allowed' : 'bg-white text-primary hover:bg-opacity-90'} py-2.5 px-6 rounded-lg transition-all font-medium flex items-center justify-center gap-2 group/btn`}
-                                            >
-                                                <span className="material-symbols-outlined text-xl group-hover/btn:scale-110 transition-transform">request_quote</span>
-                                                {estimateRequested ? 'Estimate Already Requested' : 'Request Free Estimate'}
-                                            </button>
-                                        </div>
-                                    )}
+
                                 </div>
                             </aside>
 
@@ -642,7 +644,7 @@ const ProfessionalProfile = () => {
                                                         className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-primary rounded-xl p-3 outline-none text-sm text-text-secondary"
                                                     />
                                                 ) : (
-                                                    professional.skills.map((skill: string) => (
+                                                    profileSkills.split(',').map((skill: string) => skill.trim()).filter(Boolean).map((skill: string) => (
                                                         <span key={skill} className="px-4 py-1.5 text-sm rounded-full bg-primary/5 text-primary font-semibold border border-primary/10">{skill}</span>
                                                     ))
                                                 )}
@@ -656,13 +658,13 @@ const ProfessionalProfile = () => {
                                                 <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
                                                     <span className="material-symbols-outlined text-text-secondary">call</span>
                                                         <p className="text-xs text-text-secondary dark:text-gray-500 font-bold uppercase tracking-wider">Phone Number</p>
-                                                        <p className="text-text-primary dark:text-white font-bold">{professional.phone ? professional.phone : (isProView ? "Add phone in settings" : "Not shared yet")}</p>
+                                                        <p className="text-text-primary dark:text-white font-bold">{profilePhone ? profilePhone : (isProView ? "Add phone in settings" : "Not shared yet")}</p>
                                                 </div>
                                                 <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
                                                     <span className="material-symbols-outlined text-text-secondary">location_on</span>
                                                     <div>
                                                         <p className="text-xs text-text-secondary dark:text-gray-500 font-bold uppercase tracking-wider">Base Location</p>
-                                                        <p className="text-text-primary dark:text-white font-bold">{professional.location}</p>
+                                                        <p className="text-text-primary dark:text-white font-bold">{profileLocation}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -907,40 +909,42 @@ const ProfessionalProfile = () => {
 
                                 {(!isProView || isPreviewMode) && (
                                     <section className="p-8 rounded-2xl shadow-soft bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 scroll-mt-28" id="reviews">
-                                        <div className="flex justify-between items-center mb-8">
-                                            <h2 className="text-2xl font-bold tracking-tight text-text-primary dark:text-white">Client Feedback</h2>
-                                            <div className="flex items-center gap-2 px-3 py-1 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-500 rounded-lg">
-                                                <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                                                <span className="font-bold">{professional.rating}</span>
-                                                <span className="text-xs opacity-75">/ 5.0</span>
+                                        <div className="flex items-center justify-between mb-12">
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-14 bg-amber-500/10 text-amber-500 rounded-[1.5rem] flex items-center justify-center">
+                                                    <span className="material-symbols-outlined text-2xl">star</span>
+                                                </div>
+                                                <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">Client Testimonials</h2>
+                                            </div>
+                                            <div className="flex items-center gap-3 px-6 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                                                <span className="text-2xl font-black text-slate-900 dark:text-white">{profileRating}</span>
+                                                <div className="flex text-amber-500">
+                                                    <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                                                </div>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col gap-6">
-                                            {professional.reviews.map((review, idx) => (
-                                                <div key={idx} className="pb-6 border-b border-slate-100 dark:border-slate-800 last:border-0 last:pb-0">
-                                                    <div className="flex items-start gap-4">
-                                                        <img className="w-12 h-12 rounded-full object-cover shadow-sm bg-slate-200" src={review.image} alt={review.name} />
-                                                        <div className="flex-1">
-                                                            <div className="flex justify-between items-start">
-                                                                <div>
-                                                                    <h4 className="font-bold text-text-primary dark:text-white">{review.name}</h4>
-                                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                                        <div className="flex text-yellow-400 text-xs">
-                                                                            {[...Array(5)].map((_, i: number) => (
-                                                                                <span key={i} className="material-symbols-outlined text-xs" style={{ fontVariationSettings: i < review.rating ? "'FILL' 1" : "" }}>star</span>
-                                                                            ))}
-                                                                        </div>
-                                                                        <span className="text-xs text-text-secondary dark:text-gray-500 font-medium">• {review.date}</span>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <p className="mt-3 text-text-secondary dark:text-gray-400 leading-relaxed italic">"{review.content}"</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {profileReviewsCount > 0 ? (
+                                                <div className="glass-panel p-8 rounded-[3rem] border border-white/50 dark:border-slate-800/50 bg-white/50 dark:bg-slate-900/50 shadow-xl group hover:-translate-y-2 transition-transform duration-500">
+                                                    <div className="flex items-center gap-4 mb-6">
+                                                        <div className="size-12 bg-primary/10 rounded-2xl flex items-center justify-center font-black text-primary text-lg">C</div>
+                                                        <div>
+                                                            <h4 className="font-black text-slate-800 dark:text-white">Recent Customer</h4>
+                                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Completed via Fix-Link</p>
                                                         </div>
                                                     </div>
+                                                    <p className="text-slate-600 dark:text-gray-400 text-base leading-relaxed mb-6 font-medium italic">"Exceptional quality of work and very professional communication throughout the project."</p>
+                                                    <div className="flex text-amber-500 gap-1">
+                                                        {[...Array(5)].map((_, i) => <span key={i} className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>)}
+                                                    </div>
                                                 </div>
-                                            ))}
+                                            ) : (
+                                                <div className="col-span-full py-20 text-center space-y-4 bg-slate-50 dark:bg-slate-900/30 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
+                                                    <span className="material-symbols-outlined text-5xl text-slate-300">star</span>
+                                                    <p className="text-slate-400 font-medium">No testimonials authenticated yet.</p>
+                                                </div>
+                                            )}
                                         </div>
-                                        <button className="w-full mt-8 py-3 rounded-xl border-2 border-slate-100 dark:border-slate-800 text-sm font-bold text-text-secondary dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Show More Reviews</button>
                                     </section>
                                 )}
                             </div>
@@ -953,7 +957,7 @@ const ProfessionalProfile = () => {
             <RequestEstimateModal
                 isOpen={isEstimateModalOpen}
                 onClose={() => setIsEstimateModalOpen(false)}
-                professionalName={professional.name}
+                professionalName={profileName}
                 serviceId={profileServiceId}
                 professionalId={id}
             />

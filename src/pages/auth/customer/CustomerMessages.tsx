@@ -10,7 +10,8 @@ import {
   MessageSquare, User, ArrowLeft, ChevronRight, Phone, Video, 
   Activity, X, CheckCheck, Check, Smile, Paperclip, Loader2, Send, 
   CheckCircle2, CreditCard, ShieldCheck, Flag, Star, MapPin, Calendar, 
-  Shield, Zap, Lock, RefreshCw, Hammer
+  Shield, Zap, Lock, RefreshCw, Hammer, MoreHorizontal, Search, Settings, 
+  Mic, Image as ImageIcon, Sparkles, ChevronDown
 } from "lucide-react";
 
 const CustomerMessages = () => {
@@ -47,6 +48,7 @@ const CustomerMessages = () => {
 
     // Sidebar Hydration: Fetch details for ALL professionals in the list
     const [hydratedRequests, setHydratedRequests] = useState<any[]>([]);
+    const isHydrating = userRequests.length > 0 && hydratedRequests.length === 0;
 
     useEffect(() => {
         const hydrate = async () => {
@@ -308,36 +310,43 @@ const CustomerMessages = () => {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-white dark:bg-slate-950 font-display text-text-primary dark:text-white overflow-hidden transition-all duration-500">
+        <div className="flex flex-col h-screen bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white overflow-hidden transition-all duration-500 relative">
+            {/* Background decorative blobs with animation */}
+            <div className="fixed top-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob"></div>
+            <div className="fixed bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-accent-cyan/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob [animation-delay:2s]"></div>
+            <div className="fixed top-[20%] left-[10%] w-[30%] h-[30%] bg-accent-purple/5 rounded-full blur-[120px] pointer-events-none z-0 animate-blob [animation-delay:4s]"></div>
+
             <CustomerNavbar />
 
-            <main className="flex w-full h-full p-0 gap-0 flex-1 overflow-hidden items-stretch">
+            <main className="flex w-full h-full p-4 md:p-6 gap-4 md:gap-6 flex-1 overflow-hidden items-stretch relative z-10 animate-fade-in-up">
 
                 {/* Left Column: Conversation List */}
                 <div className={`
-                    flex flex-col w-full md:w-80 lg:w-96 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 shrink-0 transition-all duration-300
+                    flex flex-col w-full md:w-80 lg:w-96 glass-panel rounded-[32px] shrink-0 transition-all duration-300 overflow-hidden
                     ${requestId ? 'hidden md:flex' : 'flex'}
                 `}>
-                    <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                        <h3 className="text-sm font-black flex items-center gap-2 tracking-tight">
-                            <MessageSquare className="text-primary" size={20} />
-                            Messages
+                    <div className="p-6 border-b border-slate-100/50 dark:border-slate-800/50 flex items-center justify-between">
+                        <h3 className="text-xl font-black flex items-center gap-3 tracking-tighter text-slate-900 dark:text-white">
+                            <div className="size-11 rounded-[1.2rem] bg-primary/10 flex items-center justify-center shadow-inner">
+                                <MessageSquare className="text-primary" size={24} />
+                            </div>
+                            <span className="text-gradient">Messages</span>
                         </h3>
                         {userRequests.length > 0 && (
                             <div className="flex gap-2">
-                                    <span className="bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                        {userRequests.length} Total
+                                <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest border border-slate-200/50 dark:border-slate-700/50">
+                                    {userRequests.length}
+                                </span>
+                                {notifications.filter(n => !n.is_read).length > 0 && (
+                                    <span className="bg-primary text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/30 animate-pulse">
+                                        New
                                     </span>
-                                    {notifications.filter(n => !n.is_read).length > 0 && (
-                                        <span className="bg-red-500 text-white text-[10px) font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                            {notifications.filter(n => !n.is_read).length} New
-                                        </span>
-                                    )}
-                                </div>
+                                )}
+                            </div>
                         )}
                     </div>
                     <div className="flex-1 overflow-y-auto custom-scrollbar relative">
-                        {isLoading ? (
+                        {isLoading || isHydrating ? (
                             <div className="flex flex-col items-center justify-center h-full opacity-60">
                                 <Loader2 size={36} className="animate-spin text-primary" />
                                 <p className="text-xs font-bold mt-3">Loading conversations...</p>
@@ -353,60 +362,74 @@ const CustomerMessages = () => {
                                 const aTime = new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt || 0).getTime();
                                 const bTime = new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt || 0).getTime();
                                 return bTime - aTime;
-                            }).map(req => (
-                                <div
-                                    key={req.id}
-                                    onClick={() => handleSelectRequest(req.id)}
-                                    className={`p-4 border-b border-slate-50 dark:border-slate-800/50 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800/30 group ${activeRequestId === req.id ? 'bg-primary/5 ring-1 ring-inset ring-primary/20' : ''}`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="relative shrink-0">
-                                            <div className="size-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-sm flex items-center justify-center overflow-hidden">
-                                                {req.professional_detail?.profile_picture || req.professional_detail?.profile_photo ? (
-                                                    <img src={getImageUrl(req.professional_detail.profile_picture || req.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
-                                                ) : (
-                                                    <User size={20} className="text-slate-400" />
+                            }).map(req => {
+                                const isActive = activeRequestId === req.id;
+                                const hasUnread = notifications.some(n => n.link?.includes(req.id) && !n.is_read);
+
+                                return (
+                                    <div
+                                        key={req.id}
+                                        onClick={() => handleSelectRequest(req.id)}
+                                        className={`p-4 mx-3 my-2 rounded-2xl cursor-pointer transition-all duration-300 group relative ${isActive ? 'bg-white dark:bg-slate-800 shadow-glass-hover ring-1 ring-slate-200/50 dark:ring-slate-700 scale-[1.02] z-10' : 'hover:bg-white/50 dark:hover:bg-slate-800/50 hover:scale-[1.01] hover:shadow-glass'}`}
+                                    >
+                                        {isActive && <div className="absolute left-[-12px] top-1/4 bottom-1/4 w-1.5 bg-primary rounded-r-full shadow-[4px_0_12px_rgba(13,147,242,0.4)] animate-in slide-in-from-left duration-300"></div>}
+                                        
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative shrink-0">
+                                                <div className={`size-14 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 transition-all duration-300 overflow-hidden ${isActive ? 'border-primary ring-4 ring-primary/10 scale-105' : 'border-white dark:border-slate-700 shadow-sm group-hover:scale-105'}`}>
+                                                    {req.professional_detail?.profile_picture || req.professional_detail?.profile_photo ? (
+                                                        <img src={getImageUrl(req.professional_detail.profile_picture || req.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                                                             <User size={24} className="text-slate-400" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {hasUnread && (
+                                                    <div className="absolute -top-1 -right-1 z-20">
+                                                        <span className="relative flex h-4 w-4">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-4 w-4 bg-primary border-2 border-white dark:border-slate-900"></span>
+                                                        </span>
+                                                    </div>
                                                 )}
+                                                <div className="absolute -bottom-1 -right-1 size-4 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full"></div>
                                             </div>
-                                            {notifications.some(n => n.link?.includes(req.id) && !n.is_read) && (
-                                                <div className="absolute -top-1 -right-1 z-20">
-                                                    <span className="relative flex h-3 w-3">
-                                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white dark:border-slate-900"></span>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center justify-between mb-0.5">
+                                                    <h4 className={`text-sm tracking-tight truncate ${isActive ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors'}`}>
+                                                        {(() => {
+                                                            const detail = req.professional_detail;
+                                                            if (!detail) return "Professional";
+                                                            const first = detail.first_name || detail.user?.first_name;
+                                                            const last = detail.last_name || detail.user?.last_name || "";
+                                                            return first ? `${first} ${last}`.trim() : "Professional";
+                                                        })()}
+                                                    </h4>
+                                                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
+                                                        {(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--"}
                                                     </span>
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <h4 className={`text-sm tracking-tight truncate ${activeRequestId === req.id ? 'font-black text-primary' : 'font-bold'}`}>
-                                                {(() => {
-                                                    const detail = req.professional_detail;
-                                                    if (!detail) return "Professional";
-                                                    const first = detail.first_name || detail.user?.first_name;
-                                                    const last = detail.last_name || detail.user?.last_name || "";
-                                                    return first ? `${first} ${last}`.trim() : "Professional";
-                                                })()}
-                                            </h4>
-                                            <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate leading-tight mt-0.5 uppercase font-medium tracking-wide">
-                                                {req.description?.substring(0, 20)}...
-                                            </p>
-                                        </div>
-                                        <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                            <span className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase">
-                                                {(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--"}
-                                            </span>
-                                            {req.status === 'pending' && <span className="size-2 bg-primary rounded-full" />}
+                                                <p className={`text-[11px] truncate leading-tight transition-colors ${isActive ? 'text-slate-500 dark:text-slate-400 font-medium' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-500'}`}>
+                                                    {req.description || "No description available"}
+                                                </p>
+                                                <div className="flex items-center gap-1.5 mt-2">
+                                                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border ${req.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                                                        {req.status?.replace('_', ' ') || 'Unknown'}
+                                                    </span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
 
                 {/* Middle Column: Chat Experience */}
                 <div className={`
-                    flex flex-col flex-1 bg-white dark:bg-slate-950 relative z-0 overflow-hidden
+                    flex flex-col flex-1 glass-panel rounded-[32px] relative z-0 overflow-hidden transition-all duration-500
                     ${!requestId ? 'hidden md:flex' : 'flex'}
                 `}>
                     {isLoading ? (
@@ -460,30 +483,30 @@ const CustomerMessages = () => {
                     ) : (
                         <>
                             {/* Chat Header */}
-                            <div className="flex items-center justify-between p-3 md:p-4 border-b border-slate-100/60 dark:border-slate-800/50 bg-white/90 dark:bg-card-dark/90 backdrop-blur-xl sticky top-0 z-20 transition-all shadow-sm">
-                                <div className="flex items-center gap-3 md:gap-4">
+                            <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-100/50 dark:border-slate-800/50 bg-white/50 dark:bg-slate-900/50 backdrop-blur-2xl sticky top-0 z-20 transition-all">
+                                <div className="flex items-center gap-4 md:gap-5">
                                     <button
                                         onClick={() => setSearchParams({})}
-                                        className="md:hidden size-9 flex items-center justify-center text-slate-400 hover:text-primary transition-all bg-slate-50 dark:bg-slate-800 rounded-lg"
+                                        className="md:hidden size-10 flex items-center justify-center text-slate-400 hover:text-primary transition-all bg-white dark:bg-slate-800 rounded-xl border border-slate-200/50 dark:border-slate-700/50"
                                     >
-                                        <span className="material-symbols-outlined text-xl">arrow_back</span>
+                                        <ArrowLeft size={20} />
                                     </button>
                                     <div className="relative group cursor-pointer">
-                                        <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-md transform group-hover:scale-105 transition-transform overflow-hidden">
+                                        <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-lg transform group-hover:scale-105 transition-all overflow-hidden ring-4 ring-primary/5">
                                             {activeRequest.professional_detail?.profile_picture || activeRequest.professional_detail?.profile_photo ? (
                                                 <img src={getImageUrl(activeRequest.professional_detail.profile_picture || activeRequest.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
                                             ) : (
-                                                <span className="material-symbols-outlined">person</span>
+                                                <User size={28} />
                                             )}
                                         </div>
-                                        <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm ring-2 ring-white dark:ring-slate-950" />
+                                        <div className="absolute -bottom-1 -right-1 size-4.5 bg-green-500 border-[3px] border-white dark:border-slate-900 rounded-full shadow-sm" />
                                     </div>
                                     <div className="flex flex-col gap-0.5">
                                         <Link 
                                             to={`/customer/profile/${activeRequest.professional || activeRequest.assigned_to}`}
-                                            className="hover:text-primary transition-colors cursor-pointer group/name flex items-center gap-1"
+                                            className="hover:text-primary transition-colors cursor-pointer group/name flex items-center gap-2"
                                         >
-                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none group-hover/name:text-primary transition-colors">
+                                            <h3 className="text-slate-900 dark:text-white text-lg font-black tracking-tight leading-none group-hover/name:translate-x-1 transition-all">
                                                 {(() => {
                                                     const detail = activeUserDetails || activeRequest.professional_detail;
                                                     if (!detail) return "Professional";
@@ -492,95 +515,86 @@ const CustomerMessages = () => {
                                                     return first ? `${first} ${last}`.trim() : "Professional";
                                                 })()}
                                             </h3>
-                                            <span className="material-symbols-outlined text-sm opacity-0 group-hover/name:opacity-100 transition-all -translate-x-1 group-hover/name:translate-x-0">chevron_right</span>
+                                            <ChevronRight size={16} className="text-slate-400 opacity-0 group-hover/name:opacity-100 transition-all" />
                                         </Link>
-                                        <div className="flex items-center gap-1.5 opacity-60">
-                                            <span className="size-1.5 bg-green-500 rounded-full animate-blink" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest leading-none">
-                                                Online
+                                        <div className="flex items-center gap-2">
+                                            <span className="size-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                                Active Now
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="hidden sm:flex items-center gap-2">
-                                    {(activeRequest.status === 'booked' || activeRequest.status === 'in_progress' || activeRequest.status === 'done' || activeRequest.status === 'completed') && (
-                                        <div className="flex items-center gap-2 px-3 py-1.5 bg-primary/5 rounded-full border border-primary/20 animate-in fade-in zoom-in mr-2">
-                                            <span className="material-symbols-outlined text-sm text-primary">call</span>
-                                            <span className="text-xs font-black text-primary tracking-tight">
-                                                {activeUserDetails?.phone || activeRequest.professional_detail?.phone || "+251 9XX XXX XXX"}
-                                            </span>
-                                        </div>
-                                    )}
-                                    <button className="size-10 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-white dark:hover:bg-slate-800/80 rounded-xl transition-all border border-slate-100 dark:border-slate-800 shadow-sm">
-                                        <span className="material-symbols-outlined text-xl">videocam</span>
-                                    </button>
-                                    <button className="size-10 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-white dark:hover:bg-slate-800/80 rounded-xl transition-all border border-slate-100 dark:border-slate-800 shadow-sm">
-                                        <span className="material-symbols-outlined text-xl">call</span>
-                                    </button>
+                                <div className="hidden sm:flex items-center gap-3">
                                     <button
                                         onClick={() => setShowStatus(!showStatus)}
-                                        className={`size-10 flex lg:hidden items-center justify-center rounded-xl transition-all border ${showStatus ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'text-slate-400 border-slate-100 dark:border-slate-800 hover:bg-primary/10 hover:text-primary'}`}
+                                        className={`size-12 flex lg:hidden items-center justify-center rounded-2xl transition-all border ${showStatus ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'text-slate-400 border-slate-200/50 dark:border-slate-700/50 hover:bg-primary/10 hover:text-primary'}`}
                                     >
-                                        <span className="material-symbols-outlined text-xl">{showStatus ? 'close' : 'analytics'}</span>
+                                        <Activity size={22} />
+                                    </button>
+                                    <button className="size-12 flex items-center justify-center text-slate-400 hover:text-primary bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 rounded-2xl transition-all border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                                        <MoreHorizontal size={22} />
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto px-4 md:px-12 py-6 flex flex-col gap-6 relative scroll-smooth custom-scrollbar"
-                                 style={{
-                                    backgroundColor: '#efeae2', // Creamy Ivory
-                                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23000' stroke-width='0.4' stroke-linecap='round' opacity='0.09'%3E%3C!-- Bear Face --%3E%3Cpath d='M20 20a5 5 0 1110 0 5 5 0 01-10 0zM18 16a2 2 0 114 0 2 2 0 01-4 0zM28 16a2 2 0 114 0 2 2 0 01-4 0zM23 21a1 1 0 112 0 1 1 0 01-2 0z'/%3E%3C!-- Heart --%3E%3Cpath d='M60 30c-2-2-5-2-7 0s-2 5 0 7l7 7 7-7c2-2 2-5 0-7s-5-2-7 0z'/%3E%3C!-- Sparkle --%3E%3Cpath d='M100 20l2 4 4 2-4 2-2 4-2-4-4-2 4-2z'/%3E%3C!-- Small Paw --%3E%3Ccircle cx='140' cy='30' r='3'/%3E%3Ccircle cx='136' cy='24' r='1.5'/%3E%3Ccircle cx='140' cy='22' r='1.5'/%3E%3Ccircle cx='144' cy='24' r='1.5'/%3E%3C!-- Chat Bubble --%3E%3Cpath d='M30 80a5 5 0 0110 0v5l-3-2-2 2z'/%3E%3C!-- Flower --%3E%3Ccircle cx='80' cy='80' r='2'/%3E%3Cpath d='M80 76a2 2 0 110 4 2 2 0 010-4zM84 80a2 2 0 11-4 0 2 2 0 014 0zM80 84a2 2 0 110-4 2 2 0 010 4zM76 80a2 2 0 114 0 2 2 0 01-4 0z'/%3E%3C!-- Star --%3E%3Cpath d='M120 70l2 5h5l-4 3 1 5-4-3-4 3 1-5-4-3h5z'/%3E%3C!-- Bone/Tool --%3E%3Cpath d='M160 80h10M158 78c1-2 3-2 4 0l-4 4zM172 78c-1-2-3-2-4 0l4 4z'/%3E%3C!-- More Hearts/Sparkles --%3E%3Cpath d='M40 130c-1-1-2.5-1-3.5 0s-1 2.5 0 3.5l3.5 3.5 3.5-3.5c1-1 1-2.5 0-3.5s-2.5-1-3.5 0z'/%3E%3Cpath d='M90 120l1 3 3 1-3 1-1 3-1-3-3-1 3-1z'/%3E%3Cpath d='M140 140c-2-2-4-2-6 0s-2 4 0 6 4 2 6 0 2-4 0-6z'/%3E%3C/g%3E%3C/svg%3E")`,
-                                    backgroundSize: '240px 240px',
-                                    backgroundAttachment: 'local'
-                                 }}>
-                                <div className="flex justify-center mb-4">
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md px-5 py-2 rounded-full border border-slate-200/50 dark:border-slate-800/50 shadow-sm">
-                                        Secure Channel Started • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "Just Now"}
-                                    </span>
+                             <div className="flex-1 overflow-y-auto px-6 md:px-12 py-10 flex flex-col gap-10 relative scroll-smooth custom-scrollbar">
+                                {/* Mesh Gradient & Premium Patterns */}
+                                <div className="absolute inset-0 z-[-1] overflow-hidden pointer-events-none">
+                                    <div className="absolute top-[-20%] left-[-10%] w-[120%] h-[140%] bg-[radial-gradient(circle_at_50%_50%,rgba(13,147,242,0.08)_0%,rgba(139,92,246,0.05)_30%,transparent_70%)] animate-pulse duration-[10s]" />
+                                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/micro-fabrics.png')] opacity-[0.04] dark:opacity-[0.08]" />
+                                </div>
+                                
+                                <div className="flex justify-center mb-8">
+                                    <div className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
+                                        <Shield size={14} className="text-emerald-500" />
+                                        <span className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
+                                            End-to-end Encrypted • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "Just Now"}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Real Message Thread */}
-                                <div className="flex flex-col gap-4 py-4 min-h-full">
-                                    {/* Virtual Message: Original Request Description (Customer View: Right/Outgoing) */}
-                                    <div className="flex justify-end animate-in fade-in slide-in-from-right-4">
-                                        <div className="flex flex-col items-end gap-1.5 max-w-[80%] md:max-w-[70%] group">
-                                            <div className="relative text-sm font-medium leading-relaxed rounded-[20px] rounded-tr-none px-4 py-3 bg-primary text-white shadow-lg shadow-primary/10 border border-primary/20 transition-all hover:shadow-xl">
-                                                <div className="pr-12 md:pr-14">
-                                                    {activeRequest.description || "Hello! I'd like to request your services."}
+                                <div className="flex flex-col gap-6 py-4 min-h-full">
+                                    {/* Virtual Message: Original Request Description */}
+                                    <div className="flex justify-end animate-in fade-in zoom-in slide-in-from-right-8 duration-700">
+                                        <div className="flex flex-col items-end gap-2 max-w-[80%] md:max-w-[70%] group">
+                                            <div className="relative text-[12.5px] font-medium leading-relaxed rounded-2xl rounded-tr-none px-3 py-2 bg-gradient-to-br from-primary via-primary to-primary-dark text-white shadow-[0_4px_16px_-4px_rgba(13,147,242,0.3)] border border-white/10 transition-shadow">
+                                                <div className="pb-6 text-pretty relative z-10">
+                                                    {activeRequest.description || "Project initiated."}
                                                 </div>
-                                                <div className="absolute bottom-1 right-3 flex items-center gap-1 opacity-70 text-[9px] font-bold tracking-tight select-none">
-                                                    {formatTime(activeRequest)}
-                                                    <span className="material-symbols-outlined text-[10px] font-black">done_all</span>
+                                                <div className="absolute inset-x-3 bottom-2 flex items-center justify-between opacity-80 text-[8px] font-black tracking-tight select-none relative z-10 gap-4">
+                                                    <span>{formatTime(activeRequest)}</span>
+                                                    <CheckCheck size={12} strokeWidth={3} />
                                                 </div>
                                             </div>
-                                            <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest mr-2 opacity-0 group-hover:opacity-100 transition-opacity">Initial Request</span>
+                                            <span className="text-slate-400 dark:text-slate-500 text-[9px] font-black uppercase tracking-[0.2em] mr-4 opacity-0 group-hover:opacity-100 transition-all duration-300">Project Mission</span>
                                         </div>
                                     </div>
 
-                                    {/* Virtual Message: Pro Acceptance (Customer View: Left) */}
+                                    {/* Virtual Message: Pro Acceptance */}
                                     {activeRequest.status !== 'pending' && (
-                                        <div className="flex items-end gap-2.5 max-w-[85%] animate-in fade-in slide-in-from-left-4 duration-500 group">
-                                            <div className="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden mb-1">
+                                        <div className="flex items-end gap-3 max-w-[85%] md:max-w-[75%] animate-in fade-in slide-in-from-left-6 duration-700 group">
+                                            <div className="size-9 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-md border border-slate-200/50 dark:border-slate-700/50 overflow-hidden mb-0.5 ring-2 ring-slate-100 dark:ring-slate-900/50">
                                                 {activeRequest.professional_detail?.profile_picture || activeRequest.professional_detail?.profile_photo ? (
                                                     <img src={getImageUrl(activeRequest.professional_detail.profile_picture || activeRequest.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <span className="material-symbols-outlined text-primary text-base font-black">construction</span>
+                                                    <Sparkles size={16} className="text-primary" />
                                                 )}
                                             </div>
-                                            <div className="flex flex-col gap-1 text-left">
-                                                <div className="relative text-sm font-medium leading-relaxed rounded-[20px] rounded-tl-none px-4 py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-md border border-slate-100 dark:border-slate-700 transition-all hover:shadow-lg">
-                                                    <div className="pr-10 md:pr-12">
+                                            <div className="flex flex-col gap-1.5 text-left">
+                                                <div className="relative text-[12.5px] font-medium leading-relaxed rounded-2xl rounded-tl-none px-3.5 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-sm border border-slate-100 dark:border-slate-700 transition-all hover:shadow-md">
+                                                    <div className="pb-5 text-pretty">
                                                         {activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'booked'
-                                                            ? `Hello! I've reviewed your request and I'm happy to help. I've accepted the project!`
+                                                            ? `I've reviewed your project requirements and I'm ready to start. I've accepted the request!`
                                                             : activeRequest.status === 'done' || activeRequest.status === 'completed'
-                                                            ? "I've finished the job! Please review the work and approve the payment when you're ready."
-                                                            : "The job has been updated to: " + activeRequest.status}
+                                                            ? "Great news! I've completed the work. Please take a moment to review and finalize the project."
+                                                            : "The project status has been updated to: " + activeRequest.status.replace('_', ' ')}
                                                     </div>
-                                                    <div className="absolute bottom-1 right-3 opacity-40 text-[9px] font-bold tracking-tight select-none">
+                                                    <div className="absolute left-3.5 bottom-2 opacity-40 text-[8px] font-bold tracking-tight select-none">
                                                         {formatTime(activeRequest.updated_at || activeRequest.updatedAt || activeRequest)}
                                                     </div>
                                                 </div>
-                                                <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest ml-2 opacity-0 group-hover:opacity-100 transition-opacity">Professional Action</span>
                                             </div>
                                         </div>
                                     )}
@@ -589,27 +603,29 @@ const CustomerMessages = () => {
                                     {messages.map((msg, i) => {
                                         const isMe = msg.sender === user?.id || msg.is_me;
                                         return (
-                                            <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-2.5'} animate-in fade-in slide-in-from-bottom-2`}>
+                                            <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-3'} animate-in fade-in zoom-in slide-in-from-bottom-4 duration-500`}>
                                                 {!isMe && (
-                                                    <div className="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden mb-1 transition-transform hover:scale-105">
+                                                    <div className="size-9 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-md border border-slate-200/50 dark:border-slate-700/50 overflow-hidden mb-0.5 ring-2 ring-slate-100 dark:ring-slate-900/50 transition-all hover:scale-110">
                                                          {activeRequest.professional_detail?.profile_picture ? (
                                                             <img src={getImageUrl(activeRequest.professional_detail.profile_picture)} alt="" className="w-full h-full object-cover" />
                                                         ) : (
-                                                            <span className="material-symbols-outlined text-xs">person</span>
+                                                            <User size={18} className="text-slate-400" />
                                                         )}
                                                     </div>
                                                 )}
-                                                <div className={`relative max-w-[75%] md:max-w-[65%] px-4 py-2.5 shadow-md transition-all hover:shadow-lg ${
+                                                <div className={`relative max-w-[75%] md:max-w-[65%] px-3 py-2 transition-shadow group/msg ${
                                                     isMe 
-                                                    ? 'bg-primary text-white rounded-[18px] rounded-tr-none shadow-primary/5' 
-                                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-[18px] rounded-tl-none shadow-slate-100/5'
+                                                    ? 'bg-gradient-to-br from-primary via-primary to-primary-dark text-white rounded-2xl rounded-tr-none shadow-[0_4px_16px_-4px_rgba(13,147,242,0.25)]' 
+                                                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700/60 rounded-2xl rounded-tl-none shadow-sm'
                                                 }`}>
-                                                    <div className="pr-12 md:pr-14">
-                                                        <p className="text-sm font-medium leading-relaxed break-words">{msg.body || msg.text || msg.content}</p>
+                                                    <div className="pb-6 text-pretty relative z-10">
+                                                        <p className="text-[12.5px] font-medium leading-[1.5] break-words">{msg.body || msg.text || msg.content}</p>
                                                     </div>
-                                                    <div className={`absolute bottom-1 right-3 flex items-center gap-1 text-[9px] font-bold tracking-tight select-none ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
-                                                        {formatTime(msg)}
-                                                        {isMe && <span className="material-symbols-outlined text-[10px] font-black">{msg.is_read || msg.isRead ? 'done_all' : 'done'}</span>}
+                                                    <div className={`absolute inset-x-3 bottom-2 flex items-center justify-between text-[8px] font-black tracking-tight select-none relative z-10 gap-4 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
+                                                        <span>{formatTime(msg)}</span>
+                                                        {isMe && (
+                                                            msg.is_read || msg.isRead ? <CheckCheck size={12} strokeWidth={3} /> : <Check size={12} strokeWidth={3} />
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -617,36 +633,49 @@ const CustomerMessages = () => {
                                     })}
                                     <div ref={messagesEndRef} />
                                 </div>
-                            </div>
-
-                            {/* Messaging Input with WhatsApp Clean UI */}
-                             <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-6 pb-6">
-                                 <div className="flex items-center gap-2 max-w-5xl mx-auto">
-                                     <div className="flex-1 flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-1.5 ring-1 ring-slate-200/50 dark:ring-slate-700 shadow-sm focus-within:bg-white dark:focus-within:bg-slate-800 transition-all focus-within:ring-primary/20">
-                                         <button type="button" className="text-slate-400 hover:text-primary transition-all p-1">
-                                             <span className="material-symbols-outlined text-2xl">sentiment_satisfied</span>
-                                         </button>
-                                         <input
-                                             className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2 px-2"
-                                             placeholder="Message..."
-                                             type="text"
-                                             value={messageInput}
-                                             onChange={(e) => setMessageInput(e.target.value)}
-                                             disabled={isSending}
-                                         />
-                                         <button type="button" className="text-slate-400 hover:text-primary transition-all p-1">
-                                             <span className="material-symbols-outlined text-2xl">attachment</span>
-                                         </button>
+                            </div>                             {/* Messaging Input */}
+                             <form onSubmit={handleSendMessage} className="p-6 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border-t border-slate-100/50 dark:border-slate-800/50">
+                                 <div className="flex items-end gap-3 max-w-5xl mx-auto">
+                                     <div className="flex-1 flex flex-col gap-2">
+                                         <div className="flex items-center gap-1 mb-1 px-2">
+                                             <button type="button" className="p-2 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-primary">
+                                                 <ImageIcon size={18} />
+                                             </button>
+                                             <button type="button" className="p-2 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-primary">
+                                                 <Paperclip size={18} />
+                                             </button>
+                                             <button type="button" className="p-2 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-primary">
+                                                 <Mic size={18} />
+                                             </button>
+                                             <button type="button" className="p-2 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-primary">
+                                                 <Smile size={18} />
+                                             </button>
+                                         </div>
+                                         <div className="flex items-center bg-white dark:bg-slate-800 rounded-[24px] px-5 py-2 ring-1 ring-slate-200/50 dark:ring-slate-700/50 shadow-sm focus-within:ring-primary/30 focus-within:shadow-lg focus-within:shadow-primary/5 transition-all">
+                                             <input
+                                                 className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2.5"
+                                                 placeholder="Type your message here..."
+                                                 type="text"
+                                                 value={messageInput}
+                                                 onChange={(e) => setMessageInput(e.target.value)}
+                                                 disabled={isSending}
+                                             />
+                                             <div className="flex items-center gap-2">
+                                                 <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest hidden sm:block">
+                                                     Press Enter to send
+                                                 </span>
+                                             </div>
+                                         </div>
                                      </div>
                                      <button
                                          type="submit"
-                                         className="size-11 flex items-center justify-center bg-primary text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/30 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                                         className="size-14 flex items-center justify-center bg-primary text-white rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/30 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 group"
                                          disabled={!messageInput.trim() || isSending || !conversationId}
                                      >
                                          {isSending ? (
-                                             <span className="material-symbols-outlined text-xl animate-spin">refresh</span>
+                                             <Loader2 size={24} className="animate-spin" />
                                          ) : (
-                                             <span className="material-symbols-outlined text-xl ml-1">send</span>
+                                             <Send size={24} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                          )}
                                      </button>
                                  </div>
@@ -657,103 +686,98 @@ const CustomerMessages = () => {
 
                 {/* Right Column: Project Insights */}
                 <div className={`
-                    ${showStatus ? 'fixed inset-0 z-[60] flex bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm p-6 animate-in fade-in slide-in-from-right duration-300' : 'hidden'} 
-                    xl:relative xl:inset-auto xl:z-0 xl:flex xl:bg-white xl:dark:bg-slate-900 border-l border-slate-100 dark:border-slate-800 xl:p-0 
-                    w-full xl:w-80 2xl:w-96 flex-col gap-0 overflow-y-auto custom-scrollbar pr-0 shrink-0
+                    ${showStatus ? 'fixed inset-0 z-[60] flex bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm p-6 animate-in fade-in slide-in-from-right-8 duration-500' : 'hidden'} 
+                    xl:relative xl:inset-auto xl:z-0 xl:flex xl:glass-panel xl:rounded-[32px]
+                    w-full xl:w-80 2xl:w-96 flex-col gap-0 overflow-hidden shrink-0 min-h-0
                 `}>
                     {showStatus && (
                         <button
                             onClick={() => setShowStatus(false)}
-                            className="xl:hidden absolute top-6 right-6 size-10 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 shadow-lg z-[70] border-2 border-white dark:border-slate-700"
+                            className="xl:hidden absolute top-6 right-6 size-12 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-600 dark:text-slate-300 shadow-xl z-[70] border border-slate-200/50 dark:border-slate-700/50"
                         >
-                            <span className="material-symbols-outlined">close</span>
+                            <X size={24} />
                         </button>
                     )}
+                    <div className="flex-1 min-h-0 flex flex-col overflow-y-auto custom-scrollbar">
                     {activeRequest ? (
                         <>
                             {/* Stepper */}
-                            <div className="bg-white dark:bg-card-dark rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/60 dark:border-slate-800 p-8">
-                                <h3 className="text-sm font-black text-text-primary dark:text-white uppercase tracking-[0.15em] mb-10 text-center">Project Timeline</h3>
+                            <div className="p-8 border-b border-slate-100/50 dark:border-slate-800/50 relative overflow-hidden shrink-0">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+                                <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] mb-10 text-center flex items-center justify-center gap-3">
+                                    <div className="h-px w-4 bg-slate-200 dark:bg-slate-800" />
+                                    <span className="text-gradient">Project Journey</span>
+                                    <div className="h-px w-4 bg-slate-200 dark:bg-slate-800" />
+                                </h3>
 
-                                <div className="relative flex flex-col gap-12">
-                                    <div className="absolute left-[11px] top-6 bottom-6 w-1 bg-slate-100 dark:bg-slate-800 rounded-full" />
+                                <div className="relative flex flex-col gap-6">
+                                        <div className="absolute left-[11px] top-6 bottom-6 w-0.5 whitespace-pre-wrap bg-gradient-to-b from-primary/10 via-primary/30 to-primary/10 rounded-full" />
                                     {jobSteps.map((step, index) => {
                                         const isCompleted = step.status === 'completed';
                                         const isCurrent = step.status === 'current';
 
                                         return (
-                                            <div key={index} className={`flex gap-6 relative group transition-all duration-500 ${!isCompleted && !isCurrent ? 'opacity-40 grayscale' : ''}`}>
-                                                <div className="relative shrink-0 z-10">
+                                            <div key={index} className={`flex gap-4 relative group transition-all duration-700 ${!isCompleted && !isCurrent ? 'opacity-20 grayscale' : ''}`}>
+                                                <div className="relative shrink-0 z-10 flex flex-col items-center">
                                                     {isCompleted ? (
-                                                        <div className="size-[26px] bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-green-500/40 ring-4 ring-white dark:ring-slate-900">
-                                                            <span className="material-symbols-outlined text-sm font-black">check</span>
+                                                        <div className="size-6 bg-emerald-500 rounded-full flex items-center justify-center text-white shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-4 ring-white dark:ring-slate-900">
+                                                            <Check size={12} strokeWidth={4} />
                                                         </div>
                                                     ) : isCurrent ? (
-                                                        <div className="size-[26px] bg-primary rounded-full flex items-center justify-center text-white shadow-lg shadow-primary/40 ring-4 ring-white dark:ring-slate-900">
-                                                            <div className="size-2.5 bg-white rounded-full animate-ping" />
+                                                        <div className="relative">
+                                                            <div className="absolute inset-0 bg-primary/30 rounded-full animate-ping duration-[3s]" />
+                                                            <div className="size-6 bg-primary rounded-full flex items-center justify-center text-white shadow-[0_0_20px_rgba(13,147,242,0.4)] ring-4 ring-white dark:ring-slate-900 z-10 relative">
+                                                                <div className="size-1.5 bg-white rounded-full animate-pulse shadow-[0_0_8px_white]" />
+                                                            </div>
                                                         </div>
                                                     ) : (
-                                                        <div className="size-[26px] bg-slate-200 dark:bg-slate-700 rounded-full ring-4 ring-white dark:ring-slate-900" />
+                                                        <div className="size-6 bg-slate-200 dark:bg-slate-700 rounded-full ring-4 ring-white dark:ring-slate-900" />
                                                     )}
                                                 </div>
 
-                                                <div className="flex flex-col flex-1 gap-0.5">
+                                                <div className="flex flex-col flex-1 gap-0.5 group-hover:translate-x-2 transition-transform duration-500">
                                                     <div className="flex items-center justify-between">
-                                                        <span className={`text-sm font-black tracking-tight ${isCurrent ? 'text-primary' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                        <span className={`text-[12px] font-black tracking-tight ${isCurrent ? 'text-primary' : isCompleted ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400'}`}>
                                                             {step.title}
                                                         </span>
-                                                        {step.date && <span className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-tighter">{step.date}</span>}
+                                                        {step.date && <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">{step.date}</span>}
                                                     </div>
-                                                    <span className={`text-[11px] font-bold ${isCurrent ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-                                                        {isCompleted ? 'Phase Finalized' : isCurrent ? 'Active Phase • action required' : 'Future Milestone'}
+                                                    <span className={`text-[9px] font-bold uppercase tracking-[0.1em] ${isCurrent ? 'text-primary/70' : 'text-slate-400'}`}>
+                                                        {isCompleted ? 'Phase Finalized' : isCurrent ? 'Active Milestone' : 'Upcoming Phase'}
                                                     </span>
 
                                                     {isCurrent && step.actionRequired && (
-                                                        <div className="mt-3 p-3 bg-primary/5 rounded-xl border border-primary/20 space-y-2 animate-in fade-in slide-in-from-top-2">
-                                                            <p className="text-[10px] font-black text-primary leading-snug">
+                                                        <div className="mt-3 p-3 bg-white dark:bg-slate-900 rounded-xl border border-primary/10 shadow-md space-y-2 animate-in fade-in duration-500">
+                                                            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed">
                                                                 {activeRequest.status === 'accepted' || activeRequest.status === 'assigned'
-                                                                    ? "The professional has accepted! Pay now to secure your booking in escrow."
-                                                                    : "The professional has finished the work. Please review and approve to finalize the project."}
+                                                                    ? "Ready to proceed — complete checkout to confirm."
+                                                                    : "Work complete — verify and release payment."}
                                                             </p>
                                                             {activeRequest.status === 'accepted' || activeRequest.status === 'assigned' ? (
                                                                 <button 
                                                                     onClick={() => navigate('/customer/checkout/' + activeRequestId)}
-                                                                    className="w-full py-2 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                                                                    className="w-full py-2 bg-primary text-white text-[9px] font-black rounded-lg uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
                                                                 >
-                                                                    <span className="material-symbols-outlined text-sm">payments</span>
-                                                                    Book & Pay Escrow
+                                                                    <CreditCard size={12} />
+                                                                    Complete Booking
                                                                 </button>
                                                             ) : (
-                                                                <div className="flex flex-col gap-2">
+                                                                <div className="flex flex-col gap-1.5">
                                                                     <button 
                                                                         onClick={() => updateJobStatus(activeRequestId, 'completed')}
-                                                                        className="w-full py-2 bg-emerald-500 text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-emerald-600 transition-all shadow-md flex items-center justify-center gap-2"
+                                                                        className="w-full py-2 bg-emerald-500 text-white text-[9px] font-black rounded-lg uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
                                                                     >
-                                                                        <span className="material-symbols-outlined text-sm">verified</span>
-                                                                        Approve Job Done
+                                                                        <CheckCircle2 size={12} />
+                                                                        Verify & Pay
                                                                     </button>
                                                                     <button 
-                                                                        onClick={() => alert("Report submitted. Our team will review this issue.")}
-                                                                        className="w-full py-1.5 bg-red-50 text-red-600 text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-red-100 transition-all flex items-center justify-center gap-2 border border-red-100"
+                                                                        onClick={() => alert("Reporting system coming soon.")}
+                                                                        className="w-full py-1.5 text-red-500 text-[8px] font-black rounded-lg uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
                                                                     >
-                                                                        <span className="material-symbols-outlined text-sm">flag</span>
-                                                                        Report an Issue
+                                                                        Raise Dispute
                                                                     </button>
                                                                 </div>
                                                             )}
-                                                        </div>
-
-
-                                                    )}
-                                                    {isCurrent && activeRequest.status === 'completed' && (
-                                                        <div className="mt-3">
-                                                            <button 
-                                                                onClick={() => alert("Opening Reviews...")}
-                                                                className="w-full py-2 bg-white border border-slate-200 text-text-primary text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2"
-                                                            >
-                                                                <span className="material-symbols-outlined text-sm text-amber-400">star</span>
-                                                                Leave a Review
-                                                            </button>
                                                         </div>
                                                     )}
                                                 </div>
@@ -763,74 +787,97 @@ const CustomerMessages = () => {
                                 </div>
                             </div>
 
-                            {/* Job Details */}
-                            <div className="max-w-lg mx-auto w-full bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-6 shadow-xl shadow-slate-200/50 dark:shadow-none animate-in fade-in slide-in-from-top-4 duration-500">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className="size-2 bg-primary rounded-full animate-pulse" />
-                                        <h3 className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-[0.2em]">Job Details</h3>
+                            {/* Project Snapshot */}
+                            <div className="p-8 space-y-6 relative overflow-hidden shrink-0 border-t border-slate-100/50 dark:border-slate-800/50">
+                                <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent-cyan/5 rounded-full blur-3xl pointer-events-none" />
+                                <div className="flex items-center justify-between relative z-10">
+                                    <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] flex items-center gap-2">
+                                        <div className="size-1 bg-primary rounded-full" />
+                                        <span className="text-gradient">Project Snapshot</span>
+                                    </h3>
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 rounded-full border border-primary/20 backdrop-blur-md">
+                                        <ShieldCheck size={12} className="text-primary" />
+                                        <span className="text-[9px] font-black text-primary uppercase tracking-widest">Verified</span>
                                     </div>
-                                    <span className="text-[10px] font-black text-primary bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10 tracking-widest">VERIFIED</span>
                                 </div>
 
                                 <div className="space-y-4">
-                                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 italic">
-                                        <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+                                    <div className="p-4 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 italic">
+                                        <p className="text-[12px] text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
                                             "{activeRequest.description || "Project request details..."}"
                                         </p>
                                     </div>
 
-                                    <div className="flex flex-col gap-3">
-                                        <div className="flex items-center gap-4 px-4 py-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
-                                            <span className="material-symbols-outlined text-primary text-xl">location_on</span>
+                                    <div className="grid gap-2">
+                                        <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-slate-200/50 dark:border-slate-700/50 transition-all hover:bg-white dark:hover:bg-slate-800">
+                                            <div className="size-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                                                <MapPin size={16} />
+                                            </div>
                                             <div className="min-w-0">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">Your Location</p>
-                                                <p className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">
-                                                    {activeRequest.address || activeRequest.location || "Addis Ababa"}
+                                                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Location</p>
+                                                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
+                                                    {activeRequest.address || activeRequest.city || "Addis Ababa"}
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-4 px-4 py-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
-                                            <span className="material-symbols-outlined text-green-500 text-xl">payments</span>
+                                        
+                                        <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-slate-200/50 dark:border-slate-700/50 transition-all hover:bg-white dark:hover:bg-slate-800">
+                                            <div className="size-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                                                <CreditCard size={16} />
+                                            </div>
                                             <div className="min-w-0">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">Estimated Budget</p>
-                                                <p className="text-sm font-black text-green-600 dark:text-green-400">
+                                                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Project Budget</p>
+                                                <p className="text-xs font-black text-slate-900 dark:text-white">
                                                     {activeRequest.budget || "TBD"} ETB
                                                 </p>
                                             </div>
                                         </div>
-                                        {(activeRequest.scheduled_at || activeRequest.preferredDate) && (
-                                            <div className="flex items-center gap-4 px-4 py-3 bg-primary/5 rounded-xl border border-primary/10">
-                                                <span className="material-symbols-outlined text-primary text-xl">event_available</span>
-                                                <div className="min-w-0">
-                                                    <p className="text-[9px] font-black uppercase tracking-widest text-primary opacity-60">Scheduled For</p>
-                                                    <p className="text-sm font-black text-primary">
-                                                        {new Date(activeRequest.scheduled_at || activeRequest.preferredDate).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
-                                                    </p>
-                                                </div>
+
+                                        <div className="flex items-center gap-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-slate-200/50 dark:border-slate-700/50 transition-all hover:bg-white dark:hover:bg-slate-800">
+                                            <div className="size-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                                <Calendar size={16} />
                                             </div>
-                                        )}
+                                            <div className="min-w-0">
+                                                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Scheduled Date</p>
+                                                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                                    {activeRequest.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : "Not TBD"}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            {/* Escrow Banner */}
-                            <div className="bg-slate-900 dark:bg-primary/20 p-5 rounded-2xl flex gap-4 overflow-hidden relative shadow-lg shadow-slate-900/20">
-                                <span className="material-symbols-outlined text-3xl text-primary shrink-0 opacity-80">verified_user</span>
-                                <div className="relative z-10">
-                                    <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Safety Lock</h4>
-                                    <p className="text-[11px] text-white/70 dark:text-white/80 font-bold leading-relaxed pr-2">
-                                        Fix-Link holds payments in escrow until you confirm the job is 100% complete. Secure. Trusted. Verified.
-                                    </p>
+                                <div className="space-y-3">
+                                    {/* Safety / Escrow Banner */}
+                                    <div className="bg-slate-900 border border-slate-800 p-4 rounded-[28px] flex gap-4 overflow-hidden relative group shadow-2xl shadow-slate-950/20">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none group-hover:scale-150 transition-transform duration-700"></div>
+                                        <div className="size-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary shrink-0 relative z-10 border border-primary/20">
+                                            <ShieldCheck size={20} />
+                                        </div>
+                                        <div className="relative z-10">
+                                            <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1 flex items-center gap-2">
+                                                Safety Protocol
+                                                <div className="size-1 bg-primary rounded-full animate-pulse" />
+                                            </h4>
+                                            <p className="text-[10px] text-slate-400 font-bold leading-relaxed">
+                                                Held securely until verification.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </>
                     ) : (
-                        <div className="h-full flex flex-col items-center justify-center text-center p-12 space-y-4 opacity-20 grayscale border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
-                            <span className="material-symbols-outlined text-8xl">analytics</span>
-                            <p className="text-sm font-black uppercase tracking-widest">Project Insights Disabled</p>
+                        <div className="h-full flex flex-col items-center justify-center text-center p-12 space-y-6 opacity-40">
+                            <div className="size-24 rounded-[32px] bg-slate-100 dark:bg-slate-800 flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 animate-pulse">
+                                <Activity size={40} className="text-slate-300 dark:text-slate-600" />
+                            </div>
+                            <div className="space-y-2">
+                                <p className="text-sm font-black uppercase tracking-[0.25em] text-slate-500">Insights Offline</p>
+                                <p className="text-[11px] font-bold text-slate-400 max-w-[200px] leading-relaxed">Select a conversation to pull project details and progress</p>
+                            </div>
                         </div>
                     )}
+                    </div>
                 </div>
             </main>
         </div>

@@ -122,14 +122,14 @@ const CustomerNavbar = () => {
             <select
               value={service}
               onChange={(e) => setService(e.target.value)}
-              className="w-full h-full bg-transparent border-none focus:ring-0 text-[14px] font-black pl-5 pr-12 text-slate-800 dark:text-slate-100 cursor-pointer appearance-none [&::-ms-expand]:hidden outline-none group-hover:text-primary transition-colors"
+              className="w-full h-full bg-transparent border-none focus:ring-0 text-[14px] font-black pl-4 pr-10 text-slate-800 dark:text-slate-100 cursor-pointer appearance-none outline-none group-hover:text-primary transition-colors [appearance:none] [&::-ms-expand]:hidden"
             >
-              <option>All Services</option>
+              <option className="bg-white dark:bg-slate-900">All Services</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.name}>{cat.name}</option>
+                <option key={cat.id} value={cat.name} className="bg-white dark:bg-slate-900">{cat.name}</option>
               ))}
             </select>
-            <ChevronDown size={16} strokeWidth={3} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-primary transition-colors pointer-events-none" />
+            <ChevronDown size={14} strokeWidth={3} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-primary transition-colors pointer-events-none" />
             <div className="absolute right-0 top-1/4 bottom-1/4 w-px bg-slate-200 dark:bg-slate-700/50"></div>
           </div>
           

@@ -225,23 +225,25 @@ const CustomerHome = () => {
           {/* Conditional Sidebar */}
           {showFilters && (
             <aside className="w-full lg:w-1/4 xl:w-1/5 flex-shrink-0 animate-in slide-in-from-left-5 fade-in duration-300 relative z-10">
-              <FiltersSidebar
-                priceMin={priceMin}
-                setPriceMin={setPriceMin}
-                priceMax={priceMax}
-                setPriceMax={setPriceMax}
-                selectedRating={selectedRating}
-                setSelectedRating={setSelectedRating}
-                selectedExperience={selectedExperience}
-                setSelectedExperience={setSelectedExperience}
-                verifiedOnly={verifiedOnly}
-                setVerifiedOnly={setVerifiedOnly}
-                selectedAvailability={selectedAvailability}
-                setSelectedAvailability={setSelectedAvailability}
-                selectedLanguages={selectedLanguages}
-                setSelectedLanguages={setSelectedLanguages}
-                onClearAll={handleClearAll}
-              />
+              <div className="bg-white dark:bg-slate-900 shadow-sm border border-slate-200 dark:border-slate-800 rounded-[2rem] p-8 sticky top-8">
+                <FiltersSidebar
+                  priceMin={priceMin}
+                  setPriceMin={setPriceMin}
+                  priceMax={priceMax}
+                  setPriceMax={setPriceMax}
+                  selectedRating={selectedRating}
+                  setSelectedRating={setSelectedRating}
+                  selectedExperience={selectedExperience}
+                  setSelectedExperience={setSelectedExperience}
+                  verifiedOnly={verifiedOnly}
+                  setVerifiedOnly={setVerifiedOnly}
+                  selectedAvailability={selectedAvailability}
+                  setSelectedAvailability={setSelectedAvailability}
+                  selectedLanguages={selectedLanguages}
+                  setSelectedLanguages={setSelectedLanguages}
+                  onClearAll={handleClearAll}
+                />
+              </div>
             </aside>
           )}
 
