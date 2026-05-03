@@ -29,8 +29,8 @@ const ScheduleList: React.FC<ScheduleListProps> = ({ jobs, loading }) => {
                         <span className="material-symbols-outlined text-primary font-black">calendar_today</span>
                     </div>
                     <div>
-                        <h2 className="text-xl font-black text-text-primary dark:text-white">Active Schedule</h2>
-                        <p className="text-xs text-text-secondary dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">Your work for today</p>
+                        <h2 className="text-xl font-black text-text-primary dark:text-white">Booked Jobs</h2>
+                        <p className="text-xs text-text-secondary dark:text-gray-400 font-bold uppercase tracking-wider mt-0.5">Confirmed & in-progress only</p>
                     </div>
                 </div>
                 <Link to="/professional/messages" className="text-xs font-black text-primary hover:underline uppercase tracking-widest px-4 py-2 bg-primary/5 rounded-full">
@@ -44,8 +44,8 @@ const ScheduleList: React.FC<ScheduleListProps> = ({ jobs, loading }) => {
                         <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 border-4 border-white dark:border-card-dark shadow-inner">
                             <span className="material-symbols-outlined text-slate-300 text-4xl">event_busy</span>
                         </div>
-                        <h3 className="text-lg font-black text-text-primary dark:text-white">No active jobs yet</h3>
-                        <p className="text-text-secondary dark:text-gray-400 text-sm mt-1 max-w-[240px] mx-auto font-medium">When you accept a customer request, it will appear here.</p>
+                        <h3 className="text-lg font-black text-text-primary dark:text-white">No booked jobs yet</h3>
+                        <p className="text-text-secondary dark:text-gray-400 text-sm mt-1 max-w-[240px] mx-auto font-medium">Jobs that are booked or in-progress will appear here.</p>
                     </div>
                 ) : (
                     jobs.map((job) => (

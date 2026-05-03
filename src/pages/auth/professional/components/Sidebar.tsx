@@ -22,6 +22,7 @@ const Sidebar: React.FC = () => {
                     { to: "/professional/messages", icon: "chat", label: "Messages" },
                     { to: "/professional/earnings", icon: "payments", label: "Earnings" },
                     { to: "/professional/profile", icon: "person", label: "Profile" },
+                    { to: "/professional/reviews", icon: "star", label: "Reviews" },
                     { to: "/professional/promote", icon: "rocket_launch", label: "Promote" },
                     { to: "/professional/notifications", icon: "notifications", label: "Notifications" },
                 ].map((item) => (

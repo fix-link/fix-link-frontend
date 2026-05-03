@@ -369,6 +369,7 @@ export const updateUserProfile = async (id: string, data: Partial<User> | FormDa
     }
 
     const response = await api.patch(`/users/${id}/`, payload, { headers });
+    userDetailsCache.delete(id);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.detail || "Failed to update profile");
