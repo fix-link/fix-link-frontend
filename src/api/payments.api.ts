@@ -67,3 +67,8 @@ export const getExistingPayment = async (jobId: string): Promise<{ checkout_url?
     return null;
   }
 };
+
+export const verifyPayment = async (paymentId: string) => {
+  const response = await api.get(`/payments/${paymentId}/verify/`);
+  return response.data;
+};

@@ -160,8 +160,8 @@ export const updateJobStatus = async (jobId: string, status: string) => {
         'accepted':    'accept-assigned',
         'cancelled':   'cancel',
         'in_progress': 'start',
-        'done':        'request_complition',
-        'completed':   'confirm_completion',
+        'done':        'mark-done',
+        'completed':   'confirm-completion',
         'booked':      'book',
     };
 
@@ -181,15 +181,6 @@ export const updateJobStatus = async (jobId: string, status: string) => {
                 } catch (e2: any) {} // let it fall through to generic fallback
             }
 
-            // Special fallback for 'done': try mark-done/ if request_complition/ fails (e.g. 404 constraints)
-            if (status === 'done') {
-                try {
-                    console.warn(`updateJobStatus: POST /${action}/ failed. Attempting mark-done fallback...`);
-                    const res = await api.post(`/jobs/${jobId}/mark-done/`);
-                    return res.data;
-                } catch (e3: any) {} // let it fall through to generic fallback
-            }
-            
             const msg = e1?.response?.data?.detail || e1?.response?.data?.error || e1?.message;
             console.error(`updateJobStatus: POST /${action}/ failed`, e1?.response?.data);
             throw new Error(msg || `Failed to update job to ${status}`);

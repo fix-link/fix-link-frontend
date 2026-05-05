@@ -24,8 +24,12 @@ export const getImageUrl = (path: string | null | undefined): string => {
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
   console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, token ? "With Token" : "No Token");
+  
   // Guard against invalid/expired/undefined token strings
-  if (token && token !== "undefined" && token !== "null") {
+  // Do NOT send the token for login, register, or token refresh endpoints
+  const isAuthEndpoint = config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/token');
+  
+  if (token && token !== "undefined" && token !== "null" && !isAuthEndpoint) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -51,6 +55,8 @@ const handleLogout = (error: any) => {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
   localStorage.removeItem("user");
+  
+  delete api.defaults.headers.common["Authorization"];
 
   const path = window.location.pathname;
   const isAuthPage = path.includes("/login") || path.includes("/signup") || path.includes("/register") || path.includes("/verify");

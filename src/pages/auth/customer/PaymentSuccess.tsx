@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '../../../context/DataContext';
 import { updateJobStatus } from '../../../api/jobs.api';
+import { getExistingPayment, verifyPayment } from '../../../api/payments.api';
 import CustomerNavbar from './components/CustomerNavbar';
 import { 
   CheckCircle2, Star, Briefcase, 
@@ -21,6 +22,17 @@ const PaymentSuccess = () => {
         const syncPayment = async () => {
             if (!jobId) return;
             try {
+                // First verify the payment with the backend
+                const payment = await getExistingPayment(jobId);
+                if (payment && (payment as any).id) {
+                    try {
+                        await verifyPayment((payment as any).id);
+                    } catch (verifyErr) {
+                        console.warn("PaymentSuccess: Verify call failed or returned error", verifyErr);
+                        // We still proceed to updateJobStatus in case the backend webhook already caught it
+                    }
+                }
+
                 // Call the /book/ endpoint to confirm the job is now booked/paid
                 await updateJobStatus(jobId, 'booked');
                 await refreshJobs();
