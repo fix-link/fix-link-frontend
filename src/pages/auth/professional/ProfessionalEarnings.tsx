@@ -1,12 +1,30 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { useAuth } from "../../../context/AuthContext";
 import { useData } from "../../../context/DataContext";
+import { getEarningsSummary, withdrawFunds } from "../../../api/payments.api";
 
 const ProfessionalEarnings: React.FC = () => {
     const { user } = useAuth();
     const { jobs, jobsLoading } = useData();
+    const [earningsSummary, setEarningsSummary] = useState<any>(null);
+    const [loadingSummary, setLoadingSummary] = useState(true);
+    const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+    useEffect(() => {
+        const fetchSummary = async () => {
+            try {
+                const summary = await getEarningsSummary();
+                setEarningsSummary(summary);
+            } catch (err) {
+                console.error("Failed to fetch earnings summary", err);
+            } finally {
+                setLoadingSummary(false);
+            }
+        };
+        fetchSummary();
+    }, []);
 
     const myCompletedJobs = useMemo(() =>
         jobs.filter((j: any) =>
@@ -20,25 +38,53 @@ const ProfessionalEarnings: React.FC = () => {
             ["accepted", "booked", "in_progress", "done"].includes(j.status)
         ), [jobs, user?.id]);
 
-    // Use price OR budget — whichever is present
-    const getAmount = (job: any) => Number(job.price || job.budget || 0);
-
-    const totalEarned = useMemo(() =>
-        myCompletedJobs.reduce((sum: number, j: any) => sum + getAmount(j), 0),
-        [myCompletedJobs]);
-
-    const pendingAmount = useMemo(() =>
-        myActiveJobs.reduce((sum: number, j: any) => sum + getAmount(j), 0),
-        [myActiveJobs]);
+    // Use backend values if available, fallback to frontend calculations
+    const totalEarned = earningsSummary?.total_earned || myCompletedJobs.reduce((sum: number, j: any) => sum + Number(j.price || j.budget || 0), 0);
+    const pendingAmount = earningsSummary?.pending_release || myActiveJobs.reduce((sum: number, j: any) => sum + Number(j.price || j.budget || 0), 0);
+    const availableToWithdraw = earningsSummary?.withdrawable_balance || 0;
 
     const avgPerJob = myCompletedJobs.length > 0
         ? Math.round(totalEarned / myCompletedJobs.length)
         : 0;
 
+    const handleWithdraw = async () => {
+        if (availableToWithdraw <= 0) {
+            alert("No funds available for withdrawal.");
+            return;
+        }
+        
+        const method = user?.preferred_payout_method || "telebirr";
+        const account = user?.payout_account_number || user?.phonenumber;
+
+        if (!account) {
+            alert("Please set up your payout account in profile settings first.");
+            return;
+        }
+
+        if (!confirm(`Request withdrawal of ${availableToWithdraw} ETB to your ${method} account (${account})?`)) return;
+
+        setIsWithdrawing(true);
+        try {
+            await withdrawFunds(availableToWithdraw, method, account);
+            alert("Withdrawal request sent successfully!");
+            // Refresh summary
+            const summary = await getEarningsSummary();
+            setEarningsSummary(summary);
+        } catch (err: any) {
+            alert(`Withdrawal failed: ${err.message || "Unknown error"}`);
+        } finally {
+            setIsWithdrawing(false);
+        }
+    };
+
     const getCustomerName = (job: any) => {
         const d = job.customer_detail;
         if (d?.first_name) return `${d.first_name} ${d.last_name || ""}`.trim();
         return "Customer";
+    };
+
+    const getAmount = (job: any) => {
+        return Number(job.price || job.budget || 0);
     };
 
     return (
@@ -94,16 +140,40 @@ const ProfessionalEarnings: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Payout Notice */}
-                    <div className="flex items-start gap-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-5">
-                        <span className="material-symbols-outlined text-blue-500 text-2xl mt-0.5">info</span>
-                        <div>
-                            <p className="text-sm font-black text-blue-800 dark:text-blue-300">Payout Withdrawals</p>
-                            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mt-1">
-                                Payout requests will be available once the backend team enables the withdrawal endpoint.
-                                Funds are held in escrow and released after customers confirm job completion.
-                            </p>
+                    {/* Withdrawal Section */}
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-900 dark:bg-white rounded-[2rem] p-8 md:p-10 shadow-2xl relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                        
+                        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
+                            <div className="size-20 rounded-[2rem] bg-white/10 dark:bg-slate-900/10 flex items-center justify-center backdrop-blur-xl border border-white/20 dark:border-slate-800/20 rotate-[-4deg]">
+                                <span className="material-symbols-outlined text-4xl text-emerald-400">account_balance_wallet</span>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400">Withdrawable Balance</p>
+                                <h2 className="text-4xl md:text-5xl font-black text-white dark:text-slate-900 tracking-tighter">
+                                    {availableToWithdraw.toLocaleString()} <span className="text-lg opacity-50">ETB</span>
+                                </h2>
+                                <p className="text-xs font-medium text-slate-400 dark:text-slate-500 max-w-xs">
+                                    Funds are automatically moved here 24h after job completion.
+                                </p>
+                            </div>
                         </div>
+
+                        <button 
+                            onClick={handleWithdraw}
+                            disabled={isWithdrawing || availableToWithdraw <= 0}
+                            className={`relative z-10 px-10 py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all shadow-xl hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:hover:scale-100 flex items-center gap-3
+                                ${availableToWithdraw > 0 
+                                    ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/20' 
+                                    : 'bg-slate-700 text-slate-400'}`}
+                        >
+                            {isWithdrawing ? (
+                                <span className="material-symbols-outlined animate-spin">autorenew</span>
+                            ) : (
+                                <span className="material-symbols-outlined">payments</span>
+                            )}
+                            {isWithdrawing ? "Processing..." : "Request Payout"}
+                        </button>
                     </div>
 
                     {/* Earnings History */}

@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { 
   Plus, Calendar, User, MessageCircle, CheckCircle2, 
   Hourglass, AlertCircle, ShieldCheck, XCircle, CreditCard,
-  ChevronRight, ArrowRight, Loader2
+  ChevronRight, ArrowRight, Loader2, Star
 } from "lucide-react";
 
 interface Job {
@@ -180,15 +180,28 @@ const Bookings = () => {
                   key={booking.id} 
                   className="glass-panel group relative flex flex-col rounded-[32px] border border-slate-200/50 dark:border-slate-800/50 overflow-hidden hover:shadow-2xl hover:shadow-primary/5 transition-all duration-500"
                 >
+
                   <div className="p-8 flex-1">
                     <div className="flex justify-between items-start mb-8">
                       <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border flex items-center gap-2 ${status.color}`}>
                         <BookingIcon size={12} className={status.label === "In Progress" ? "animate-spin" : ""} />
                         {status.label}
                       </div>
-                      <div className="flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-tighter bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
-                        <Calendar size={12} />
-                        {new Date(booking.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      <div className="flex items-center gap-2">
+
+                        <div className="flex items-center gap-2 text-slate-400 font-black text-[10px] uppercase tracking-tighter bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 rounded-lg border border-slate-200/50 dark:border-slate-700/50">
+                          <Calendar size={12} />
+                          {new Date(booking.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </div>
+                        {['booked', 'in_progress', 'done', 'completed'].includes(booking.status.toLowerCase()) && (
+                          <Link 
+                            to={`/customer/profile/${booking.assigned_to}?review=true&jobId=${booking.id}`}
+                            className="p-1.5 bg-amber-500 text-white rounded-lg hover:scale-110 transition-transform shadow-lg shadow-amber-500/20"
+                            title="Rate Experience"
+                          >
+                            <Star size={12} fill="currentColor" />
+                          </Link>
+                        )}
                       </div>
                     </div>
                     

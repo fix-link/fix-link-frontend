@@ -7,7 +7,7 @@ interface AuthContextType {
     isLoading: boolean;
     login: (access: string, refresh: string, user: User) => void;
     logout: () => void;
-    updateUser: (userData: Partial<User>) => Promise<void>;
+    updateUser: (userData: Partial<User> | FormData) => Promise<User | void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -133,21 +133,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsAuthenticated(false);
     };
 
-    const updateUserData = async (userData: Partial<User>) => {
+    const updateUserData = async (userData: Partial<User> | FormData) => {
         if (!user) return;
 
         try {
             const { updateUserProfile } = await import("../api/auth.api");
             const updatedUser = await updateUserProfile(user.id, userData);
 
-            // Backend returns full user, so we merge it
+            // Backend returns full user, so we update our state
             const newUserData = { ...user, ...updatedUser };
             setUser(newUserData);
             localStorage.setItem("user", JSON.stringify(newUserData));
+            return newUserData;
         } catch (error) {
             console.error("Failed to update user profile on server:", error);
-            // Fallback: update locally anyway if you want optimistic UI, 
-            // but for settings, it's better to show error.
             throw error;
         }
     };

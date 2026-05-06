@@ -704,11 +704,22 @@ const CustomerMessages = () => {
                             {/* Stepper */}
                             <div className="p-8 border-b border-slate-100/50 dark:border-slate-800/50 relative overflow-hidden shrink-0">
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
-                                <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] mb-10 text-center flex items-center justify-center gap-3">
-                                    <div className="h-px w-4 bg-slate-200 dark:bg-slate-800" />
-                                    <span className="text-gradient">Project Journey</span>
-                                    <div className="h-px w-4 bg-slate-200 dark:bg-slate-800" />
-                                </h3>
+                                <div className="flex items-center justify-between mb-10 relative z-10">
+                                    <div className="w-12 h-px bg-slate-100 dark:bg-slate-800" />
+                                    <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] text-center flex items-center justify-center gap-3">
+                                        <span className="text-gradient">Project Journey</span>
+                                    </h3>
+                                    {['booked', 'in_progress', 'done', 'completed'].includes(activeRequest?.status?.toLowerCase()) && (
+                                        <Link 
+                                            to={`/customer/profile/${activeRequest.professional || activeRequest.assigned_to}?review=true&jobId=${activeRequest.id}`}
+                                            className="flex items-center gap-1.5 text-[9px] font-black text-amber-500 hover:text-amber-600 transition-colors uppercase tracking-widest"
+                                        >
+                                            <Star size={12} fill="currentColor" />
+                                            Rate
+                                        </Link>
+                                    )}
+                                    <div className="w-12 h-px bg-slate-100 dark:bg-slate-800" />
+                                </div>
 
                                 <div className="relative flex flex-col gap-6">
                                         <div className="absolute left-[11px] top-6 bottom-6 w-0.5 whitespace-pre-wrap bg-gradient-to-b from-primary/10 via-primary/30 to-primary/10 rounded-full" />

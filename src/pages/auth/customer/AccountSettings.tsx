@@ -107,8 +107,7 @@ const AccountSettings = () => {
             const formData = new FormData();
             formData.append('profile_picture', file);
             
-            const updatedData = await updateUserProfile(user.id, formData);
-            await updateUser(updatedData);
+            await updateUser(formData);
             
             setUpdateSuccess(true);
             setTimeout(() => setUpdateSuccess(false), 3000);

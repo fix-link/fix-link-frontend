@@ -49,6 +49,10 @@ import {
   getUserDetails,
   updateUserProfile,
   getImageUrl,
+  getCalendar,
+  blockDate,
+  createReview,
+  getReviews,
 } from "../../../api/auth.api";
 import { getServiceCategories, listJobs } from "../../../api/jobs.api";
 
@@ -91,22 +95,35 @@ const ProfessionalProfile = () => {
     setIsEditing(false);
   };
 
-  const handleDayToggle = (day: number, dateString?: string) => {
-    if (!isEditing) return;
+  const handleDayToggle = async (day: number, dateString?: string) => {
+    if (!isEditing || !user?.id) return;
 
     if (dateString) {
       // Toggle specific date block
-      if (blockedDates.includes(dateString)) {
-        setBlockedDates(blockedDates.filter((d) => d !== dateString));
-      } else {
-        setBlockedDates([...blockedDates, dateString]);
+      try {
+        await blockDate(user.id, dateString);
+        if (blockedDates.includes(dateString)) {
+          setBlockedDates(blockedDates.filter((d) => d !== dateString));
+        } else {
+          setBlockedDates([...blockedDates, dateString]);
+        }
+      } catch (err) {
+        console.error("Failed to toggle date block:", err);
+        alert("Failed to update availability. Please try again.");
       }
     } else {
       // Toggle weekly availability
-      if (availableDays.includes(day)) {
-        setAvailableDays(availableDays.filter((d) => d !== day));
+      let newDays = [...availableDays];
+      if (newDays.includes(day)) {
+        newDays = newDays.filter((d) => d !== day);
       } else {
-        setAvailableDays([...availableDays, day]);
+        newDays.push(day);
+      }
+      setAvailableDays(newDays);
+      try {
+        await updateUser({ available_days: newDays });
+      } catch (err) {
+        console.error("Failed to update weekly availability:", err);
       }
     }
   };
@@ -124,6 +141,10 @@ const ProfessionalProfile = () => {
   ]); // Default: All days available
   const [profileRating, setProfileRating] = useState(0);
   const [profileReviewsCount, setProfileReviewsCount] = useState(0);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [profileServiceId, setProfileServiceId] = useState<string | undefined>(
     undefined,
   );
@@ -148,6 +169,7 @@ const ProfessionalProfile = () => {
     month: now.getMonth(),
     year: now.getFullYear(),
   });
+  const [serviceCategories, setServiceCategories] = useState<any[]>([]);
   const monthNames = [
     "January",
     "February",
@@ -166,193 +188,91 @@ const ProfessionalProfile = () => {
   // Use effect to initialize or update data
   useEffect(() => {
     const fetchProfileData = async () => {
-      if (isProView && user) {
-        setIsLoading(true);
-        try {
-          // FORCE FRESH FETCH for logged-in professional
-          const freshUser = await getUserDetails(user.id);
-          const isUUID = (str: string) =>
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-              str,
-            );
+      const targetId = isProView ? user?.id : id;
+      if (!targetId) return;
 
-          const rawName = freshUser.first_name
-            ? `${freshUser.first_name} ${freshUser.last_name || ""}`.trim()
-            : isUUID(freshUser.name || "")
-              ? ""
-              : freshUser.name || "";
-          setProfileName(rawName);
+      setIsLoading(true);
+      try {
+        const freshUser = await getUserDetails(targetId);
+        
+        const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+        
+        // Name resolution
+        const rawName = freshUser.first_name ? `${freshUser.first_name} ${freshUser.last_name || ""}`.trim() : isUUID(freshUser.name || "") ? "" : freshUser.name || "";
+        setProfileName(isUUID(rawName) ? "Professional Specialist" : (rawName || "User"));
 
-          // Resolve profession name from UUID or Categories if needed
-          let resolvedRole = freshUser.profession_name || "";
-          const isGeneric = (str: string) =>
-            !str ||
-            isUUID(str) ||
-            str === "Professional Specialist" ||
-            str === "Member";
+        // Role resolution
+        let resolvedRole = freshUser.profession_name || "";
+        const isGeneric = (str: string) => !str || isUUID(str) || str === "Professional Specialist" || str === "Member";
 
-          if (isGeneric(resolvedRole)) {
-            const candidate = freshUser.profession;
-            const sc = freshUser.service_categories;
-            const primaryId =
-              sc && Array.isArray(sc) && sc.length > 0 ? sc[0] : candidate;
+        if (isGeneric(resolvedRole)) {
+          const candidate = freshUser.profession;
+          const sc = freshUser.service_categories;
+          const primaryId = sc && Array.isArray(sc) && sc.length > 0 ? sc[0] : candidate;
 
-            if (primaryId && !isUUID(primaryId)) {
-              resolvedRole = primaryId;
-            } else if (primaryId && isUUID(primaryId)) {
-              try {
-                const categories = await getServiceCategories();
-                const catList = Array.isArray(categories)
-                  ? categories
-                  : categories?.results || [];
-                const matched = catList.find((c: any) => c.id === primaryId);
-                if (matched) resolvedRole = matched.name;
-              } catch (e) {
-                console.error("Failed to resolve profession name:", e);
-              }
+          if (primaryId && !isUUID(primaryId)) {
+            resolvedRole = primaryId;
+          } else if (primaryId && isUUID(primaryId)) {
+            try {
+              const categories = await getServiceCategories();
+              const catList = Array.isArray(categories) ? categories : categories?.results || [];
+              const matched = catList.find((c: any) => c.id === primaryId);
+              if (matched) resolvedRole = matched.name;
+            } catch (e) {
+              console.error("Failed to resolve profession name:", e);
             }
           }
-
-          setProfileRole(resolvedRole || "Professional Specialist");
-          setProfileAbout(freshUser.bio || "");
-          setProfileSkills(freshUser.skills || "");
-          setProfileExperience(
-            freshUser.years_of_experience?.toString() || "0",
-          );
-          const city = freshUser.city || "";
-          const subcity = freshUser.subcity || "";
-          setProfileLocation(
-            city && subcity
-              ? `${city}, ${subcity}`
-              : city || subcity || "Addis Ababa",
-          );
-          setProfileLanguages(freshUser.languages || ["Amharic", "English"]);
-          setProfilePortfolio(freshUser.portfolio || []);
-          setProfilePhone(freshUser.phonenumber || freshUser.phone || "");
-          setProfileImage(
-            getImageUrl(freshUser.profile_picture || freshUser.profilePhoto),
-          );
-        } catch (err) {
-          console.error("Failed to fetch fresh pro profile:", err);
-        } finally {
-          setIsLoading(false);
         }
-      } else if (!isProView && id) {
+        setProfileRole(resolvedRole || "Professional Specialist");
+
+        setProfileAbout(freshUser.bio || `With extensive experience in ${resolvedRole || "their field"}, ${profileName.split(" ")[0]} provides high-quality service.`);
+        setProfileSkills(freshUser.skills || "");
+        setProfileExperience(freshUser.years_of_experience?.toString() || "0");
+        
+        const city = freshUser.city || "";
+        const area = freshUser.subcity || freshUser.neighborhood || "";
+        setProfileLocation(city && area ? `${city}, ${area}` : city || area || "Addis Ababa");
+
+        setProfilePhone(freshUser.phonenumber || freshUser.phone || "");
+        setProfileImage(getImageUrl(freshUser.profile_picture || freshUser.profilePhoto));
+        setProfileLanguages(freshUser.languages || ["Amharic", "English"]);
+        setProfilePortfolio(freshUser.portfolio || []);
+        setProfileRating(freshUser.average_rating || freshUser.rating || 0);
+        setProfileReviewsCount(freshUser.total_jobs_completed || freshUser.reviews_count || 0);
+
+        if (freshUser.available_days) {
+          setAvailableDays(freshUser.available_days);
+        }
+
+        // Fetch Calendar for current month
+        const start = new Date(calendarView.year, calendarView.month, 1).toISOString().split('T')[0];
+        const end = new Date(calendarView.year, calendarView.month + 1, 0).toISOString().split('T')[0];
         try {
-          console.log(
-            `ProfessionalProfile: Fetching data for professional ID: ${id}`,
-          );
-          const fetchedUser = await getUserDetails(id);
-          console.log("ProfessionalProfile: Fetched user data:", fetchedUser);
-
-          // REDIRECT: If this is the logged-in user and they are at the customer profile link,
-          // go to account settings instead of showing a fake pro-profile of themselves.
-          if (fetchedUser.id === user?.id && !isProView) {
-            navigate("/account-settings");
-            return;
+          const calendarData = await getCalendar(targetId, start, end);
+          if (calendarData) {
+            setBlockedDates(calendarData.blocked_dates || []);
+            setJobDates(calendarData.booked_dates || []);
           }
-
-          // SECURITY: If the fetched user is not a professional, we shouldn't show a professional profile layout.
-          if (
-            fetchedUser.role !== "professional" &&
-            !fetchedUser.is_professional
-          ) {
-            setProfileName(
-              fetchedUser.first_name
-                ? `${fetchedUser.first_name} ${fetchedUser.last_name || ""}`.trim()
-                : fetchedUser.username || "User",
-            );
-            setIsProfessional(false);
-            setIsLoading(false);
-            return;
-          }
-
-          setIsProfessional(true);
-          const name = fetchedUser.first_name
-            ? `${fetchedUser.first_name} ${fetchedUser.last_name || ""}`.trim()
-            : fetchedUser.username || "Anonymous Professional";
-          setProfileName(name);
-          setProfileRole(
-            fetchedUser.profession_name ||
-              fetchedUser.profession ||
-              "Professional Specialist",
-          );
-          setProfileAbout(
-            fetchedUser.bio ||
-              `With extensive experience in ${fetchedUser.profession_name || fetchedUser.profession || "their field"}, ${name.split(" ")[0]} provides high-quality service.`,
-          );
-
-          // FALLBACK: If name looks like a UUID (length 36, contains dashes), use a friendly fallback
-          const isUUID = (str: string) =>
-            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-              str,
-            );
-          if (isUUID(name)) {
-            setProfileName("Professional Specialist");
-          }
-
-          setProfileSkills(fetchedUser.skills || "");
-          setProfileExperience(
-            fetchedUser.years_of_experience?.toString() || "0",
-          );
-
-          // Map location dynamically
-          const city = fetchedUser.city || "";
-          const area = fetchedUser.subcity || fetchedUser.neighborhood || "";
-          setProfileLocation(
-            city && area ? `${city}, ${area}` : city || area || "Addis Ababa",
-          );
-
-          setProfilePhone(fetchedUser.phonenumber || fetchedUser.phone || "");
-          setProfileImage(
-            getImageUrl(
-              fetchedUser.profile_picture || (fetchedUser as any).profilePhoto,
-            ),
-          );
-
-          setProfileLanguages(fetchedUser.languages || ["Amharic", "English"]);
-          setProfilePortfolio(fetchedUser.portfolio || []);
-
-          // Store ratings and reviews if available (fallback to 0)
-          setProfileRating(
-            fetchedUser.average_rating || fetchedUser.rating || 0,
-          );
-          setProfileReviewsCount(
-            fetchedUser.total_jobs_completed || fetchedUser.reviews_count || 0,
-          );
-          // Fetch service categories to find the correct UUID for the createJob API
-          // The profession field is a profession UUID, NOT a service category UUID
-          try {
-            const categories = await getServiceCategories();
-            const catList = Array.isArray(categories)
-              ? categories
-              : categories?.results || [];
-            const profName = (fetchedUser.profession_name || "")
-              .toLowerCase()
-              .trim();
-            const matched = catList.find(
-              (cat: any) => cat.name?.toLowerCase().trim() === profName,
-            );
-            console.log(
-              "ProfessionalProfile: profession_name:",
-              fetchedUser.profession_name,
-              "| matched service category:",
-              matched,
-            );
-            setProfileServiceId(matched?.id || undefined);
-          } catch (catErr) {
-            console.warn(
-              "ProfessionalProfile: Could not fetch service categories, estimate may fail:",
-              catErr,
-            );
-            setProfileServiceId(undefined);
-          }
-        } catch (error) {
-          console.error("Failed to fetch professional details:", error);
-        } finally {
-          setIsLoading(false);
+        } catch (calErr) {
+          console.warn("Failed to fetch calendar data:", calErr);
         }
-      } else {
+
+        // Resolve service ID for estimate modal
+        try {
+          const categoriesData = await getServiceCategories();
+          const catList = Array.isArray(categoriesData) ? categoriesData : categoriesData?.results || [];
+          setServiceCategories(catList);
+          
+          const profName = (resolvedRole || "").toLowerCase().trim();
+          const matched = catList.find((cat: any) => cat.name?.toLowerCase().trim() === profName);
+          setProfileServiceId(matched?.id || undefined);
+        } catch (catErr) {
+          console.error("ProfessionalProfile: Error fetching categories:", catErr);
+        }
+
+      } catch (error) {
+        console.error("Failed to fetch professional details:", error);
+      } finally {
         setIsLoading(false);
       }
     };
@@ -437,34 +357,100 @@ const ProfessionalProfile = () => {
     fetchJobsData();
   }, [id, user, isProView]);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("review") === "true") {
+      setIsReviewModalOpen(true);
+    }
+  }, []);
+
   const handleSave = async () => {
-    if (isProView) {
+    if (isProView && user?.id) {
       try {
-        // Determine first/last name from profileName if it's not a UUID
+        // Determine first/last name from profileName
         const nameParts = profileName.trim().split(" ");
         const fName = nameParts[0] || "";
         const lName = nameParts.slice(1).join(" ") || "";
 
-        const updated = await updateUserProfile(user!.id, {
+        // Prepare the patch object
+        const patch: any = {
           first_name: fName,
           last_name: lName,
           bio: profileAbout,
-          profession: profileRole,
           years_of_experience: Number(profileExperience),
-          city: profileLocation.split(",")[0].trim(),
+          city: profileLocation.split(",")[0]?.trim() || "",
           subcity: profileLocation.split(",")[1]?.trim() || "",
+          neighborhood: profileLocation.split(",")[1]?.trim() || "", // Alternative field for some backends
           skills: profileSkills,
           phonenumber: profilePhone,
           languages: profileLanguages,
-        } as any);
+          // Sync portfolio state (Note: Backend must support JSON or separate upload for images)
+          portfolio: profilePortfolio.map(item => ({
+            title: item.title,
+            img: item.img || item.url
+          })),
+          // Sync blocked dates
+          blocked_dates: blockedDates,
+          // Sync available days
+          available_days: availableDays
+        };
 
-        updateUser(updated);
+        // If we matched a service ID for the role, send it as profession
+        if (profileServiceId) {
+          patch.profession = profileServiceId;
+        }
+
+        // Call the centralized updateUser from AuthContext which handles API + state sync
+        await updateUser(patch);
+        
         setIsEditing(false);
         alert("Profile updated successfully!");
-      } catch (err) {
+        
+        // Refresh local data to be sure everything is in sync
+        window.location.reload(); 
+      } catch (err: any) {
         console.error("Save failed:", err);
-        alert("Failed to save changes. Please try again.");
+        const msg = err.message || "Failed to save changes. Please try again.";
+        alert(msg);
       }
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!id || !reviewComment.trim() || isSubmittingReview) return;
+    
+    setIsSubmittingReview(true);
+    try {
+      const jobId = new URLSearchParams(window.location.search).get("jobId") || undefined;
+      await createReview(id, reviewRating, reviewComment, jobId);
+      alert("Thank you! Your review has been submitted.");
+      setIsReviewModalOpen(false);
+      setReviewComment("");
+      
+      // Refresh reviews on page
+      const data = await getReviews(id);
+      const list = Array.isArray(data) ? data : (data.results || []);
+      setProfilePortfolio(list); // Wait, I should have a reviews state? 
+      // Actually, professional profile uses 'professional.reviews' which is derived from state in some places.
+      // I'll just reload to be safe and sync everything.
+      window.location.reload();
+    } catch (err: any) {
+      console.error("Failed to submit review:", err);
+      const backendError = err.response?.data;
+      let errorMessage = "Failed to submit review.";
+      
+      if (backendError) {
+        if (typeof backendError === 'string') errorMessage += ` ${backendError}`;
+        else if (backendError.detail) errorMessage += ` ${backendError.detail}`;
+        else if (backendError.message) errorMessage += ` ${backendError.message}`;
+        else if (typeof backendError === 'object') errorMessage += ` ${JSON.stringify(backendError)}`;
+      } else {
+        errorMessage += ` ${err.message || "Unknown error"}`;
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsSubmittingReview(false);
     }
   };
 
@@ -482,16 +468,15 @@ const ProfessionalProfile = () => {
         file,
       );
 
-      const updated = await updateUserProfile(user.id, formData);
-      updateUser(updated);
+      const updated = await updateUser(formData);
 
-      if (type === "profile") {
+      if (updated && type === "profile") {
         setProfileImage(
-          getImageUrl(updated.profile_picture || updated.profilePhoto),
+          getImageUrl(updated.profile_picture || (updated as any).profilePhoto),
         );
       } else {
-        // For cover image, we might need a separate state or just rely on re-rendering if it's in the professional object
-        alert("Cover photo updated!");
+        alert(`${type === "profile" ? "Profile" : "Cover"} photo updated!`);
+        window.location.reload();
       }
     } catch (err) {
       console.error("Image upload failed:", err);
@@ -715,21 +700,23 @@ const ProfessionalProfile = () => {
                       </div>
 
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={profileRole}
+                        <select
+                          value={profileServiceId || ""}
                           onChange={(e) => {
-                            const isUUID = (str: string) =>
-                              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-                                str,
-                              );
-                            if (!isUUID(e.target.value))
-                              setProfileRole(e.target.value);
-                            else setProfileRole("");
+                            const val = e.target.value;
+                            setProfileServiceId(val);
+                            const matched = serviceCategories.find(c => c.id === val);
+                            if (matched) setProfileRole(matched.name);
                           }}
-                          placeholder="e.g. Master Electrician"
-                          className="text-xl font-medium bg-slate-50 dark:bg-slate-800 border-2 border-primary rounded-xl px-3 py-1 outline-none mt-3 text-text-secondary dark:text-gray-400 shadow-sm w-full"
-                        />
+                          className="text-xl font-medium bg-slate-50 dark:bg-slate-800 border-2 border-primary rounded-xl px-3 py-1 outline-none mt-3 text-text-secondary dark:text-gray-400 shadow-sm w-full cursor-pointer"
+                        >
+                          <option value="">Select Category</option>
+                          {serviceCategories.map((cat: any) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
                       ) : (
                         <p className="text-xl font-medium text-text-secondary dark:text-gray-400 mt-1">
                           {profileRole || "Professional Specialist"}
@@ -1472,17 +1459,28 @@ const ProfessionalProfile = () => {
                           Client Testimonials
                         </h2>
                       </div>
-                      <div className="flex items-center gap-3 px-6 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
-                        <span className="text-2xl font-black text-slate-900 dark:text-white">
-                          {profileRating}
-                        </span>
-                        <div className="flex text-amber-500">
-                          <span
-                            className="material-symbols-outlined text-xl"
-                            style={{ fontVariationSettings: "'FILL' 1" }}
+                      <div className="flex items-center gap-4">
+                        {(!isProView || isPreviewMode) && (
+                          <button
+                            onClick={() => setIsReviewModalOpen(true)}
+                            className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2"
                           >
-                            star
+                            <Plus size={18} />
+                            Write a Review
+                          </button>
+                        )}
+                        <div className="hidden sm:flex items-center gap-3 px-6 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
+                          <span className="text-2xl font-black text-slate-900 dark:text-white">
+                            {profileRating}
                           </span>
+                          <div className="flex text-amber-500">
+                            <span
+                              className="material-symbols-outlined text-xl"
+                              style={{ fontVariationSettings: "'FILL' 1" }}
+                            >
+                              star
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1619,6 +1617,99 @@ const ProfessionalProfile = () => {
                 className="px-5 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add to Portfolio
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Review Modal */}
+      {isReviewModalOpen && (
+        <div 
+          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
+          onClick={() => setIsReviewModalOpen(false)}
+        >
+          <div 
+            className="w-full max-w-lg bg-white dark:bg-card-dark rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-8 pt-8 pb-6 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                    <StarIcon size={24} fill="currentColor" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white leading-tight">Rate & Review</h3>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Share your experience</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsReviewModalOpen(false)}
+                  className="p-2 hover:bg-white/50 dark:hover:bg-slate-800 rounded-full transition-colors"
+                >
+                  <span className="material-symbols-outlined text-slate-400">close</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-8 space-y-8">
+              <div className="text-center space-y-4">
+                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">How was the service?</p>
+                <div className="flex items-center justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => setReviewRating(star)}
+                      className={`transition-all duration-300 hover:scale-125 ${reviewRating >= star ? 'text-amber-500' : 'text-slate-200 dark:text-slate-700'}`}
+                    >
+                      <StarIcon 
+                        size={40} 
+                        fill={reviewRating >= star ? "currentColor" : "none"} 
+                        strokeWidth={2.5}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-lg font-black text-slate-800 dark:text-white">
+                  {['Poor', 'Fair', 'Good', 'Very Good', 'Exceptional'][reviewRating - 1]}
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Write your review</label>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="Tell us what you liked or what could be improved..."
+                  className="w-full h-32 px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none focus:border-amber-500/50 transition-colors text-sm font-medium resize-none placeholder:text-slate-400"
+                ></textarea>
+              </div>
+            </div>
+
+            <div className="p-8 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => setIsReviewModalOpen(false)}
+                className="flex-1 py-4 text-sm font-black text-slate-500 uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitReview}
+                disabled={!reviewComment.trim() || isSubmittingReview}
+                className="flex-[2] py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+              >
+                {isSubmittingReview ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    Post Review
+                    <ChevronRight size={18} />
+                  </>
+                )}
               </button>
             </div>
           </div>

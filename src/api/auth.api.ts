@@ -470,5 +470,44 @@ export const logoutUser = async () => {
   }
 };
 
+/**
+ * Calendar & Availability
+ */
+export const getCalendar = async (userId: string, start: string, end: string) => {
+  const response = await api.get(`/users/${userId}/calendar/?start=${start}&end=${end}`);
+  return response.data;
+};
+
+export const blockDate = async (userId: string, date: string, note?: string) => {
+  const response = await api.post(`/users/${userId}/calendar/block/`, { date, note });
+  return response.data;
+};
+
+/**
+ * Reviews
+ */
+export const getReviews = async (professionalId?: string) => {
+  const endpoint = professionalId ? `/reviews/?professional=${professionalId}` : '/reviews/';
+  const response = await api.get(endpoint);
+  return response.data;
+};
+
+export const createReview = async (professionalId: string, rating: number, comment: string, jobId?: string) => {
+  // According to swagger, 'job' and 'rating' are required.
+  // 'professional' and 'reviewer' are readOnly (derived from the job).
+  if (!jobId) {
+    throw new Error("Job ID is required to submit a review.");
+  }
+
+  const payload = {
+    job: jobId,
+    rating: Math.round(rating),
+    comment: comment
+  };
+  
+  const response = await api.post('/reviews/', payload);
+  return response.data;
+};
+
 export default api;
 

@@ -39,6 +39,10 @@ export interface User {
   phone?: string;
   city?: string;
   subcity?: string;
+  available_days?: number[];
+  blocked_dates?: string[];
+  preferred_payout_method?: string;
+  payout_account_number?: string;
 }
 
 export interface Job {

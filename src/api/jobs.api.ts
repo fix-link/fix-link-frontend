@@ -181,7 +181,10 @@ export const updateJobStatus = async (jobId: string, status: string) => {
                 } catch (e2: any) {} // let it fall through to generic fallback
             }
 
-            const msg = e1?.response?.data?.detail || e1?.response?.data?.error || e1?.message;
+            let msg = e1?.response?.data?.detail || e1?.response?.data?.error || e1?.message;
+            if (typeof msg === 'object') {
+                msg = JSON.stringify(msg);
+            }
             console.error(`updateJobStatus: POST /${action}/ failed`, e1?.response?.data);
             throw new Error(msg || `Failed to update job to ${status}`);
         }
@@ -193,7 +196,10 @@ export const updateJobStatus = async (jobId: string, status: string) => {
         console.log(`updateJobStatus: PATCH ${status} success`, res.data);
         return res.data;
     } catch (e: any) {
-        const msg = e?.response?.data?.detail || e?.response?.data?.error || e?.message;
+        let msg = e?.response?.data?.detail || e?.response?.data?.error || e?.message;
+        if (typeof msg === 'object') {
+            msg = JSON.stringify(msg);
+        }
         console.error(`updateJobStatus: all methods failed for ${status}`, e?.response?.data);
         throw new Error(msg || `Failed to update job to ${status}`);
     }
