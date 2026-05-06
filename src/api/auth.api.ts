@@ -432,7 +432,7 @@ export const resetPassword = async (email: string, otp: string, new_password: st
  */
 export const changePassword = async (oldPassword: string, newPassword: string) => {
   try {
-    const response = await api.post("/users/change-password/", {
+    const response = await api.post("/portfolios/change-password/", {
       old_password: oldPassword,
       new_password: newPassword
     });
