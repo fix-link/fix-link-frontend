@@ -28,6 +28,7 @@ const AccountSettings = () => {
     const [location, setLocation] = useState(user?.city ? `${user.city}${user.subcity ? ', ' + user.subcity : ''}` : "");
     const [profilePreview, setProfilePreview] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [basePrice, setBasePrice] = useState(user?.hourly_rate || user?.base_price || 0);
     const isPro = user?.role === 'professional';
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,6 +58,7 @@ const AccountSettings = () => {
                     setPhone(latest.phonenumber || latest.phone || (latest as any).phone_number || "");
                     const loc = latest.city ? `${latest.city}${latest.subcity ? ', ' + latest.subcity : ''}` : "";
                     setLocation(loc);
+                    setBasePrice(latest.hourly_rate || latest.base_price || 0);
                 } catch (err) {
                     console.error("AccountSettings: Failed to sync user details:", err);
                 }
@@ -74,7 +76,8 @@ const AccountSettings = () => {
                 email,
                 phonenumber: phone,
                 city: location.split(',')[0]?.trim(),
-                subcity: location.split(',')[1]?.trim() || ""
+                subcity: location.split(',')[1]?.trim() || "",
+                hourly_rate: Number(basePrice)
             });
             setUpdateSuccess(true);
             setTimeout(() => setUpdateSuccess(false), 3000);
@@ -306,6 +309,23 @@ const AccountSettings = () => {
                                                     />
                                                 </div>
                                             </div>
+
+                                            {isPro && (
+                                                <div className="space-y-3 md:col-span-2">
+                                                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Starting Price (ETB)</label>
+                                                    <div className="relative group">
+                                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors font-black">ETB</div>
+                                                        <input
+                                                            type="number"
+                                                            value={basePrice}
+                                                            onChange={(e) => setBasePrice(Number(e.target.value))}
+                                                            placeholder="e.g. 500"
+                                                            className="w-full px-6 py-4 pl-16 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-all font-bold text-slate-800 dark:text-white outline-none"
+                                                        />
+                                                    </div>
+                                                    <p className="text-[10px] text-slate-400 font-medium ml-1">This price will be shown as "Starting from" on your profile card.</p>
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="pt-6">

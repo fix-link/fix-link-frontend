@@ -27,7 +27,9 @@ export interface User {
   profession_name?: string;
   // Professional specific fields
   skills?: string;
-  hourlyRate?: string;
+  hourly_rate?: number;
+  hourlyRate?: string; // Legacy
+  base_price?: number;
   languages?: string[];
   portfolio?: { img: string; title: string }[];
 

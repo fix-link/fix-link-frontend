@@ -157,6 +157,7 @@ const ProfessionalProfile = () => {
   });
   const [profilePhone, setProfilePhone] = useState("");
   const [profileImage, setProfileImage] = useState("");
+  const [profilePrice, setProfilePrice] = useState(0);
   const [hasAcceptedJob, setHasAcceptedJob] = useState(false);
 
   // Advanced Calendar States
@@ -239,6 +240,7 @@ const ProfessionalProfile = () => {
         setProfilePortfolio(freshUser.portfolio || []);
         setProfileRating(freshUser.average_rating || freshUser.rating || 0);
         setProfileReviewsCount(freshUser.total_jobs_completed || freshUser.reviews_count || 0);
+        setProfilePrice(freshUser.hourly_rate || freshUser.base_price || 0);
 
         if (freshUser.available_days) {
           setAvailableDays(freshUser.available_days);
@@ -743,6 +745,21 @@ const ProfessionalProfile = () => {
                             </span>
                           </div>
                         </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                            Starting Price
+                          </p>
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="text-xl font-black text-primary">
+                              {profilePrice || 0}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                              ETB
+                            </span>
+                          </div>
+                        </div>
+
                         <div className="flex items-center gap-1.5">
                           <span className="material-symbols-outlined text-base">
                             work_history
