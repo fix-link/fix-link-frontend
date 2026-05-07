@@ -27,7 +27,9 @@ export interface User {
   profession_name?: string;
   // Professional specific fields
   skills?: string;
-  hourlyRate?: string;
+  hourly_rate?: number;
+  hourlyRate?: string; // Legacy
+  base_price?: number;
   languages?: string[];
   portfolio?: { img: string; title: string }[];
 
@@ -39,6 +41,10 @@ export interface User {
   phone?: string;
   city?: string;
   subcity?: string;
+  available_days?: number[];
+  blocked_dates?: string[];
+  preferred_payout_method?: string;
+  payout_account_number?: string;
 }
 
 export interface Job {

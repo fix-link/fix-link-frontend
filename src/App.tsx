@@ -11,6 +11,10 @@ import ProfessionalProfile from "./pages/auth/customer/ProfessionalProfile";
 import CustomerMessages from "./pages/auth/customer/CustomerMessages";
 import ProfessionalHome from "./pages/auth/professional/ProfessionalHome";
 import ProfessionalMessages from "./pages/auth/professional/ProfessionalMessages";
+import ProfessionalJobs from "./pages/auth/professional/ProfessionalJobs";
+import ProfessionalEarnings from "./pages/auth/professional/ProfessionalEarnings";
+import ProfessionalReviews from "./pages/auth/professional/ProfessionalReviews";
+import ProfessionalNotifications from "./pages/auth/professional/ProfessionalNotifications";
 import LoginPage from "./pages/auth/login";
 import ForgotPassword from "./pages/auth/login/ForgotPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
@@ -106,10 +110,34 @@ function App() {
           }
         />
         <Route
+          path="/professional/jobs"
+          element={
+            <ProtectedRoute role="professional">
+              <ProfessionalJobs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/professional/earnings"
+          element={
+            <ProtectedRoute role="professional">
+              <ProfessionalEarnings />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/professional/reviews"
+          element={
+            <ProtectedRoute role="professional">
+              <ProfessionalReviews />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/professional/notifications"
           element={
             <ProtectedRoute role="professional">
-              <ProfessionalMessages />
+              <ProfessionalNotifications />
             </ProtectedRoute>
           }
         />

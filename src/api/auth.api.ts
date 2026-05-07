@@ -24,8 +24,12 @@ export const getImageUrl = (path: string | null | undefined): string => {
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
   console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, token ? "With Token" : "No Token");
+  
   // Guard against invalid/expired/undefined token strings
-  if (token && token !== "undefined" && token !== "null") {
+  // Do NOT send the token for login, register, or token refresh endpoints
+  const isAuthEndpoint = config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/token');
+  
+  if (token && token !== "undefined" && token !== "null" && !isAuthEndpoint) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
@@ -51,6 +55,8 @@ const handleLogout = (error: any) => {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
   localStorage.removeItem("user");
+  
+  delete api.defaults.headers.common["Authorization"];
 
   const path = window.location.pathname;
   const isAuthPage = path.includes("/login") || path.includes("/signup") || path.includes("/register") || path.includes("/verify");
@@ -369,6 +375,7 @@ export const updateUserProfile = async (id: string, data: Partial<User> | FormDa
     }
 
     const response = await api.patch(`/users/${id}/`, payload, { headers });
+    userDetailsCache.delete(id);
     return response.data;
   } catch (error: any) {
     throw new Error(error.response?.data?.detail || "Failed to update profile");
@@ -425,7 +432,7 @@ export const resetPassword = async (email: string, otp: string, new_password: st
  */
 export const changePassword = async (oldPassword: string, newPassword: string) => {
   try {
-    const response = await api.post("/users/change-password/", {
+    const response = await api.post("/portfolios/change-password/", {
       old_password: oldPassword,
       new_password: newPassword
     });
@@ -461,6 +468,45 @@ export const logoutUser = async () => {
     console.warn("Server-side logout failed:", error);
     // Continue with local logout regardless
   }
+};
+
+/**
+ * Calendar & Availability
+ */
+export const getCalendar = async (userId: string, start: string, end: string) => {
+  const response = await api.get(`/users/${userId}/calendar/?start=${start}&end=${end}`);
+  return response.data;
+};
+
+export const blockDate = async (userId: string, date: string, note?: string) => {
+  const response = await api.post(`/users/${userId}/calendar/block/`, { date, note });
+  return response.data;
+};
+
+/**
+ * Reviews
+ */
+export const getReviews = async (professionalId?: string) => {
+  const endpoint = professionalId ? `/reviews/?professional=${professionalId}` : '/reviews/';
+  const response = await api.get(endpoint);
+  return response.data;
+};
+
+export const createReview = async (professionalId: string, rating: number, comment: string, jobId?: string) => {
+  // According to swagger, 'job' and 'rating' are required.
+  // 'professional' and 'reviewer' are readOnly (derived from the job).
+  if (!jobId) {
+    throw new Error("Job ID is required to submit a review.");
+  }
+
+  const payload = {
+    job: jobId,
+    rating: Math.round(rating),
+    comment: comment
+  };
+  
+  const response = await api.post('/reviews/', payload);
+  return response.data;
 };
 
 export default api;

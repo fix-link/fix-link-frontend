@@ -67,3 +67,22 @@ export const getExistingPayment = async (jobId: string): Promise<{ checkout_url?
     return null;
   }
 };
+
+export const verifyPayment = async (paymentId: string) => {
+  const response = await api.get(`/payments/${paymentId}/verify/`);
+  return response.data;
+};
+
+export const getEarningsSummary = async () => {
+  const response = await api.get("/payments/earnings/summary/");
+  return response.data;
+};
+
+export const withdrawFunds = async (amount: number, method: string, account: string) => {
+  const response = await api.post("/payments/withdraw/", {
+    amount,
+    method,
+    account_number: account
+  });
+  return response.data;
+};

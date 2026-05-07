@@ -5,6 +5,12 @@ import { useAuth } from '../../../context/AuthContext';
 import { initializePayment, getExistingPayment } from '../../../api/payments.api';
 import CustomerNavbar from './components/CustomerNavbar';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
+import { 
+  ArrowLeft, CreditCard, Smartphone, 
+  Building2, ShieldCheck, Lock, 
+  User, Check, Globe, Quote,
+  ChevronRight, Info, AlertCircle, Loader2
+} from "lucide-react";
 
 const PaymentCheckout = () => {
     const { jobId } = useParams<{ jobId: string }>();
@@ -30,10 +36,10 @@ const PaymentCheckout = () => {
 
     if (jobsLoading && !job) {
         return (
-            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 space-y-4">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-text-secondary dark:text-gray-400 font-medium">Loading session...</p>
+            <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col items-center justify-center p-6 bg-background-light dark:bg-background-dark">
+                <div className="flex flex-col items-center gap-6 animate-pulse">
+                    <Loader2 size={48} className="text-primary animate-spin" />
+                    <p className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Initalizing Secure Tunnel...</p>
                 </div>
             </div>
         );
@@ -41,10 +47,20 @@ const PaymentCheckout = () => {
 
     if (!job) {
         return (
-            <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 space-y-4">
-                <span className="material-symbols-outlined text-4xl text-slate-300 dark:text-slate-700">warning</span>
-                <h2 className="text-xl font-black text-slate-800 dark:text-white">Transaction Not Found</h2>
-                <button onClick={() => navigate(-1)} className="px-6 py-2 bg-slate-200 dark:bg-slate-800 rounded-full font-bold text-xs uppercase tracking-widest">Go Back</button>
+            <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col items-center justify-center p-6 space-y-8">
+                <div className="size-20 bg-slate-100 dark:bg-slate-800 rounded-3xl flex items-center justify-center">
+                    <AlertCircle size={40} className="text-slate-400" />
+                </div>
+                <div className="text-center space-y-2">
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Transmission Terminated</h2>
+                    <p className="text-slate-500 font-medium">We couldn't locate the transaction record in our database.</p>
+                </div>
+                <button 
+                  onClick={() => navigate(-1)} 
+                  className="px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                >
+                  Return to Dashboard
+                </button>
             </div>
         );
     }
@@ -109,190 +125,238 @@ const PaymentCheckout = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-display flex flex-col">
+        <div className="min-h-screen bg-background-light dark:bg-background-dark font-display relative overflow-hidden">
+            {/* Background Blobs */}
+            <div className="fixed top-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+            <div className="fixed bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+
             <CustomerNavbar />
 
-            <main className="flex-1 max-w-6xl mx-auto w-full p-4 md:p-8 lg:py-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                
-                {/* Back Button */}
-                <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors group mb-8 md:mb-12">
-                    <div className="size-8 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center shadow-sm group-hover:-translate-x-1 transition-transform">
-                        <span className="material-symbols-outlined text-sm font-black">arrow_back_ios_new</span>
+            <main className="max-w-[1400px] mx-auto px-6 py-10 lg:py-12 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                {/* Back Link */}
+                <button 
+                  onClick={() => navigate(-1)} 
+                  className="flex items-center gap-3 text-slate-400 hover:text-primary transition-all group mb-16"
+                >
+                    <div className="size-9 rounded-xl glass-panel flex items-center justify-center border border-slate-200/50 dark:border-slate-800/50 shadow-sm group-hover:-translate-x-1.5 transition-transform">
+                        <ArrowLeft size={16} strokeWidth={3} />
                     </div>
-                    <span className="text-xs font-black uppercase tracking-widest">Return to Job</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Abort Transaction</span>
                 </button>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-12 xl:gap-24 items-start">
                     
-                    {/* Left Panel: Invoice & Summary */}
-                    <div className="space-y-8">
-                        <div className="space-y-3">
-                            <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">Complete your booking.</h1>
-                            <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed max-w-md">
-                                You are about to deposit funds into the Fix-Link Escrow account. The money will only be released once you approve the completed service.
+                    {/* LEFT PANEL: Identity & Project Context */}
+                    <div className="xl:col-span-5 space-y-12">
+                        <div className="space-y-4">
+                            <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1]">
+                                Secure your <span className="text-gradient">Professional Engagement</span>.
+                            </h1>
+                            <p className="text-lg font-medium text-slate-500 dark:text-slate-400 leading-relaxed max-w-md">
+                                Funds enter an encrypted escrow vault and are released only upon your explicit approval of the completed milestone.
                             </p>
                         </div>
 
-                        <div className="bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl shadow-slate-200/50 dark:shadow-none relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-8 opacity-5">
-                                <span className="material-symbols-outlined text-9xl">receipt_long</span>
-                            </div>
+                        <div className="glass-panel p-6 md:p-8 rounded-[2.5rem] border border-white/50 dark:border-slate-800/50 shadow-xl relative overflow-hidden group">
+                            <div className="absolute -top-10 -right-10 size-40 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
 
-                            <div className="relative z-10 space-y-8">
-                                <div className="space-y-2">
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-primary bg-primary/10 px-3 py-1.5 rounded-full inline-block">Invoice Summary</span>
-                                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 leading-tight pr-12">
-                                        "{job.description || job.title || "Project specific services"}"
+                            <div className="relative z-10 space-y-10">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 w-fit">
+                                        <Quote size={12} className="text-primary" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Project Manifest</span>
+                                    </div>
+                                    <h3 className="text-2xl font-black text-slate-800 dark:text-white leading-tight">
+                                        {job.description || job.title || "Project specific services"}
                                     </h3>
                                 </div>
 
-                                {/* Professional Preview */}
+                                {/* Professional Identity */}
                                 {professionalDetails && (
-                                    <div className="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800/80">
-                                        <div className="size-12 rounded-full overflow-hidden bg-slate-200 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-sm shrink-0">
-                                            {professionalDetails.profile_picture || professionalDetails.profile_photo ? (
-                                                <img src={getImageUrl(professionalDetails.profile_picture || professionalDetails.profile_photo)} alt="Pro" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <span className="material-symbols-outlined text-slate-400 flex items-center justify-center h-full">person</span>
-                                            )}
+                                    <div className="flex items-center gap-4 p-4 rounded-[1.5rem] bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/50 group-hover:bg-white dark:group-hover:bg-slate-900 transition-colors duration-500">
+                                        <div className="size-14 rounded-xl overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl shrink-0 rotate-[-1deg]">
+                                            <img 
+                                              src={getImageUrl(professionalDetails.profile_picture || professionalDetails.profile_photo)} 
+                                              alt="Pro" 
+                                              className="size-full object-cover" 
+                                              onError={(e) => (e.currentTarget.src = `https://ui-avatars.com/api/?name=${professionalDetails.first_name}&background=random`)}
+                                            />
                                         </div>
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Assigned Professional</p>
-                                            <p className="text-sm font-bold text-slate-800 dark:text-white">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-0.5">Assigned Expert</p>
+                                            <p className="text-base font-black text-slate-800 dark:text-white">
                                                 {professionalDetails.first_name || professionalDetails.user?.first_name} {professionalDetails.last_name || professionalDetails.user?.last_name || ""}
                                             </p>
                                         </div>
                                     </div>
                                 )}
 
-                                <div className="border-t border-dashed border-slate-200 dark:border-slate-700 pt-6">
+                                <div className="pt-8 border-t border-dashed border-slate-200 dark:border-slate-800">
                                     <div className="flex justify-between items-end">
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Total Due Now</p>
-                                            <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">
-                                                {job.budget || "TBD"} <span className="text-sm font-bold text-slate-400">ETB</span>
-                                            </p>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Investment Capital</p>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
+                                                    {job.budget || "TBD"}
+                                                </span>
+                                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ETB</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Escrow Guarantee Badge */}
-                        <div className="flex items-center gap-4 bg-emerald-50 dark:bg-emerald-500/10 p-5 rounded-2xl border border-emerald-100 dark:border-emerald-500/20 shadow-sm shadow-emerald-100/50 dark:shadow-none">
-                            <div className="size-10 bg-emerald-100 dark:bg-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
-                                <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400">gpp_good</span>
+                        {/* Trust Mechanism */}
+                        <div className="flex items-start gap-5 p-6 rounded-[2.5rem] bg-emerald-500/5 border border-emerald-500/20 shadow-lg shadow-emerald-500/5">
+                            <div className="size-12 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shrink-0 shadow-xl shadow-emerald-500/20">
+                                <ShieldCheck size={24} />
                             </div>
-                            <div>
-                                <h4 className="text-xs font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wide">100% Escrow Protection</h4>
-                                <p className="text-xs text-emerald-700/80 dark:text-emerald-400/80 font-medium leading-relaxed mt-0.5">
-                                    Your money is safe. We monitor the transaction and release funds only when you are completely satisfied with the delivery.
+                            <div className="space-y-1">
+                                <h4 className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Fix-Link Safe-Lock</h4>
+                                <p className="text-xs text-emerald-800/60 dark:text-emerald-400/60 font-medium leading-relaxed">
+                                    Your funds live in a cryptographic escrow. Release is contingent on your satisfaction.
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Right Panel: Payment Selection */}
-                    <div className="bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl shadow-slate-200/50 dark:shadow-none">
-                        
-                        <div className="space-y-6">
-                            <div>
-                                <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-4 flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-primary text-xl">account_balance_wallet</span>
-                                    Payment Method
-                                </h3>
+                    {/* RIGHT PANEL: Financial Handshake */}
+                    <div className="xl:col-span-1 border-l border-slate-100 dark:border-slate-800 hidden xl:block h-full mx-auto" />
+
+                    <div className="xl:col-span-6 space-y-8">
+                        <div className="glass-panel p-6 md:p-10 rounded-[3rem] border border-white/50 dark:border-slate-800/50 shadow-2xl space-y-10">
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-3">
+                                        <Lock size={12} className="text-primary" />
+                                        Secure Channel Selection
+                                    </h3>
+                                    <div className="hidden sm:flex items-center gap-2 text-slate-300 dark:text-slate-600">
+                                        <Globe size={14} />
+                                        <span className="text-[10px] font-black uppercase">Encrypted Point-to-Point</span>
+                                    </div>
+                                </div>
                                 
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     {([
-                                        { id: 'chapa', label: 'Chapa', desc: 'Cards & Banks', icon: 'credit_card' },
-                                        { id: 'telebirr', label: 'TeleBirr', desc: 'Mobile Money', icon: 'smartphone' },
-                                        { id: 'cbebirr', label: 'CBE Birr', desc: 'Direct Transfer', icon: 'account_balance' }
+                                        { id: 'chapa', label: 'Chapa', desc: 'Secure Web', icon: CreditCard },
+                                        { id: 'telebirr', label: 'TeleBirr', desc: 'USSD Push', icon: Smartphone },
+                                        { id: 'cbebirr', label: 'CBE Birr', desc: 'Digital Rail', icon: Building2 }
                                     ] as const).map(provider => (
                                         <button 
                                             key={provider.id}
                                             onClick={() => setSelectedProvider(provider.id as any)}
-                                            className={`relative overflow-hidden p-4 rounded-2xl text-left transition-all border-2 ${
+                                            className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl transition-all duration-500 border-2 active:scale-95 ${
                                                 selectedProvider === provider.id 
-                                                    ? 'border-primary bg-primary/5 shadow-md shadow-primary/10 ring-4 ring-primary/10' 
-                                                    : 'border-slate-100 dark:border-slate-800 bg-transparent hover:border-slate-300 dark:hover:border-slate-700'
+                                                    ? 'border-primary bg-primary/10 shadow-lg shadow-primary/10' 
+                                                    : 'border-slate-50 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/30 hover:border-slate-200 dark:hover:border-slate-700'
                                             }`}
                                         >
                                             {selectedProvider === provider.id && (
-                                                <div className="absolute top-2 right-2 size-4 bg-primary rounded-full flex items-center justify-center">
-                                                    <span className="material-symbols-outlined text-white text-[10px] font-black">check</span>
+                                                <div className="absolute top-2 right-2 size-3.5 bg-primary text-white rounded-full flex items-center justify-center animate-in zoom-in duration-300 shadow-md">
+                                                    <Check size={8} strokeWidth={4} />
                                                 </div>
                                             )}
-                                            <span className={`material-symbols-outlined mb-2 block ${selectedProvider === provider.id ? 'text-primary' : 'text-slate-400'}`}>
-                                                {provider.icon}
-                                            </span>
-                                            <h4 className={`text-sm font-black tracking-tight ${selectedProvider === provider.id ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-300'}`}>
-                                                {provider.label}
-                                            </h4>
-                                            <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400 mt-1">{provider.desc}</p>
+                                            <div className={`size-10 rounded-xl flex items-center justify-center transition-all duration-500 ${selectedProvider === provider.id ? 'bg-primary text-white shadow-lg' : 'bg-white dark:bg-slate-800 text-slate-400 shadow-sm'}`}>
+                                                <provider.icon size={18} />
+                                            </div>
+                                            <div className="text-center">
+                                                <h4 className={`text-[11px] font-black tracking-tight ${selectedProvider === provider.id ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>
+                                                    {provider.label}
+                                                </h4>
+                                                <p className="text-[7px] font-bold uppercase tracking-widest text-slate-400 mt-0.5 opacity-60">{provider.desc}</p>
+                                            </div>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 {selectedProvider !== 'chapa' ? (
-                                    <div className="space-y-2 bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                                            {selectedProvider === 'telebirr' ? 'TeleBirr Phone Number' : 'CBE Birr Account Number'}
+                                    <div className="space-y-3 bg-slate-50/50 dark:bg-slate-900/40 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 relative group">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
+                                            Handset Authentication Address
                                         </label>
                                         <div className="relative">
-                                            <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 font-light">dialpad</span>
+                                            <div className="absolute left-5 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-primary shadow-sm">
+                                                <User size={20} />
+                                            </div>
                                             <input 
                                                 type="tel"
                                                 value={accountNumber}
                                                 onChange={(e) => setAccountNumber(e.target.value)}
-                                                placeholder={selectedProvider === 'telebirr' ? '+251 911 ...' : 'Enter account number'}
-                                                className="w-full pl-12 pr-4 py-3.5 bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-primary focus:ring-0 outline-none transition-all text-sm font-bold text-slate-800 dark:text-white placeholder-slate-300"
+                                                placeholder={selectedProvider === 'telebirr' ? '0911 ...' : 'Enter account ID'}
+                                                className="w-full pl-20 pr-6 py-5 bg-white dark:bg-slate-800 border-none rounded-[1.5rem] focus:ring-4 focus:ring-primary/10 transition-all text-lg font-black text-slate-800 dark:text-white placeholder-slate-300 shadow-xl"
                                             />
                                         </div>
-                                        <p className="text-[10px] text-slate-500 font-medium leading-relaxed px-1 pt-1">
-                                            We will send a secure USSD payment prompt directly to this {selectedProvider === 'telebirr' ? 'phone' : 'account'} number.
-                                        </p>
+                                        <div className="flex gap-3 px-2 pt-2">
+                                            <Info size={14} className="text-primary shrink-0" />
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-500 font-medium leading-relaxed">
+                                                System will initialize a secure USSD handshake protocol with your {selectedProvider === 'telebirr' ? 'TeleBirr' : 'CBE'} terminal.
+                                            </p>
+                                        </div>
                                     </div>
                                 ) : (
-                                    <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-start gap-4">
-                                        <span className="material-symbols-outlined text-primary bg-primary/10 p-2 rounded-lg">language</span>
-                                        <div>
-                                            <h5 className="text-xs font-black text-slate-800 dark:text-white tracking-wide">Web Checkout</h5>
-                                            <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-1">
-                                                You will be elegantly redirected to Chapa's highly secure payment portal to enter your debit card or alternate bank details.
+                                    <div className="bg-primary/5 p-8 rounded-[3rem] border-2 border-dashed border-primary/20 flex gap-6 items-center">
+                                        <div className="size-16 rounded-[1.5rem] bg-primary text-white flex items-center justify-center shrink-0 shadow-2xl shadow-primary/20">
+                                            <Globe size={32} />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <h5 className="text-sm font-black text-slate-900 dark:text-white tracking-wide uppercase">Gateway Synchronization</h5>
+                                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+                                                Redirecting to Chapa's encrypted financial cloud. External debit/bank authentication required.
                                             </p>
                                         </div>
                                     </div>
                                 )}
-                            </div>
 
-                            <button 
-                                onClick={handleCheckout}
-                                disabled={isProcessing || (selectedProvider !== 'chapa' && !accountNumber)}
-                                className={`w-full py-5 rounded-2xl font-black text-base tracking-widest uppercase transition-all shadow-xl flex items-center justify-center gap-2
-                                    ${isProcessing 
-                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' 
-                                        : 'bg-primary hover:bg-primary-dark text-white hover:-translate-y-1 hover:shadow-primary/30'
-                                    }`}
-                            >
-                                {isProcessing ? (
-                                    <><span className="material-symbols-outlined text-[18px] animate-spin">sync</span> Establishing Bridge...</>
-                                ) : (
-                                    <><span className="material-symbols-outlined text-[18px]">lock</span> Pay {job.budget || "Amount"} ETB</>
-                                )}
-                            </button>
-                            
-                            <div className="flex items-center justify-center gap-2 opacity-40">
-                                <span className="material-symbols-outlined text-sm">enhanced_encryption</span>
-                                <span className="text-[9px] font-black uppercase tracking-widest">End-to-End Encrypted Handshake</span>
+                                <div className="space-y-6 pt-2">
+                                    <button 
+                                        onClick={handleCheckout}
+                                        disabled={isProcessing || (selectedProvider !== 'chapa' && !accountNumber)}
+                                        className={`w-full py-5 rounded-2xl font-black text-xs tracking-[0.2em] uppercase transition-all shadow-xl shadow-primary/20 relative overflow-hidden group/btn hover:-translate-y-1 active:scale-[0.98]
+                                            ${isProcessing 
+                                                ? 'bg-slate-500/10 text-slate-400 cursor-wait shadow-none grayscale' 
+                                                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-primary dark:hover:bg-primary dark:hover:text-white'
+                                            }`}
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-[100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000"></div>
+                                        <span className="flex items-center justify-center gap-4 relative z-10">
+                                            {isProcessing ? (
+                                                <><Loader2 size={24} className="animate-spin" /> Synchronizing...</>
+                                            ) : (
+                                                <>Authorize ETB {job.budget || "..."} Payment <ChevronRight size={20} strokeWidth={3} /></>
+                                            )}
+                                        </span>
+                                    </button>
+                                    
+                                    <div className="flex items-center justify-center gap-3 opacity-30 group">
+                                        <ShieldCheck size={14} className="group-hover:scale-110 transition-transform" />
+                                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Encrypted Financial Pipeline Active</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
-
             </main>
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                .text-gradient {
+                    background: linear-gradient(135deg, #0d93f2 0%, #075985 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+                .glass-panel {
+                    background: rgba(255, 255, 255, 0.7);
+                    backdrop-filter: blur(40px);
+                    -webkit-backdrop-filter: blur(40px);
+                }
+                .dark .glass-panel {
+                    background: rgba(15, 23, 42, 0.4);
+                }
+            `}} />
         </div>
     );
 };

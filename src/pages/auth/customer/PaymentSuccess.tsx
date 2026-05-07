@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '../../../context/DataContext';
 import { updateJobStatus } from '../../../api/jobs.api';
+import { getExistingPayment, verifyPayment } from '../../../api/payments.api';
 import CustomerNavbar from './components/CustomerNavbar';
+import { 
+  CheckCircle2, Star, Briefcase, 
+  ShieldCheck, Bell, Calendar, Home, 
+  Loader2, BadgeCheck, ArrowRight
+} from "lucide-react";
 
 const PaymentSuccess = () => {
     const { jobId } = useParams<{ jobId: string }>();
@@ -16,6 +22,17 @@ const PaymentSuccess = () => {
         const syncPayment = async () => {
             if (!jobId) return;
             try {
+                // First verify the payment with the backend
+                const payment = await getExistingPayment(jobId);
+                if (payment && (payment as any).id) {
+                    try {
+                        await verifyPayment((payment as any).id);
+                    } catch (verifyErr) {
+                        console.warn("PaymentSuccess: Verify call failed or returned error", verifyErr);
+                        // We still proceed to updateJobStatus in case the backend webhook already caught it
+                    }
+                }
+
                 // Call the /book/ endpoint to confirm the job is now booked/paid
                 await updateJobStatus(jobId, 'booked');
                 await refreshJobs();
@@ -29,109 +46,131 @@ const PaymentSuccess = () => {
     }, [jobId]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 font-display">
+        <div className="min-h-screen bg-background-light dark:bg-background-dark font-display relative overflow-hidden">
+            {/* Background Decor */}
+            <div className="fixed top-[-10%] right-[-5%] w-[50%] h-[50%] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+            <div className="fixed bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+
             <CustomerNavbar />
 
-            <main className="max-w-2xl mx-auto px-4 py-20 flex flex-col items-center justify-center text-center">
-
-                {/* Animated success icon */}
-                <div className="relative mb-8">
-                    <div className="w-32 h-32 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                        <div className="w-24 h-24 rounded-full bg-emerald-200 dark:bg-emerald-800/40 flex items-center justify-center overflow-hidden">
+            <main className="max-w-3xl mx-auto px-6 py-24 flex flex-col items-center justify-center text-center relative z-10">
+                {/* Modern success icon */}
+                <div className="relative mb-12 animate-in zoom-in duration-700">
+                    <div className="size-40 rounded-[3rem] bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center relative rotate-3 group">
+                        <div className="size-28 rounded-[2.5rem] bg-white dark:bg-slate-900 shadow-2xl flex items-center justify-center overflow-hidden transition-transform duration-500 group-hover:scale-110 group-hover:rotate-0">
                             {isSyncing ? (
-                                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+                                <Loader2 size={48} className="text-emerald-500 animate-spin" />
                             ) : (
-                                <span className="material-symbols-outlined text-6xl text-emerald-600 dark:text-emerald-400 animate-in zoom-in duration-500" style={{ fontVariationSettings: "'FILL' 1" }}>
-                                    check_circle
-                                </span>
+                                <CheckCircle2 size={64} className="text-emerald-500 animate-in zoom-in slide-in-from-bottom-4 duration-500" />
                             )}
                         </div>
+                        {!isSyncing && (
+                            <div className="absolute -top-4 -right-4 size-14 bg-amber-400 text-white rounded-[1.5rem] flex items-center justify-center shadow-2xl animate-bounce">
+                                <Star size={28} fill="currentColor" />
+                            </div>
+                        )}
                     </div>
-                    {!isSyncing && (
-                        <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center shadow-lg animate-bounce">
-                            <span className="material-symbols-outlined text-white text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                        </div>
-                    )}
                 </div>
 
-                {/* Main message */}
-                <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">
-                    {isSyncing ? "Verifying Payment..." : "Booking Confirmed! 🎉"}
-                </h1>
-                <p className="text-lg text-slate-500 dark:text-slate-400 font-medium mb-8 max-w-md">
-                    {isSyncing 
-                        ? "We're securing your escrow deposit and updating your project status..." 
-                        : "Your payment is secured and the professional has been notified to start the work."}
-                </p>
+                <div className="space-y-4 mb-12">
+                    <h1 className="text-5xl md:text-6xl font-black text-slate-900 dark:text-white tracking-tight">
+                        {isSyncing ? (
+                            <>Verifying <span className='text-gradient'>Payment</span></>
+                        ) : (
+                            <>Payment <span className='text-emerald-500'>Successful</span></>
+                        )}
+                    </h1>
+                    <p className="text-xl text-slate-500 dark:text-slate-400 font-medium max-w-lg mx-auto leading-relaxed">
+                        {isSyncing 
+                            ? "Finalizing your transaction and securing your booking..." 
+                            : "Your payment has been received and the booking is confirmed. The expert has been notified."}
+                    </p>
+                </div>
 
-                {/* Job detail card */}
                 {job && (
-                    <div className="w-full bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-xl shadow-emerald-100/50 dark:shadow-none border border-emerald-100 dark:border-slate-700 mb-8 transition-all hover:shadow-2xl">
-                        <div className="flex items-start gap-4 text-left">
-                            <div className="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
-                                <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400" style={{ fontVariationSettings: "'FILL' 1" }}>work</span>
+                    <div className="w-full glass-panel dark:bg-slate-900/40 rounded-[48px] p-10 shadow-[0_40px_100px_-20px_rgba(16,185,129,0.15)] border border-white/50 dark:border-slate-800/50 mb-12 animate-in slide-in-from-bottom-8 duration-700 delay-200">
+                        <div className="flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
+                            <div className="size-20 rounded-[2rem] bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-xl shadow-emerald-500/20 rotate-[-4deg]">
+                                <Briefcase size={32} />
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-1">
-                                    {isSyncing ? "Syncing Record..." : "Official Receipt"}
+                            <div className="flex-1 min-w-0 space-y-1">
+                                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-500 animate-pulse">
+                                    {isSyncing ? "Securing Ledger..." : "Receipt Manifest Generated"}
                                 </p>
-                                <h2 className="text-xl font-black text-slate-900 dark:text-white truncate">{job.title}</h2>
+                                <h2 className="text-3xl font-black text-slate-900 dark:text-white truncate tracking-tight">{job.title}</h2>
                                 {job.budget && (
-                                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">
-                                        ETB {job.budget} · {isSyncing ? 'Processing...' : 'Payment Secured'}
-                                    </p>
+                                    <div className="flex items-center justify-center md:justify-start gap-2">
+                                        <span className="text-lg font-bold text-slate-400">Total Capital:</span>
+                                        <span className="text-lg font-black text-slate-900 dark:text-white">ETB {job.budget}</span>
+                                    </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* What happens next */}
-                        <div className="mt-5 pt-5 border-t border-slate-100 dark:border-slate-700 space-y-3">
-                            <p className="text-xs font-black uppercase tracking-widest text-slate-400 text-left mb-3">Next Steps</p>
+                        {/* Status Pipeline */}
+                        <div className="mt-12 pt-10 border-t border-slate-100 dark:border-slate-800/50 grid grid-cols-1 md:grid-cols-2 gap-6">
                             {[
-                                { icon: 'verified', text: 'Chapa payment verification', done: true },
-                                { icon: 'lock', text: 'Funds secured in Escrow', done: !isSyncing },
-                                { icon: 'notifications', text: 'Professional notified to start', done: !isSyncing },
-                                { icon: 'check_circle', text: 'Booking updated to "Paid"', done: !isSyncing },
+                                { icon: BadgeCheck, text: 'Financial Verification', done: true },
+                                { icon: ShieldCheck, text: 'Escrow Lock Activated', done: !isSyncing },
+                                { icon: Bell, text: 'Professional Dispatch', done: !isSyncing },
+                                { icon: CheckCircle2, text: 'Booking Matrix Updated', done: !isSyncing },
                             ].map((step, i) => (
-                                <div key={i} className="flex items-center gap-3 transition-all">
-                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 transition-colors ${step.done ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-slate-100 dark:bg-slate-700'}`}>
-                                        <span className={`material-symbols-outlined text-sm ${step.done ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`} style={{ fontVariationSettings: "'FILL' 1" }}>{step.icon}</span>
+                                <div key={i} className="flex items-center gap-4 group">
+                                    <div className={`size-10 rounded-2xl flex items-center justify-center shrink-0 transition-all duration-500 ${step.done ? 'bg-emerald-500/10 text-emerald-500 rotate-0' : 'bg-slate-100 dark:bg-slate-800 text-slate-300'}`}>
+                                        <step.icon size={20} strokeWidth={step.done ? 2.5 : 2} />
                                     </div>
-                                    <p className={`text-sm font-medium text-left ${step.done ? 'text-slate-700 dark:text-slate-200' : 'text-slate-400'}`}>{step.text}</p>
+                                    <p className={`text-sm font-black uppercase tracking-widest transition-colors ${step.done ? 'text-slate-700 dark:text-white' : 'text-slate-400 dark:text-slate-700'}`}>{step.text}</p>
                                 </div>
                             ))}
                         </div>
                     </div>
                 )}
 
-                {/* Action buttons */}
                 {!isSyncing && (
-                    <div className="flex flex-col sm:flex-row gap-4 w-full animate-in fade-in slide-in-from-bottom-4 duration-1000">
+                    <div className="flex flex-col sm:flex-row gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-500">
                         <Link
                             to="/customer/bookings"
-                            className="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-emerald-200 dark:shadow-none text-base hover:-translate-y-1"
+                            className="flex-[1.5] flex items-center justify-center gap-3 px-10 py-6 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-3xl transition-all shadow-2xl hover:scale-[1.02] active:scale-[0.98] text-lg group"
                         >
-                            <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>calendar_month</span>
-                            View My Bookings
+                            <Calendar size={22} className="group-hover:rotate-12 transition-transform" />
+                            Launch Dashboard
+                            <ArrowRight size={20} className="ml-2 group-hover:translate-x-1.5 transition-transform" />
                         </Link>
                         <Link
                             to="/customer/home"
-                            className="flex-1 flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-white font-black rounded-2xl border border-slate-200 dark:border-slate-700 transition-all text-base"
+                            className="flex-1 flex items-center justify-center gap-3 px-10 py-6 bg-white dark:bg-slate-800 text-slate-800 dark:text-white font-black rounded-3xl border-2 border-slate-100 dark:border-slate-800 transition-all text-lg hover:bg-slate-50 dark:hover:bg-slate-700"
                         >
-                            <span className="material-symbols-outlined">home</span>
-                            Go to Dashboard
+                            <Home size={22} />
+                            Home
                         </Link>
                     </div>
                 )}
 
-                <p className="text-xs text-slate-400 dark:text-slate-600 mt-6 font-medium">
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 mt-10">
                     {isSyncing 
-                        ? "Contacting Chapa and Fix-Link secure servers..." 
-                        : "Everything is set! You can now track your project in real-time."}
+                        ? "Connecting to global decentralized nodes..." 
+                        : "Fixed-Link Secure Transmission Complete"}
                 </p>
             </main>
+
+            <style dangerouslySetInnerHTML={{ __html: `
+                .text-gradient {
+                    background: linear-gradient(135deg, #0d93f2 0%, #075985 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+                .glass-panel {
+                    background: rgba(255, 255, 255, 0.75);
+                    backdrop-filter: blur(40px);
+                    -webkit-backdrop-filter: blur(40px);
+                }
+                .dark .glass-panel {
+                    background: rgba(15, 23, 42, 0.5);
+                }
+            `}} />
         </div>
     );
 };
 
 export default PaymentSuccess;
+
