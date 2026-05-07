@@ -194,29 +194,15 @@ const ProfessionalProfile = () => {
 
       setIsLoading(true);
       try {
-        const start = new Date(calendarView.year, calendarView.month, 1).toISOString().split('T')[0];
-        const end = new Date(calendarView.year, calendarView.month + 1, 0).toISOString().split('T')[0];
-
-        // Parallel execution: Fetch all three at once
-        const [freshUser, categoriesData, calendarData] = await Promise.all([
-          getUserDetails(targetId),
-          getServiceCategories(),
-          getCalendar(targetId, start, end).catch(err => {
-            console.warn("Failed to fetch calendar data:", err);
-            return null;
-          })
-        ]);
-
-        // 1. Process User Data
+        const freshUser = await getUserDetails(targetId);
+        
         const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
         
+        // Name resolution
         const rawName = freshUser.first_name ? `${freshUser.first_name} ${freshUser.last_name || ""}`.trim() : isUUID(freshUser.name || "") ? "" : freshUser.name || "";
         setProfileName(isUUID(rawName) ? "Professional Specialist" : (rawName || "User"));
 
-        // Process Category Map for role resolution
-        const catList = Array.isArray(categoriesData) ? categoriesData : categoriesData?.results || [];
-        setServiceCategories(catList);
-
+        // Role resolution
         let resolvedRole = freshUser.profession_name || "";
         const isGeneric = (str: string) => !str || isUUID(str) || str === "Professional Specialist" || str === "Member";
 
@@ -228,13 +214,18 @@ const ProfessionalProfile = () => {
           if (primaryId && !isUUID(primaryId)) {
             resolvedRole = primaryId;
           } else if (primaryId && isUUID(primaryId)) {
-            const matched = catList.find((c: any) => c.id === primaryId);
-            if (matched) resolvedRole = matched.name;
+            try {
+              const categories = await getServiceCategories();
+              const catList = Array.isArray(categories) ? categories : categories?.results || [];
+              const matched = catList.find((c: any) => c.id === primaryId);
+              if (matched) resolvedRole = matched.name;
+            } catch (e) {
+              console.error("Failed to resolve profession name:", e);
+            }
           }
         }
         setProfileRole(resolvedRole || "Professional Specialist");
 
-        // Set Profile State
         setProfileAbout(freshUser.bio || `With extensive experience in ${resolvedRole || "their field"}, ${profileName.split(" ")[0]} provides high-quality service.`);
         setProfileSkills(freshUser.skills || "");
         setProfileExperience(freshUser.years_of_experience?.toString() || "0");
@@ -251,18 +242,35 @@ const ProfessionalProfile = () => {
         setProfileReviewsCount(freshUser.total_jobs_completed || freshUser.reviews_count || 0);
         setProfilePrice(freshUser.hourly_rate || freshUser.base_price || 0);
 
-        if (freshUser.available_days) setAvailableDays(freshUser.available_days);
-
-        // 2. Process Calendar Data
-        if (calendarData) {
-          setBlockedDates(calendarData.blocked_dates || []);
-          setJobDates(calendarData.booked_dates || []);
+        if (freshUser.available_days) {
+          setAvailableDays(freshUser.available_days);
         }
 
-        // 3. Resolve Service ID for estimate modal
-        const profName = (resolvedRole || "").toLowerCase().trim();
-        const matchedCat = catList.find((cat: any) => cat.name?.toLowerCase().trim() === profName);
-        setProfileServiceId(matchedCat?.id || undefined);
+        // Fetch Calendar for current month
+        const start = new Date(calendarView.year, calendarView.month, 1).toISOString().split('T')[0];
+        const end = new Date(calendarView.year, calendarView.month + 1, 0).toISOString().split('T')[0];
+        try {
+          const calendarData = await getCalendar(targetId, start, end);
+          if (calendarData) {
+            setBlockedDates(calendarData.blocked_dates || []);
+            setJobDates(calendarData.booked_dates || []);
+          }
+        } catch (calErr) {
+          console.warn("Failed to fetch calendar data:", calErr);
+        }
+
+        // Resolve service ID for estimate modal
+        try {
+          const categoriesData = await getServiceCategories();
+          const catList = Array.isArray(categoriesData) ? categoriesData : categoriesData?.results || [];
+          setServiceCategories(catList);
+          
+          const profName = (resolvedRole || "").toLowerCase().trim();
+          // We won't set Category ID as Service ID anymore to avoid 'Invalid pk' errors
+          // setProfileServiceId(matched?.id || undefined);
+        } catch (catErr) {
+          console.error("ProfessionalProfile: Error fetching categories:", catErr);
+        }
 
       } catch (error) {
         console.error("Failed to fetch professional details:", error);
@@ -282,8 +290,7 @@ const ProfessionalProfile = () => {
       if (!targetId) return;
 
       try {
-        // Fetch ONLY jobs related to this professional for better speed
-        const allJobs = await listJobs({ professional: targetId });
+        const allJobs = await listJobs();
         const acceptedStatuses = ["accepted", "assigned", "done", "completed"];
 
         // 1. Check relationship with current user (if customer)
