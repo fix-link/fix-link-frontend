@@ -65,8 +65,17 @@ export const getJobDetails = async (id: string) => {
 /**
  * List jobs
  */
-export const listJobs = async () => {
-    const response = await api.get("/jobs/");
+export const listJobs = async (filters: Record<string, string | number> = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+        }
+    });
+    
+    const queryString = params.toString();
+    const endpoint = queryString ? `/jobs/?${queryString}` : "/jobs/";
+    const response = await api.get(endpoint);
     return response.data;
 };
 
