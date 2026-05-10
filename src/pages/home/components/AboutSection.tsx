@@ -1,23 +1,6 @@
-import { useState } from "react";
-import { Network, ShieldCheck, Users, Plus, Minus, HelpCircle, MessageCircle } from "lucide-react";
-
-const faqs = [
-  {
-    q: "How does Fix-Link vet professionals?",
-    a: "Every professional undergoes multi-stage background checks, license verification, and continuous performance reviews to ensure elite service quality.",
-  },
-  {
-    q: "What is the payment process?",
-    a: "We use a secure escrow system. Your payment is held safely and only released to the professional after you approve the completed work.",
-  },
-  {
-    q: "How do I book a service?",
-    a: "Simply search for the service you need, compare professional profiles, request an instant quote, and book directly through our platform.",
-  },
-];
+import { Network, ShieldCheck, Users } from "lucide-react";
 
 const AboutSection = () => {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
     <section id="about" className="py-24 sm:py-32 relative overflow-hidden bg-background-light dark:bg-background-dark/80">

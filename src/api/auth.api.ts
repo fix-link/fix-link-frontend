@@ -498,7 +498,7 @@ export const getReviews = async (professionalId?: string) => {
   return response.data;
 };
 
-export const createReview = async (professionalId: string, rating: number, comment: string, jobId?: string) => {
+export const createReview = async (_professionalId: string, rating: number, comment: string, jobId?: string) => {
   // According to swagger, 'job' and 'rating' are required.
   // 'professional' and 'reviewer' are readOnly (derived from the job).
   if (!jobId) {

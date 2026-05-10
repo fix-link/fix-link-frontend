@@ -81,9 +81,12 @@ const PaymentCheckout = () => {
              normalizedAccount = '+251' + accountNumber;
         }
 
+        const originalAmount = Number(job.budget) || 0;
+        const totalAmount = originalAmount * 1.05; // Add 5% fee
+
         try {
             const resp = await initializePayment(job.id, normalizedAccount, {
-                amount: job.budget,
+                amount: totalAmount,
                 currency: "ETB",
                 email: user?.email,
                 first_name: user?.first_name || user?.username,
@@ -191,13 +194,22 @@ const PaymentCheckout = () => {
                                     </div>
                                 )}
 
-                                <div className="pt-8 border-t border-dashed border-slate-200 dark:border-slate-800">
-                                    <div className="flex justify-between items-end">
+                                <div className="pt-8 border-t border-dashed border-slate-200 dark:border-slate-800 space-y-4">
+                                    <div className="flex justify-between items-center text-sm font-bold">
+                                        <span className="text-slate-500 uppercase tracking-widest text-[9px]">Service Price</span>
+                                        <span className="text-slate-900 dark:text-white">{job.budget} ETB</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-sm font-bold">
+                                        <span className="text-slate-500 uppercase tracking-widest text-[9px]">Transaction Fee (5%)</span>
+                                        <span className="text-primary">{(Number(job.budget) * 0.05).toFixed(2)} ETB</span>
+                                    </div>
+                                    
+                                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-end">
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Investment Capital</p>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Total Investment</p>
                                             <div className="flex items-baseline gap-2">
                                                 <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
-                                                    {job.budget || "TBD"}
+                                                    {(Number(job.budget) * 1.05).toFixed(2)}
                                                 </span>
                                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ETB</span>
                                             </div>
@@ -326,7 +338,7 @@ const PaymentCheckout = () => {
                                             {isProcessing ? (
                                                 <><Loader2 size={24} className="animate-spin" /> Synchronizing...</>
                                             ) : (
-                                                <>Authorize ETB {job.budget || "..."} Payment <ChevronRight size={20} strokeWidth={3} /></>
+                                                <>Authorize ETB {(Number(job.budget) * 1.05).toFixed(2)} Payment <ChevronRight size={20} strokeWidth={3} /></>
                                             )}
                                         </span>
                                     </button>

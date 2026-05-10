@@ -62,11 +62,23 @@ export const getJobDetails = async (id: string) => {
     return response.data;
 };
 
+// In-memory cache to prevent redundant heavy requests
+let jobsCache: any = null;
+let jobsCacheTime = 0;
+let categoriesCache: any = null;
+let categoriesCacheTime = 0;
+
 /**
  * List jobs
  */
 export const listJobs = async () => {
+    // 30 second cache to avoid redundant full-list fetches
+    if (jobsCache && (Date.now() - jobsCacheTime < 30000)) {
+        return jobsCache;
+    }
     const response = await api.get("/jobs/");
+    jobsCache = response.data;
+    jobsCacheTime = Date.now();
     return response.data;
 };
 
@@ -74,7 +86,13 @@ export const listJobs = async () => {
  * Get service categories
  */
 export const getServiceCategories = async () => {
+    // 5 minute cache for static categories
+    if (categoriesCache && (Date.now() - categoriesCacheTime < 300000)) {
+        return categoriesCache;
+    }
     const response = await api.get("/service-categories/");
+    categoriesCache = response.data;
+    categoriesCacheTime = Date.now();
     return response.data;
 };
 

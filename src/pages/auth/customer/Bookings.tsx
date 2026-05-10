@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { 
   Plus, Calendar, User, MessageCircle, CheckCircle2, 
   Hourglass, AlertCircle, ShieldCheck, XCircle, CreditCard,
-  ChevronRight, ArrowRight, Loader2, Star
+  ChevronRight, Loader2, Star
 } from "lucide-react";
 
 interface Job {
@@ -29,13 +29,34 @@ const Bookings = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchBookings = async () => {
+    // 1. Try cache for instant load
+    if (user?.id) {
+      const cached = localStorage.getItem(`cached_bookings_${user.id}`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            setBookings(parsed);
+            setIsLoading(false);
+          }
+        } catch (e) {
+          console.warn("Bookings: Cache parse fail", e);
+        }
+      }
+    }
+
     try {
       const allJobs = await listJobs();
       const confirmedBookings = allJobs.filter((job: Job) => 
-        job.customer === user?.id && 
+        String(job.customer) === String(user?.id) && 
         ['booked', 'in_progress', 'done', 'completed'].includes(job.status.toLowerCase())
       );
       setBookings(confirmedBookings);
+      
+      // Update cache
+      if (user?.id) {
+        localStorage.setItem(`cached_bookings_${user.id}`, JSON.stringify(confirmedBookings));
+      }
     } catch (error) {
       console.error("Failed to fetch bookings:", error);
     } finally {

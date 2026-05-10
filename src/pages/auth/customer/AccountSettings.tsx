@@ -5,13 +5,13 @@ import CustomerNavbar from "./components/CustomerNavbar";
 import CustomerFooter from "./components/CustomerFooter";
 import Sidebar from "../professional/components/Sidebar";
 import Header from "../professional/components/Header";
-import { getImageUrl, changePassword, updateUserProfile, deleteUserProfile, getUserDetails } from "../../../api/auth.api";
+import { getImageUrl, changePassword, deleteUserProfile, getUserDetails } from "../../../api/auth.api";
 import LocationInput from "../../../components/LocationInput";
 import PhoneInput from "../../../components/PhoneInput";
 import { 
-  User, Shield, Mail, Phone, MapPin, Camera, 
+  User, Shield, Mail, MapPin, Camera, 
   Save, Lock, Trash2, AlertTriangle, CheckCircle2, 
-  ChevronRight, Loader2, X
+  Loader2, X
 } from "lucide-react";
 
 const AccountSettings = () => {

@@ -6,48 +6,15 @@ import RequestEstimateModal from "./components/RequestEstimateModal";
 import Sidebar from "../professional/components/Sidebar";
 import Header from "../professional/components/Header";
 import {
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Star,
-  Calendar,
-  ShieldCheck,
-  MessageSquare,
   ChevronRight,
-  Heart,
-  Share2,
-  Award,
-  Clock,
-  CheckCircle2,
-  ChevronLeft,
-  Plus,
-  Languages,
-  Briefcase,
-  Layout,
-  ArrowLeft,
   Loader2,
-  ImageIcon,
-  UserCheck,
-  StarHalf,
-  Quote,
-  Eye,
-  EyeOff,
-  Save,
-  Trash2,
-  Edit3,
-  Verified,
-  Info,
-  Settings,
-  FileText,
-  Grid,
+  Plus,
   Star as StarIcon,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import LocationInput from "../../../components/LocationInput";
 import {
   getUserDetails,
-  updateUserProfile,
   getImageUrl,
   getCalendar,
   blockDate,
@@ -151,7 +118,7 @@ const ProfessionalProfile = () => {
   const [profileServiceId, setProfileServiceId] = useState<string | undefined>(
     undefined,
   );
-  const [isProfessional, setIsProfessional] = useState(true);
+  const [isProfessional] = useState(true);
   const [isFavorited, setIsFavorited] = useState(() => {
     const favorites = JSON.parse(
       localStorage.getItem("user_favorites") || "[]",
@@ -195,89 +162,96 @@ const ProfessionalProfile = () => {
       const targetId = isProView ? user?.id : id;
       if (!targetId) return;
 
-      setIsLoading(true);
-      try {
-        const freshUser = await getUserDetails(targetId);
+      const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-        const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-
+      // Helper to apply data to state
+      const applyData = (userData: any, catList: any[]) => {
         // Name resolution
-        const rawName = freshUser.first_name ? `${freshUser.first_name} ${freshUser.last_name || ""}`.trim() : isUUID(freshUser.name || "") ? "" : freshUser.name || "";
+        const rawName = userData.first_name ? `${userData.first_name} ${userData.last_name || ""}`.trim() : isUUID(userData.name || "") ? "" : userData.name || "";
         setProfileName(isUUID(rawName) ? "Professional Specialist" : (rawName || "User"));
 
         // Role resolution
-        let resolvedRole = freshUser.profession_name || "";
+        let resolvedRole = userData.profession_name || "";
         const isGeneric = (str: string) => !str || isUUID(str) || str === "Professional Specialist" || str === "Member";
 
         if (isGeneric(resolvedRole)) {
-          const candidate = freshUser.profession;
-          const sc = freshUser.service_categories;
+          const candidate = userData.profession;
+          const sc = userData.service_categories;
           const primaryId = sc && Array.isArray(sc) && sc.length > 0 ? sc[0] : candidate;
 
           if (primaryId && !isUUID(primaryId)) {
             resolvedRole = primaryId;
           } else if (primaryId && isUUID(primaryId)) {
-            try {
-              const categories = await getServiceCategories();
-              const catList = Array.isArray(categories) ? categories : categories?.results || [];
-              const matched = catList.find((c: any) => c.id === primaryId);
-              if (matched) resolvedRole = matched.name;
-            } catch (e) {
-              console.error("Failed to resolve profession name:", e);
-            }
+            const matched = catList.find((c: any) => c.id === primaryId);
+            if (matched) resolvedRole = matched.name;
           }
         }
         setProfileRole(resolvedRole || "Professional Specialist");
 
-        setProfileAbout(freshUser.bio || `With extensive experience in ${resolvedRole || "their field"}, ${profileName.split(" ")[0]} provides high-quality service.`);
-        setProfileSkills(freshUser.skills || "");
-        setProfileExperience(freshUser.years_of_experience?.toString() || "0");
-
-        const city = freshUser.city || "";
-        const area = freshUser.subcity || freshUser.neighborhood || "";
+        setProfileAbout(userData.bio || `With extensive experience in ${resolvedRole || "their field"}, ${profileName.split(" ")[0]} provides high-quality service.`);
+        setProfileSkills(userData.skills || "");
+        setProfileExperience(userData.years_of_experience?.toString() || "0");
+        
+        const city = userData.city || "";
+        const area = userData.subcity || userData.neighborhood || "";
         setProfileLocation(city && area ? `${city}, ${area}` : city || area || "Addis Ababa");
 
-        setProfilePhone(freshUser.phonenumber || freshUser.phone || "");
-        setProfileImage(getImageUrl(freshUser.profile_picture || freshUser.profilePhoto));
-        setProfileLanguages(freshUser.languages || ["Amharic", "English"]);
-        setProfilePortfolio(freshUser.portfolio || []);
-        setProfileRating(freshUser.average_rating || freshUser.rating || 0);
-        setProfileReviewsCount(freshUser.total_jobs_completed || freshUser.reviews_count || 0);
-        setProfilePrice(freshUser.hourly_rate || freshUser.base_price || 0);
+        setProfilePhone(userData.phonenumber || userData.phone || "");
+        setProfileImage(getImageUrl(userData.profile_picture || userData.profilePhoto));
+        setProfileLanguages(userData.languages || ["Amharic", "English"]);
+        setProfilePortfolio(userData.portfolio || []);
+        setProfileRating(userData.average_rating || userData.rating || 0);
+        setProfileReviewsCount(userData.total_jobs_completed || userData.reviews_count || 0);
+        setProfilePrice(userData.hourly_rate || userData.base_price || 0);
 
-        if (freshUser.available_days) {
-          setAvailableDays(freshUser.available_days);
+        if (userData.available_days) {
+          setAvailableDays(userData.available_days);
         }
+      };
 
-        // Fetch Calendar for current month
+      setIsLoading(true);
+      
+      // 1. Try Cache for instant UI
+      const cached = localStorage.getItem(`prof_profile_${targetId}`);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          applyData(parsed, []); // Apply cached data immediately
+          setIsLoading(false); // Stop loading spinner
+        } catch (e) {
+          console.warn("ProfessionalProfile: Cache parse fail", e);
+        }
+      }
+
+      try {
         const start = new Date(calendarView.year, calendarView.month, 1).toISOString().split('T')[0];
         const end = new Date(calendarView.year, calendarView.month + 1, 0).toISOString().split('T')[0];
-        try {
-          const calendarData = await getCalendar(targetId, start, end);
-          if (calendarData) {
-            setBlockedDates(calendarData.blocked_dates || []);
-            setJobDates(calendarData.booked_dates || []);
-          }
-        } catch (calErr) {
-          console.warn("Failed to fetch calendar data:", calErr);
-        }
 
-        // Resolve service ID for estimate modal
-        try {
-          const categoriesData = await getServiceCategories();
-          const catList = Array.isArray(categoriesData) ? categoriesData : categoriesData?.results || [];
-          setServiceCategories(catList);
+        // 2. Fetch fresh user data (Critical)
+        const freshUser = await getUserDetails(targetId);
+        
+        // 3. Fetch categories (usually cached in api)
+        const categoriesData = await getServiceCategories().catch(() => []);
+        const catList = Array.isArray(categoriesData) ? categoriesData : (categoriesData as any)?.results || [];
+        setServiceCategories(catList);
 
-          const profName = (resolvedRole || "").toLowerCase().trim();
-          const matched = catList.find((cat: any) => cat.name?.toLowerCase().trim() === profName);
-          setProfileServiceId(matched?.id || undefined);
-        } catch (catErr) {
-          console.error("ProfessionalProfile: Error fetching categories:", catErr);
-        }
+        // 4. Update UI with fresh data
+        applyData(freshUser, catList);
+        localStorage.setItem(`prof_profile_${targetId}`, JSON.stringify(freshUser));
+        setIsLoading(false); // Ensure loading is off as soon as main data is ready
+
+        // 5. Fetch calendar in background (Non-blocking)
+        getCalendar(targetId, start, end)
+          .then(calendarData => {
+            if (calendarData) {
+              setBlockedDates(calendarData.blocked_dates || []);
+              setJobDates(calendarData.booked_dates || []);
+            }
+          })
+          .catch(err => console.warn("ProfessionalProfile: Background calendar fetch failed", err));
 
       } catch (error) {
         console.error("Failed to fetch professional details:", error);
-      } finally {
         setIsLoading(false);
       }
     };

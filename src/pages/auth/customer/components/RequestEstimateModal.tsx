@@ -3,10 +3,8 @@ import { createJob } from "../../../../api/jobs.api";
 import { useAuth } from "../../../../context/AuthContext";
 import LocationInput from "../../../../components/LocationInput";
 import { 
-  X, Calendar, 
-  Wallet, MapPin, Send, 
-  CheckCircle2, Loader2, LocateFixed,
-  FileText
+  X, Send, 
+  CheckCircle2, Loader2, LocateFixed
 } from "lucide-react";
 
 interface RequestEstimateModalProps {
@@ -174,10 +172,14 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
                                     <input 
                                         required 
                                         type="text" 
+                                        inputMode="numeric"
                                         className="w-full h-14 px-5 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400/50 focus:border-primary focus:bg-white dark:focus:bg-slate-800 transition-all text-sm font-black outline-none" 
                                         placeholder="e.g. 1500" 
                                         value={budget} 
-                                        onChange={(e) => setBudget(e.target.value)} 
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, '');
+                                            setBudget(val);
+                                        }} 
                                     />
                                 </div>
                             </div>
