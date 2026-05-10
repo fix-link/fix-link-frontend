@@ -1,4 +1,4 @@
-import { Globe, Share2, AtSign, ArrowRight } from "lucide-react";
+
 
 const Footer = () => {
   return (

@@ -6,48 +6,15 @@ import RequestEstimateModal from "./components/RequestEstimateModal";
 import Sidebar from "../professional/components/Sidebar";
 import Header from "../professional/components/Header";
 import {
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Star,
-  Calendar,
-  ShieldCheck,
-  MessageSquare,
   ChevronRight,
-  Heart,
-  Share2,
-  Award,
-  Clock,
-  CheckCircle2,
-  ChevronLeft,
-  Plus,
-  Languages,
-  Briefcase,
-  Layout,
-  ArrowLeft,
   Loader2,
-  ImageIcon,
-  UserCheck,
-  StarHalf,
-  Quote,
-  Eye,
-  EyeOff,
-  Save,
-  Trash2,
-  Edit3,
-  Verified,
-  Info,
-  Settings,
-  FileText,
-  Grid,
+  Plus,
   Star as StarIcon,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import LocationInput from "../../../components/LocationInput";
 import {
   getUserDetails,
-  updateUserProfile,
   getImageUrl,
   getCalendar,
   blockDate,
@@ -148,7 +115,7 @@ const ProfessionalProfile = () => {
   const [profileServiceId, setProfileServiceId] = useState<string | undefined>(
     undefined,
   );
-  const [isProfessional, setIsProfessional] = useState(true);
+  const [isProfessional] = useState(true);
   const [isFavorited, setIsFavorited] = useState(() => {
     const favorites = JSON.parse(
       localStorage.getItem("user_favorites") || "[]",

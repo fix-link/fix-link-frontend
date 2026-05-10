@@ -11,7 +11,7 @@ import {
   Activity, X, CheckCheck, Check, Smile, Paperclip, Loader2, Send, 
   CheckCircle2, CreditCard, ShieldCheck, Flag, Star, MapPin, Calendar, 
   Shield, Zap, Lock, RefreshCw, Hammer, MoreHorizontal, Search, Settings, 
-  Mic, Image as ImageIcon, Sparkles, ChevronDown
+  Mic, Image as ImageIcon, Sparkles
 } from "lucide-react";
 
 const CustomerMessages = () => {
