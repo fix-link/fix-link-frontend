@@ -31,6 +31,7 @@ import {
     Flag,
     AlertTriangle
 } from 'lucide-react';
+import DisputeModal from '../../../components/DisputeModal';
 
 const ProfessionalMessages = () => {
     const { user } = useAuth();
@@ -44,6 +45,7 @@ const ProfessionalMessages = () => {
     const [showStatus, setShowStatus] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const [showCustomerProfile, setShowCustomerProfile] = useState(false);
+    const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { jobs, notifications, jobsLoading, notificationsLoading } = useData();
@@ -595,12 +597,12 @@ const ProfessionalMessages = () => {
                                                         <button 
                                                             onClick={() => {
                                                                 setShowMoreMenu(false);
-                                                                alert("User reported successfully. Our safety team will review this interaction.");
+                                                                setIsDisputeModalOpen(true);
                                                             }}
-                                                            className="flex items-center gap-3 w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-rose-500/5 hover:text-rose-500 rounded-xl transition-all group"
+                                                            className="flex items-center gap-3 w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all group"
                                                         >
-                                                            <Flag size={16} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
-                                                            Report User
+                                                            <AlertTriangle size={16} className="text-slate-400 group-hover:text-red-500 transition-colors" />
+                                                            Raise Dispute
                                                         </button>
                                                         <button 
                                                             onClick={() => {
@@ -939,6 +941,17 @@ const ProfessionalMessages = () => {
                     </div>
                 </div>
             )}
+            
+            <DisputeModal
+                isOpen={isDisputeModalOpen}
+                onClose={() => setIsDisputeModalOpen(false)}
+                jobId={activeRequestId || ''}
+                jobTitle={activeRequest?.service_title || activeRequest?.description || 'Job Request'}
+                againstUserId={activeRequest?.customer || activeRequest?.requested_by || ''}
+                onSuccess={() => {
+                    alert("Dispute raised successfully. Our team will review it shortly.");
+                }}
+            />
         </div>
     );
 };

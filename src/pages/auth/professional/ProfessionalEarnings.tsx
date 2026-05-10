@@ -14,9 +14,11 @@ import {
     CheckCircle2,
     RefreshCw
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const ProfessionalEarnings: React.FC = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const { jobs, jobsLoading } = useData();
     const [earningsSummary, setEarningsSummary] = useState<any>(null);
     const [isWithdrawing, setIsWithdrawing] = useState(false);
@@ -288,7 +290,11 @@ const ProfessionalEarnings: React.FC = () => {
                                             {[...myCompletedJobs]
                                                 .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())
                                                 .map((job: any) => (
-                                                    <div key={job.id} className="flex items-center gap-6 px-10 py-7 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all duration-300 group">
+                                                    <div 
+                                                        key={job.id} 
+                                                        onClick={() => navigate(`/professional/messages?requestId=${job.id}`)}
+                                                        className="flex items-center gap-6 px-10 py-7 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all duration-300 group cursor-pointer"
+                                                    >
                                                         <div className="size-14 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-inner">
                                                             <CheckCircle2 size={24} className="text-emerald-500" />
                                                         </div>
@@ -347,7 +353,11 @@ const ProfessionalEarnings: React.FC = () => {
                                     ) : (
                                         <div className="divide-y divide-slate-100/50 dark:divide-slate-800/30">
                                             {myActiveJobs.map((job: any) => (
-                                                <div key={job.id} className="flex items-center gap-6 px-10 py-7 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all duration-300 group">
+                                                <div 
+                                                    key={job.id} 
+                                                    onClick={() => navigate(`/professional/messages?requestId=${job.id}`)}
+                                                    className="flex items-center gap-6 px-10 py-7 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all duration-300 group cursor-pointer"
+                                                >
                                                     <div className="size-14 rounded-2xl bg-amber-500/5 dark:bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/10 group-hover:scale-110 transition-all duration-500 shadow-inner">
                                                         <span className="material-symbols-outlined text-amber-500 text-2xl font-black">lock</span>
                                                     </div>

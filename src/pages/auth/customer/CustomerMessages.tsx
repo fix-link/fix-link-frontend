@@ -11,8 +11,10 @@ import {
   Activity, X, CheckCheck, Check, Smile, Paperclip, Loader2, Send, 
   CheckCircle2, CreditCard, ShieldCheck, Star, MapPin, Calendar, 
   Shield, Zap, RefreshCw, MoreHorizontal,
-  Mic, Image as ImageIcon, Sparkles
+  Mic, Image as ImageIcon, Sparkles, Flag, AlertTriangle
 } from "lucide-react";
+import DisputeModal from '../../../components/DisputeModal';
+import ReviewModal from '../../../components/ReviewModal';
 
 const CustomerMessages = () => {
     const { user } = useAuth();
@@ -231,6 +233,35 @@ const CustomerMessages = () => {
             alert("Failed to send message.");
         } finally {
             setIsSending(false);
+        }
+    };
+
+    const [approvingJobId, setApprovingJobId] = useState<string | null>(null);
+    const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const moreMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+                setShowMoreMenu(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleVerifyAndPay = async (jobId: string) => {
+        setApprovingJobId(jobId);
+        try {
+            await updateJobStatus(jobId, 'completed');
+            // Optimistically update or rely on real-time polling to update UI
+        } catch (error) {
+            console.error("Failed to verify & pay:", error);
+            alert("Failed to verify & pay. Please try again.");
+        } finally {
+            setApprovingJobId(null);
         }
     };
 
@@ -532,9 +563,30 @@ const CustomerMessages = () => {
                                     >
                                         <Activity size={22} />
                                     </button>
-                                    <button className="size-12 flex items-center justify-center text-slate-400 hover:text-primary bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 rounded-2xl transition-all border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
-                                        <MoreHorizontal size={22} />
-                                    </button>
+                                    <div className="relative" ref={moreMenuRef}>
+                                        <button 
+                                            onClick={() => setShowMoreMenu(!showMoreMenu)}
+                                            className={`size-12 flex items-center justify-center rounded-2xl transition-all border shadow-sm ${showMoreMenu ? 'bg-primary text-white border-primary shadow-primary/30' : 'text-slate-400 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 border-slate-200/50 dark:border-slate-700/50'}`}
+                                        >
+                                            <MoreHorizontal size={22} />
+                                        </button>
+                                        {showMoreMenu && (
+                                            <div className="absolute right-0 top-full mt-3 w-48 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in duration-200 z-[100]">
+                                                <div className="p-2">
+                                                    <button 
+                                                        onClick={() => {
+                                                            setShowMoreMenu(false);
+                                                            setIsDisputeModalOpen(true);
+                                                        }}
+                                                        className="flex items-center gap-3 w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all group"
+                                                    >
+                                                        <AlertTriangle size={16} className="text-slate-400 group-hover:text-red-500 transition-colors" />
+                                                        Raise Dispute
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -709,14 +761,14 @@ const CustomerMessages = () => {
                                     <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] text-center flex items-center justify-center gap-3">
                                         <span className="text-gradient">Project Journey</span>
                                     </h3>
-                                    {['booked', 'in_progress', 'done', 'completed'].includes(activeRequest?.status?.toLowerCase()) && (
-                                        <Link 
-                                            to={`/customer/profile/${activeRequest.professional || activeRequest.assigned_to}?review=true&jobId=${activeRequest.id}`}
+                                    {activeRequest?.status?.toLowerCase() === 'completed' && (
+                                        <button 
+                                            onClick={() => setIsReviewModalOpen(true)}
                                             className="flex items-center gap-1.5 text-[9px] font-black text-amber-500 hover:text-amber-600 transition-colors uppercase tracking-widest"
                                         >
                                             <Star size={12} fill="currentColor" />
                                             Rate
-                                        </Link>
+                                        </button>
                                     )}
                                     <div className="w-12 h-px bg-slate-100 dark:bg-slate-800" />
                                 </div>
@@ -772,17 +824,30 @@ const CustomerMessages = () => {
                                                                     <CreditCard size={12} />
                                                                     Complete Booking
                                                                 </button>
+                                                            ) : activeRequest.status === 'completed' ? (
+                                                                <button 
+                                                                    onClick={() => setIsReviewModalOpen(true)}
+                                                                    className="w-full py-2 bg-amber-500 text-white text-[9px] font-black rounded-lg uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20"
+                                                                >
+                                                                    <Star size={12} className="fill-current" />
+                                                                    Rate Professional
+                                                                </button>
                                                             ) : (
                                                                 <div className="flex flex-col gap-1.5">
                                                                     <button 
-                                                                        onClick={() => updateJobStatus(activeRequestId, 'completed')}
-                                                                        className="w-full py-2 bg-emerald-500 text-white text-[9px] font-black rounded-lg uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                                                        onClick={() => handleVerifyAndPay(activeRequestId)}
+                                                                        disabled={approvingJobId === activeRequestId}
+                                                                        className="w-full py-2 bg-emerald-500 text-white text-[9px] font-black rounded-lg uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:scale-100 disabled:cursor-not-allowed"
                                                                     >
-                                                                        <CheckCircle2 size={12} />
-                                                                        Verify & Pay
+                                                                        {approvingJobId === activeRequestId ? (
+                                                                            <Loader2 size={12} className="animate-spin" />
+                                                                        ) : (
+                                                                            <CheckCircle2 size={12} />
+                                                                        )}
+                                                                        {approvingJobId === activeRequestId ? 'Processing...' : 'Verify & Pay'}
                                                                     </button>
                                                                     <button 
-                                                                        onClick={() => alert("Reporting system coming soon.")}
+                                                                        onClick={() => setIsDisputeModalOpen(true)}
                                                                         className="w-full py-1.5 text-red-500 text-[8px] font-black rounded-lg uppercase tracking-widest hover:bg-red-50 dark:hover:bg-red-900/10 transition-all"
                                                                     >
                                                                         Raise Dispute
@@ -891,6 +956,26 @@ const CustomerMessages = () => {
                     </div>
                 </div>
             </main>
+            <DisputeModal
+                isOpen={isDisputeModalOpen}
+                onClose={() => setIsDisputeModalOpen(false)}
+                jobId={activeRequestId || ''}
+                jobTitle={activeRequest?.service_title || activeRequest?.description || 'Job Request'}
+                againstUserId={activeRequest?.professional || activeRequest?.assigned_to || ''}
+                onSuccess={() => {
+                    alert("Dispute raised successfully. Our team will review it shortly.");
+                }}
+            />
+
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                jobId={activeRequestId || ''}
+                professionalId={activeRequest?.professional || activeRequest?.assigned_to || ''}
+                onSuccess={() => {
+                    alert("Thank you for your review!");
+                }}
+            />
         </div>
     );
 };

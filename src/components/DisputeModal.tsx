@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { X, AlertTriangle, Loader2 } from "lucide-react";
 import { createDispute } from "../api/disputes.api";
 
+import { useAuth } from '../context/AuthContext';
+
 interface DisputeModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -12,6 +14,9 @@ interface DisputeModalProps {
 }
 
 const DisputeModal: React.FC<DisputeModalProps> = ({ isOpen, onClose, jobId, jobTitle, againstUserId, onSuccess }) => {
+    const { user } = useAuth();
+    const isProfessional = user?.role === 'professional';
+
     const [reason, setReason] = useState("");
     const [description, setDescription] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,10 +88,22 @@ const DisputeModal: React.FC<DisputeModalProps> = ({ isOpen, onClose, jobId, job
                                 required
                             >
                                 <option value="">Select a reason...</option>
-                                <option value="Non-delivery">Work not delivered</option>
-                                <option value="Poor Quality">Poor quality of work</option>
-                                <option value="Unresponsive">Professional is unresponsive</option>
-                                <option value="Payment Issue">Customer refusing to release funds</option>
+                                {isProfessional ? (
+                                    <>
+                                        <option value="Abusive Customer">Customer is verbally abusive or threatening</option>
+                                        <option value="Unresponsive">Customer is unresponsive to queries</option>
+                                        <option value="Unsafe Environment">Unsafe working environment</option>
+                                        <option value="Payment Refusal">Customer refusing to pay</option>
+                                        <option value="Scope Creep">Customer demanding out-of-scope work</option>
+                                    </>
+                                ) : (
+                                    <>
+                                        <option value="Non-delivery">Work not delivered</option>
+                                        <option value="Poor Quality">Poor quality of work</option>
+                                        <option value="Unresponsive">Professional is unresponsive</option>
+                                        <option value="Payment Issue">Professional demanding off-platform payment</option>
+                                    </>
+                                )}
                                 <option value="Other">Other</option>
                             </select>
                         </div>

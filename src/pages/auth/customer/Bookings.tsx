@@ -36,6 +36,8 @@ const Bookings = () => {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedJobForReview, setSelectedJobForReview] = useState<Job | null>(null);
 
+  const [approvingJobId, setApprovingJobId] = useState<string | null>(null);
+
   const fetchBookings = async () => {
     // 1. Try cache for instant load
     if (user?.id) {
@@ -79,6 +81,7 @@ const Bookings = () => {
   }, [user]);
 
   const handleApprove = async (jobId: string, assignedTo: string) => {
+    setApprovingJobId(jobId);
     try {
       await updateJobStatus(jobId, 'completed');
 
@@ -96,6 +99,8 @@ const Bookings = () => {
       fetchBookings();
     } catch (error: any) {
       alert("Failed to approve: " + error.message);
+    } finally {
+      setApprovingJobId(null);
     }
   };
 
@@ -239,14 +244,18 @@ const Bookings = () => {
                           <Calendar size={12} />
                           {new Date(booking.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         </div>
-                        {['booked', 'in_progress', 'done', 'completed'].includes(booking.status.toLowerCase()) && (
-                          <Link
-                            to={`/customer/profile/${booking.assigned_to}?review=true&jobId=${booking.id}`}
+                        {['completed'].includes(booking.status.toLowerCase()) && (
+                          <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setSelectedJobForReview(booking);
+                                setReviewModalOpen(true);
+                            }}
                             className="p-1.5 bg-amber-500 text-white rounded-lg hover:scale-110 transition-transform shadow-lg shadow-amber-500/20"
                             title="Rate Experience"
                           >
                             <Star size={12} fill="currentColor" />
-                          </Link>
+                          </button>
                         )}
                       </div>
                     </div>
@@ -294,11 +303,16 @@ const Bookings = () => {
                       <div className="flex flex-col gap-3">
                         <button
                           onClick={() => handleApprove(booking.id, booking.assigned_to || '')}
-                          className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 relative overflow-hidden group/btn"
+                          disabled={approvingJobId === booking.id}
+                          className="w-full py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-3 relative overflow-hidden group/btn disabled:opacity-70 disabled:scale-100 disabled:cursor-not-allowed"
                         >
                           <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-                          <CreditCard size={18} />
-                          Release Payment
+                          {approvingJobId === booking.id ? (
+                            <Loader2 size={18} className="animate-spin" />
+                          ) : (
+                            <CreditCard size={18} />
+                          )}
+                          {approvingJobId === booking.id ? 'Processing...' : 'Release Payment'}
                         </button>
                         <button
                           onClick={() => handleRaiseDispute(booking)}
@@ -329,7 +343,7 @@ const Bookings = () => {
                             </button>
                           )}
                           <Link
-                            to={`/customer/bookings/${booking.id}`}
+                            to={`/customer/messages?requestId=${booking.id}`}
                             className="flex items-center gap-1.5 text-primary text-[11px] font-black uppercase tracking-widest hover:translate-x-1 transition-transform"
                           >
                             Details
