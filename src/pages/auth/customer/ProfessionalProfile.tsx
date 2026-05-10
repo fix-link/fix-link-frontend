@@ -51,6 +51,8 @@ import {
   getImageUrl,
   getCalendar,
   blockDate,
+  unblockDate,
+  addPortfolioItem,
   createReview,
   getReviews,
 } from "../../../api/auth.api";
@@ -101,10 +103,11 @@ const ProfessionalProfile = () => {
     if (dateString) {
       // Toggle specific date block
       try {
-        await blockDate(user.id, dateString);
         if (blockedDates.includes(dateString)) {
+          await unblockDate(user.id, dateString);
           setBlockedDates(blockedDates.filter((d) => d !== dateString));
         } else {
+          await blockDate(user.id, dateString);
           setBlockedDates([...blockedDates, dateString]);
         }
       } catch (err) {
@@ -195,9 +198,9 @@ const ProfessionalProfile = () => {
       setIsLoading(true);
       try {
         const freshUser = await getUserDetails(targetId);
-        
+
         const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-        
+
         // Name resolution
         const rawName = freshUser.first_name ? `${freshUser.first_name} ${freshUser.last_name || ""}`.trim() : isUUID(freshUser.name || "") ? "" : freshUser.name || "";
         setProfileName(isUUID(rawName) ? "Professional Specialist" : (rawName || "User"));
@@ -229,7 +232,7 @@ const ProfessionalProfile = () => {
         setProfileAbout(freshUser.bio || `With extensive experience in ${resolvedRole || "their field"}, ${profileName.split(" ")[0]} provides high-quality service.`);
         setProfileSkills(freshUser.skills || "");
         setProfileExperience(freshUser.years_of_experience?.toString() || "0");
-        
+
         const city = freshUser.city || "";
         const area = freshUser.subcity || freshUser.neighborhood || "";
         setProfileLocation(city && area ? `${city}, ${area}` : city || area || "Addis Ababa");
@@ -264,7 +267,7 @@ const ProfessionalProfile = () => {
           const categoriesData = await getServiceCategories();
           const catList = Array.isArray(categoriesData) ? categoriesData : categoriesData?.results || [];
           setServiceCategories(catList);
-          
+
           const profName = (resolvedRole || "").toLowerCase().trim();
           const matched = catList.find((cat: any) => cat.name?.toLowerCase().trim() === profName);
           setProfileServiceId(matched?.id || undefined);
@@ -404,12 +407,12 @@ const ProfessionalProfile = () => {
 
         // Call the centralized updateUser from AuthContext which handles API + state sync
         await updateUser(patch);
-        
+
         setIsEditing(false);
         alert("Profile updated successfully!");
-        
+
         // Refresh local data to be sure everything is in sync
-        window.location.reload(); 
+        window.location.reload();
       } catch (err: any) {
         console.error("Save failed:", err);
         const msg = err.message || "Failed to save changes. Please try again.";
@@ -420,7 +423,7 @@ const ProfessionalProfile = () => {
 
   const handleSubmitReview = async () => {
     if (!id || !reviewComment.trim() || isSubmittingReview) return;
-    
+
     setIsSubmittingReview(true);
     try {
       const jobId = new URLSearchParams(window.location.search).get("jobId") || undefined;
@@ -428,7 +431,7 @@ const ProfessionalProfile = () => {
       alert("Thank you! Your review has been submitted.");
       setIsReviewModalOpen(false);
       setReviewComment("");
-      
+
       // Refresh reviews on page
       const data = await getReviews(id);
       const list = Array.isArray(data) ? data : (data.results || []);
@@ -440,7 +443,7 @@ const ProfessionalProfile = () => {
       console.error("Failed to submit review:", err);
       const backendError = err.response?.data;
       let errorMessage = "Failed to submit review.";
-      
+
       if (backendError) {
         if (typeof backendError === 'string') errorMessage += ` ${backendError}`;
         else if (backendError.detail) errorMessage += ` ${backendError.detail}`;
@@ -449,7 +452,7 @@ const ProfessionalProfile = () => {
       } else {
         errorMessage += ` ${err.message || "Unknown error"}`;
       }
-      
+
       alert(errorMessage);
     } finally {
       setIsSubmittingReview(false);
@@ -486,26 +489,46 @@ const ProfessionalProfile = () => {
     }
   };
 
-  const handleAddPortfolio = () => {
+  const handleAddPortfolio = async () => {
     if (!newPortfolioTitle.trim() && !newPortfolioFile) return;
 
-    const newItem = {
-      title:
-        newPortfolioTitle.trim() ||
-        (newPortfolioFile ? newPortfolioFile.name : "Untitled Work"),
-      type:
-        newPortfolioFile && newPortfolioFile.type.includes("image")
-          ? "image"
-          : "file",
-      url: newPortfolioFile ? URL.createObjectURL(newPortfolioFile) : null,
-      img: newPortfolioFile ? URL.createObjectURL(newPortfolioFile) : null,
-      file: newPortfolioFile, // to send to backend later
-    };
+    if (newPortfolioFile) {
+      try {
+        const uploadedItem = await addPortfolioItem(newPortfolioFile);
 
-    setProfilePortfolio([...profilePortfolio, newItem]);
-    setIsPortfolioModalOpen(false);
-    setNewPortfolioTitle("");
-    setNewPortfolioFile(null);
+        // Use the returned item from backend
+        const newItem = {
+          id: uploadedItem.id,
+          title: newPortfolioTitle.trim() || newPortfolioFile.name,
+          type: newPortfolioFile.type.includes("image") ? "image" : "file",
+          url: uploadedItem.file_url || uploadedItem.file,
+          img: uploadedItem.file_url || uploadedItem.file,
+          file: newPortfolioFile,
+        };
+
+        setProfilePortfolio([...profilePortfolio, newItem]);
+        setIsPortfolioModalOpen(false);
+        setNewPortfolioTitle("");
+        setNewPortfolioFile(null);
+      } catch (err) {
+        console.error("Failed to upload portfolio item:", err);
+        alert("Failed to upload portfolio item. Please try again.");
+      }
+    } else {
+      // Just title, no file
+      const newItem = {
+        title: newPortfolioTitle.trim(),
+        type: "file",
+        url: null,
+        img: null,
+        file: null,
+      };
+
+      setProfilePortfolio([...profilePortfolio, newItem]);
+      setIsPortfolioModalOpen(false);
+      setNewPortfolioTitle("");
+      setNewPortfolioFile(null);
+    }
   };
 
   // Helper to format image URLs
@@ -1021,16 +1044,28 @@ const ProfessionalProfile = () => {
                           <span className="material-symbols-outlined text-text-secondary">
                             call
                           </span>
-                          <p className="text-xs text-text-secondary dark:text-gray-500 font-bold uppercase tracking-wider">
-                            Phone Number
-                          </p>
-                          <p className="text-text-primary dark:text-white font-bold">
-                            {profilePhone
-                              ? profilePhone
-                              : isProView
-                                ? "Add phone in settings"
-                                : "Not shared yet"}
-                          </p>
+                          <div className="flex flex-col w-full">
+                            <p className="text-xs text-text-secondary dark:text-gray-500 font-bold uppercase tracking-wider mb-1">
+                              Phone Number
+                            </p>
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={profilePhone}
+                                onChange={(e) => setProfilePhone(e.target.value)}
+                                className="w-full bg-white dark:bg-slate-900 border-2 border-primary rounded-xl p-2 outline-none text-sm text-text-secondary"
+                                placeholder="+251912345678"
+                              />
+                            ) : (
+                              <p className="text-text-primary dark:text-white font-bold">
+                                {profilePhone
+                                  ? profilePhone
+                                  : isProView
+                                    ? "Add phone in settings"
+                                    : "Not shared yet"}
+                              </p>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
                           <span className="material-symbols-outlined text-text-secondary">
@@ -1118,7 +1153,7 @@ const ProfessionalProfile = () => {
                             className="group relative rounded-2xl overflow-hidden border border-border-color dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50"
                           >
                             {item.type === "file" ||
-                            item.img?.endsWith(".pdf") ? (
+                              item.img?.endsWith(".pdf") ? (
                               <div className="aspect-video flex flex-col items-center justify-center p-6 text-center">
                                 <div className="p-4 bg-red-50 dark:bg-red-900/30 rounded-2xl mb-3">
                                   <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-4xl">
@@ -1639,14 +1674,14 @@ const ProfessionalProfile = () => {
           </div>
         </div>
       )}
-      
+
       {/* Review Modal */}
       {isReviewModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
           onClick={() => setIsReviewModalOpen(false)}
         >
-          <div 
+          <div
             className="w-full max-w-lg bg-white dark:bg-card-dark rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20"
             onClick={(e) => e.stopPropagation()}
           >
@@ -1661,7 +1696,7 @@ const ProfessionalProfile = () => {
                     <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Share your experience</p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => setIsReviewModalOpen(false)}
                   className="p-2 hover:bg-white/50 dark:hover:bg-slate-800 rounded-full transition-colors"
                 >
@@ -1680,9 +1715,9 @@ const ProfessionalProfile = () => {
                       onClick={() => setReviewRating(star)}
                       className={`transition-all duration-300 hover:scale-125 ${reviewRating >= star ? 'text-amber-500' : 'text-slate-200 dark:text-slate-700'}`}
                     >
-                      <StarIcon 
-                        size={40} 
-                        fill={reviewRating >= star ? "currentColor" : "none"} 
+                      <StarIcon
+                        size={40}
+                        fill={reviewRating >= star ? "currentColor" : "none"}
                         strokeWidth={2.5}
                       />
                     </button>
