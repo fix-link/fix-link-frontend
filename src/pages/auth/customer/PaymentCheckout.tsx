@@ -52,7 +52,7 @@ const PaymentCheckout = () => {
                     <AlertCircle size={40} className="text-slate-400" />
                 </div>
                 <div className="text-center space-y-2">
-                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Transmission Terminated</h2>
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Payment Cancelled</h2>
                     <p className="text-slate-500 font-medium">We couldn't locate the transaction record in our database.</p>
                 </div>
                 <button 
@@ -153,10 +153,10 @@ const PaymentCheckout = () => {
                     <div className="xl:col-span-5 space-y-12">
                         <div className="space-y-4">
                             <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1]">
-                                Secure your <span className="text-gradient">Professional Engagement</span>.
+                                Secure your <span className="text-gradient">Service Payment</span>.
                             </h1>
                             <p className="text-lg font-medium text-slate-500 dark:text-slate-400 leading-relaxed max-w-md">
-                                Funds enter an encrypted escrow vault and are released only upon your explicit approval of the completed milestone.
+                                Protected by secure payment security. Your money is held safely and will only be released once you confirm the job is finished.
                             </p>
                         </div>
 
@@ -305,7 +305,7 @@ const PaymentCheckout = () => {
                                         <div className="flex gap-3 px-2 pt-2">
                                             <Info size={14} className="text-primary shrink-0" />
                                             <p className="text-[10px] text-slate-500 dark:text-slate-500 font-medium leading-relaxed">
-                                                System will initialize a secure USSD handshake protocol with your {selectedProvider === 'telebirr' ? 'TeleBirr' : 'CBE'} terminal.
+                                                System will initialize a secure connection with your {selectedProvider === 'telebirr' ? 'TeleBirr' : 'CBE'} terminal.
                                             </p>
                                         </div>
                                     </div>
@@ -345,7 +345,7 @@ const PaymentCheckout = () => {
                                     
                                     <div className="flex items-center justify-center gap-3 opacity-30 group">
                                         <ShieldCheck size={14} className="group-hover:scale-110 transition-transform" />
-                                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Encrypted Financial Pipeline Active</span>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Secure Payment Active</span>
                                     </div>
                                 </div>
                             </div>

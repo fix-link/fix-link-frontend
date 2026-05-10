@@ -187,7 +187,7 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
                             <div className="space-y-3">
                                 <label className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-3 ml-1">
                                     <div className="size-1.5 rounded-full bg-primary"></div>
-                                    Deployment Location
+                                    Job Location
                                 </label>
                                 <div className="relative group">
                                     <LocationInput 
@@ -228,7 +228,7 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
 
                         <div className="px-8 py-6 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800/50">
                             <p className="text-[10px] text-slate-400 font-bold leading-relaxed text-center uppercase tracking-widest opacity-60">
-                                Protected by secure end-to-end mission encryption.
+                                Protected by secure end-to-end encryption.
                             </p>
                         </div>
                     </>

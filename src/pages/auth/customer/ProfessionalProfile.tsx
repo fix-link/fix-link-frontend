@@ -10,6 +10,10 @@ import {
   Loader2,
   Plus,
   Star as StarIcon,
+  BadgeCheck,
+  History,
+  MapPin,
+  Edit2
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import LocationInput from "../../../components/LocationInput";
@@ -22,6 +26,25 @@ import {
   getReviews,
 } from "../../../api/auth.api";
 import { getServiceCategories, listJobs } from "../../../api/jobs.api";
+
+const Stars = ({ count, className = "" }: { count: number; className?: string }) => {
+  return (
+    <div className={`flex items-center gap-0.5 ${className}`}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span
+          key={star}
+          className="material-symbols-outlined text-amber-500"
+          style={{
+            fontVariationSettings: `'FILL' ${star <= count ? 1 : 0}`,
+            fontSize: "inherit",
+          }}
+        >
+          star
+        </span>
+      ))}
+    </div>
+  );
+};
 
 const ProfessionalProfile = () => {
   const { id } = useParams();
@@ -126,6 +149,7 @@ const ProfessionalProfile = () => {
   const [profileImage, setProfileImage] = useState("");
   const [profilePrice, setProfilePrice] = useState(0);
   const [hasAcceptedJob, setHasAcceptedJob] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Advanced Calendar States
   const [jobDates, setJobDates] = useState<string[]>([]); // Dates with confirmed bookings
@@ -161,11 +185,11 @@ const ProfessionalProfile = () => {
 
       const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
-      // Helper to apply data to state
       const applyData = (userData: any, catList: any[]) => {
         // Name resolution
         const rawName = userData.first_name ? `${userData.first_name} ${userData.last_name || ""}`.trim() : isUUID(userData.name || "") ? "" : userData.name || "";
-        setProfileName(isUUID(rawName) ? "Professional Specialist" : (rawName || "User"));
+        const finalName = isUUID(rawName) ? "Professional Specialist" : (rawName || "User");
+        setProfileName(finalName);
 
         // Role resolution
         let resolvedRole = userData.profession_name || "";
@@ -185,7 +209,7 @@ const ProfessionalProfile = () => {
         }
         setProfileRole(resolvedRole || "Professional Specialist");
 
-        setProfileAbout(userData.bio || `With extensive experience in ${resolvedRole || "their field"}, ${profileName.split(" ")[0]} provides high-quality service.`);
+        setProfileAbout(userData.bio || `With extensive experience in ${resolvedRole || "their field"}, ${finalName.split(" ")[0]} provides high-quality service.`);
         setProfileSkills(userData.skills || "");
         setProfileExperience(userData.years_of_experience?.toString() || "0");
         
@@ -206,20 +230,20 @@ const ProfessionalProfile = () => {
         }
       };
 
-      setIsLoading(true);
-      
       // 1. Try Cache for instant UI
       const cached = localStorage.getItem(`prof_profile_${targetId}`);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
           applyData(parsed, []); // Apply cached data immediately
-          setIsLoading(false); // Stop loading spinner
         } catch (e) {
           console.warn("ProfessionalProfile: Cache parse fail", e);
         }
       }
 
+      setIsLoading(!cached);
+      setIsSyncing(!!cached);
+      
       try {
         const start = new Date(calendarView.year, calendarView.month, 1).toISOString().split('T')[0];
         const end = new Date(calendarView.year, calendarView.month + 1, 0).toISOString().split('T')[0];
@@ -235,7 +259,8 @@ const ProfessionalProfile = () => {
         // 4. Update UI with fresh data
         applyData(freshUser, catList);
         localStorage.setItem(`prof_profile_${targetId}`, JSON.stringify(freshUser));
-        setIsLoading(false); // Ensure loading is off as soon as main data is ready
+        setIsLoading(false); 
+        setIsSyncing(false); 
 
         // 5. Fetch calendar in background (Non-blocking)
         getCalendar(targetId, start, end)
@@ -567,1147 +592,823 @@ const ProfessionalProfile = () => {
 
   return (
     <div
-      className={`relative flex w-full bg-background-light dark:bg-background-dark font-display text-text-primary dark:text-white ${isProView ? "h-screen overflow-hidden" : "min-h-screen flex-col"}`}
+      className={`relative flex w-full bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white overflow-hidden ${isProView ? "h-screen" : "min-h-screen flex-col"}`}
     >
-      {isProView && <Sidebar />}
-      <div
-        className={`flex flex-col flex-1 ${isProView ? "overflow-hidden lg:ml-64" : "w-full"}`}
-      >
-        {!isProView ? <CustomerNavbar /> : <Header />}
-        <main
-          className={`flex-1 ${isProView ? "overflow-y-auto custom-scrollbar" : "w-full"}`}
+        {/* Background decorative blobs - matching customer dashboard */}
+        <div className="fixed top-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob"></div>
+        <div className="fixed bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-accent-cyan/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob [animation-delay:2s]"></div>
+        <div className="fixed top-[30%] left-[20%] w-[30%] h-[30%] bg-accent-purple/5 rounded-full blur-[120px] pointer-events-none z-0 animate-blob [animation-delay:4s]"></div>
+
+        {isProView && <Sidebar />}
+        <div
+          className={`flex flex-col flex-1 relative z-10 ${isProView ? "overflow-hidden lg:ml-64" : "w-full"}`}
         >
-          <div className="w-full max-w-7xl mx-auto px-4 sm:px-10 py-8">
-            <div className="w-full rounded-2xl shadow-soft bg-white dark:bg-card-dark mb-8 border border-border-color dark:border-slate-800">
-              <div
-                className="h-56 bg-cover bg-center rounded-t-2xl relative group"
-                style={{
-                  backgroundImage: `url('${user?.cover_image ? getImageUrl(user.cover_image) : professional.coverImage}')`,
-                }}
-              >
-                {isEditing && (
-                  <div className="absolute top-4 right-4 z-10">
-                    <label className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-4 py-2 rounded-xl shadow-lg border border-white/20 cursor-pointer flex items-center gap-2 hover:scale-105 transition-all hover:bg-white dark:hover:bg-slate-700">
-                      <span className="material-symbols-outlined text-primary">
-                        landscape
-                      </span>
-                      <span className="text-sm font-black text-text-primary dark:text-white">
-                        Change Cover
-                      </span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(e, "cover")}
-                      />
-                    </label>
+          {!isProView ? <CustomerNavbar /> : <Header />}
+          <main
+            className={`flex-1 relative ${isProView ? "overflow-y-auto custom-scrollbar" : "w-full"}`}
+          >
+            <div className="w-full max-w-6xl mx-auto px-4 sm:px-8 py-8 relative">
+              
+              {isProView && (
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 animate-fade-in-up">
+                  <div className="space-y-3">
+                    <h1 className="text-2xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
+                      <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">Profile</span> & Portfolio
+                    </h1>
+                    <div className="flex items-center gap-3">
+                      <span className="size-2.5 rounded-full bg-primary animate-pulse shadow-lg shadow-primary/20"></span>
+                      <p className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">
+                        Manage your public presence and professional ledger
+                      </p>
+                    </div>
                   </div>
-                )}
-              </div>
-              <div className="p-8 pb-12">
-                <div className="flex flex-col md:flex-row -mt-32 items-end relative z-10">
-                  <div
-                    className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl size-40 border-4 border-white dark:border-card-dark shadow-lg relative group overflow-hidden"
-                    style={{
-                      backgroundImage: `url('${professional.profileImage}')`,
-                    }}
-                  >
-                    {isEditing && (
-                      <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                        <label className="cursor-pointer flex flex-col items-center">
-                          <span className="material-symbols-outlined text-white text-3xl">
-                            photo_camera
-                          </span>
-                          <span className="text-[10px] text-white font-bold uppercase tracking-widest mt-1">
-                            Change
-                          </span>
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept="image/*"
-                            onChange={(e) => handleImageUpload(e, "profile")}
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 flex flex-col md:flex-row justify-between items-start md:items-end w-full mt-6 md:mt-0 md:ml-8">
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2 group/edit">
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={profileName}
-                            onChange={(e) => {
-                              const isUUID = (str: string) =>
-                                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-                                  str,
-                                );
-                              if (!isUUID(e.target.value))
-                                setProfileName(e.target.value);
-                              else setProfileName("");
-                            }}
-                            placeholder="Your Professional Name"
-                            className="text-3xl font-extrabold tracking-tight bg-slate-50 dark:bg-slate-800 border-2 border-primary rounded-xl px-3 py-1 outline-none text-text-primary dark:text-white shadow-sm w-full"
-                          />
-                        ) : (
-                          <h1 className="text-3xl font-extrabold tracking-tight text-text-primary dark:text-white">
-                            {profileName || "Professional Specialist"}
-                          </h1>
-                        )}
-                        {professional.verified && !isEditing && (
-                          <span
-                            className="material-symbols-outlined text-primary text-2xl"
-                            title="Verified Professional"
-                          >
-                            verified
-                          </span>
-                        )}
-                        {isProView && !isEditing && !isPreviewMode && (
-                          <button
-                            onClick={() => setIsEditing(true)}
-                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors border border-slate-200 dark:border-slate-700 shadow-sm bg-white dark:bg-slate-900"
-                          >
-                            <span className="material-symbols-outlined text-sm text-primary">
-                              edit
-                            </span>
-                          </button>
-                        )}
-                      </div>
+                  
+                  {isEditing ? (
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => setIsEditing(false)}
+                        className="px-8 py-4 bg-white/80 dark:bg-slate-800/60 backdrop-blur-3xl border border-slate-100 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-700 dark:hover:text-white transition-all shadow-sm active:scale-95"
+                      >
+                        Cancel Changes
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        className="px-10 py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 group"
+                      >
+                        <span className="material-symbols-outlined text-base group-hover:rotate-12 transition-transform">save</span>
+                        Contact Info
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={togglePreview}
+                      className={`flex items-center gap-3 px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 group ${isPreviewMode ? "bg-primary text-white shadow-primary/20" : "bg-white/80 dark:bg-slate-800/60 backdrop-blur-3xl text-primary border border-primary shadow-primary/5 hover:bg-primary/5"}`}
+                    >
+                      <span className="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">
+                        {isPreviewMode ? "edit_note" : "visibility"}
+                      </span>
+                      {isPreviewMode ? "Back to Operations" : "Client Preview Mode"}
+                    </button>
+                  )}
+                </div>
+              )}
 
-                      {isEditing ? (
-                        <select
-                          value={profileServiceId || ""}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setProfileServiceId(val);
-                            const matched = serviceCategories.find(c => c.id === val);
-                            if (matched) setProfileRole(matched.name);
-                          }}
-                          className="text-xl font-medium bg-slate-50 dark:bg-slate-800 border-2 border-primary rounded-xl px-3 py-1 outline-none mt-3 text-text-secondary dark:text-gray-400 shadow-sm w-full cursor-pointer"
-                        >
-                          <option value="">Select Category</option>
-                          {serviceCategories.map((cat: any) => (
-                            <option key={cat.id} value={cat.id}>
-                              {cat.name}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <p className="text-xl font-medium text-text-secondary dark:text-gray-400 mt-1">
-                          {profileRole || "Professional Specialist"}
-                        </p>
+              <div className="w-full rounded-[2.5rem] shadow-2xl bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl mb-12 border border-slate-100 dark:border-slate-800/50 overflow-hidden animate-fade-in-up [animation-delay:100ms]">
+                <div
+                  className="h-60 bg-cover bg-center relative group"
+                  style={{
+                    backgroundImage: `url('${user?.cover_image ? getImageUrl(user.cover_image) : professional.coverImage}')`,
+                  }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60"></div>
+                  {isEditing && (
+                    <div className="absolute top-8 right-8 z-10">
+                      <label className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl px-6 py-3 rounded-2xl shadow-2xl border border-white/20 cursor-pointer flex items-center gap-3 hover:scale-105 transition-all hover:bg-white group">
+                        <span className="material-symbols-outlined text-primary font-black group-hover:rotate-12 transition-transform">landscape</span>
+                        <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest">
+                          Switch Cover
+                        </span>
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, "cover")}
+                        />
+                      </label>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="p-10 md:p-14 pb-16">
+                  <div className="flex flex-col md:flex-row -mt-28 items-end relative z-10 gap-8">
+                    <div
+                      className="size-40 bg-center bg-no-repeat bg-cover rounded-[2rem] border-[6px] border-white dark:border-slate-900 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] relative group overflow-hidden transition-transform duration-700 hover:rotate-3"
+                      style={{
+                        backgroundImage: `url('${professional.profileImage}')`,
+                      }}
+                    >
+                      {isEditing && (
+                        <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 cursor-pointer">
+                          <label className="cursor-pointer flex flex-col items-center gap-2">
+                            <div className="size-12 rounded-2xl bg-white/20 flex items-center justify-center">
+                              <span className="material-symbols-outlined text-white text-3xl font-black">photo_camera</span>
+                            </div>
+                            <span className="text-[10px] text-white font-black uppercase tracking-[0.2em]">Update</span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={(e) => handleImageUpload(e, "profile")}
+                            />
+                          </label>
+                        </div>
                       )}
-
-                      <div className="flex items-center gap-4 text-sm text-text-secondary dark:text-gray-400 mt-3 flex-wrap">
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Rating
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="material-symbols-outlined text-amber-500"
-                              style={{ fontVariationSettings: "'FILL' 1" }}
-                            >
-                              star
-                            </span>
-                            <span className="text-xl font-black text-slate-900 dark:text-white">
-                              {profileRating}
-                            </span>
-                            <span className="text-xs font-bold text-slate-400">
-                              ({profileReviewsCount})
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1">
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            Starting Price
-                          </p>
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="text-xl font-black text-primary">
-                              {profilePrice || 0}
-                            </span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                              ETB
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-base">
-                            work_history
-                          </span>
+                    </div>
+                    
+                    <div className="flex-1 flex flex-col md:flex-row justify-between items-start md:items-end w-full">
+                      <div className="flex flex-col space-y-4">
+                        <div className="flex items-center gap-4">
                           {isEditing ? (
                             <input
                               type="text"
-                              value={profileExperience}
-                              onChange={(e) =>
-                                setProfileExperience(e.target.value)
-                              }
-                              className="w-12 bg-slate-50 dark:bg-slate-800 border-b border-primary outline-none"
+                              value={profileName}
+                              onChange={(e) => {
+                                const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+                                if (!isUUID(e.target.value)) setProfileName(e.target.value);
+                              }}
+                              className="text-4xl font-black tracking-tight bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-xl border-2 border-primary rounded-2xl px-6 py-3 outline-none text-slate-900 dark:text-white shadow-inner w-full max-w-md"
                             />
                           ) : (
-                            <span>{profileExperience}+ years experience</span>
+                            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
+                              {profileName || "Professional Specialist"}
+                            </h1>
+                          )}
+                          {professional.verified && !isEditing && (
+                            <div className="size-10 bg-primary/10 dark:bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-sm" title="Verified Professional">
+                              <BadgeCheck size={24} className="text-primary" />
+                            </div>
+                          )}
+                          {isSyncing && (
+                            <div className="flex items-center gap-2 px-3 py-1 bg-slate-100 dark:bg-slate-800 rounded-full animate-pulse">
+                              <Loader2 size={12} className="animate-spin text-primary" />
+                              <span className="text-[10px] font-bold text-slate-400">Syncing</span>
+                            </div>
+                          )}
+                          {isProView && !isEditing && !isPreviewMode && (
+                            <button
+                              onClick={() => setIsEditing(true)}
+                              className="p-3 bg-white/80 dark:bg-slate-800/60 backdrop-blur-3xl hover:bg-primary hover:text-white rounded-2xl transition-all border border-slate-200 dark:border-slate-700 shadow-sm active:scale-95 group"
+                            >
+                              <Edit2 size={20} className="group-hover:rotate-12 transition-transform" />
+                            </button>
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 flex-1 max-w-md">
-                          <span className="material-symbols-outlined text-base">
-                            location_on
-                          </span>
+
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-6">
                           {isEditing ? (
-                            <LocationInput
-                              value={profileLocation}
-                              onSelect={(loc) => setProfileLocation(loc)}
-                              className="w-full bg-slate-50 dark:bg-slate-800 border-b border-primary outline-none px-2"
-                            />
+                            <select
+                              value={profileServiceId || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setProfileServiceId(val);
+                                const matched = serviceCategories.find(c => c.id === val);
+                                if (matched) setProfileRole(matched.name);
+                              }}
+                              className="text-xl font-bold bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-xl border-2 border-primary rounded-2xl px-6 py-3 outline-none text-primary shadow-inner min-w-[280px] cursor-pointer"
+                            >
+                              <option value="">Select Domain</option>
+                              {serviceCategories.map((cat: any) => (
+                                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                              ))}
+                            </select>
                           ) : (
-                            <span>{profileLocation}</span>
+                            <div className="flex items-center gap-3">
+                              <div className="size-2.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/20 animate-pulse"></div>
+                              <p className="text-xl font-bold text-slate-500 dark:text-slate-400">
+                                {profileRole || "Professional Specialist"}
+                              </p>
+                            </div>
                           )}
+                        </div>
+
+                        <div className="flex items-center gap-10 flex-wrap pt-4">
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">Composite Rating</p>
+                            <div className="flex items-center gap-3">
+                              <Stars count={profileRating} className="text-lg" />
+                              <span className="text-2xl font-black text-slate-900 dark:text-white">{profileRating}</span>
+                              <span className="text-xs font-bold text-slate-400">({profileReviewsCount})</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">Base Service Rate</p>
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-3xl font-black text-primary tracking-tighter">{profilePrice || 0}</span>
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">ETB / Cycle</span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">Service Tenure</p>
+                            <div className="flex items-center gap-2">
+                              <History size={20} className="text-slate-400" />
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={profileExperience}
+                                  onChange={(e) => setProfileExperience(e.target.value)}
+                                  className="w-16 text-xl font-black bg-slate-50/50 dark:bg-slate-800/30 border-b-2 border-primary outline-none px-2 py-1"
+                                />
+                              ) : (
+                                <span className="text-xl font-black text-slate-700 dark:text-slate-300">{profileExperience}+ <span className="text-xs uppercase tracking-widest text-slate-400 font-bold ml-1">Years</span></span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2 flex-1 min-w-[200px]">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">Service Area</p>
+                            <div className="flex items-center gap-3">
+                              <MapPin size={20} className="text-slate-400" />
+                              {isEditing ? (
+                                <LocationInput
+                                  value={profileLocation}
+                                  onSelect={(loc) => setProfileLocation(loc)}
+                                  className="w-full text-lg font-black bg-slate-50/50 dark:bg-slate-800/30 border-b-2 border-primary outline-none px-4 py-1"
+                                />
+                              ) : (
+                                <span className="text-lg font-black text-slate-700 dark:text-slate-300">{profileLocation}</span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex w-full md:w-auto items-center gap-3 mt-6 md:mt-0">
-                      {isProView && isEditing && (
-                        <>
-                          <button
-                            onClick={() => setIsEditing(false)}
-                            className="flex h-10 items-center justify-center rounded-full px-6 text-sm font-black transition-all border-2 border-slate-200 text-slate-500 hover:bg-slate-50 shadow-sm"
-                          >
-                            <span>Cancel</span>
-                          </button>
-                          <button
-                            onClick={handleSave}
-                            className="flex h-10 items-center justify-center rounded-full px-6 text-sm font-black transition-all bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/30"
-                          >
-                            <span className="material-symbols-outlined mr-2 text-base">
-                              save
-                            </span>
-                            <span>Save Changes</span>
-                          </button>
-                        </>
-                      )}
-                      {isProView && !isEditing && (
-                        <button
-                          onClick={togglePreview}
-                          className={`flex h-10 items-center justify-center rounded-full px-6 text-sm font-black transition-all border-2 shadow-md ${isPreviewMode ? "bg-primary text-white border-primary ring-4 ring-primary/20" : "bg-white text-primary border-primary hover:bg-primary/5"}`}
-                        >
-                          <span className="material-symbols-outlined mr-2 text-base">
-                            {isPreviewMode ? "edit_note" : "visibility"}
-                          </span>
-                          <span>
-                            {isPreviewMode
-                              ? "Back to Editor"
-                              : "See Customer View"}
-                          </span>
-                        </button>
-                      )}
-                      {!isProView && (
-                        <>
-                          {hasAcceptedJob ? (
-                            <button
-                              onClick={handleChat}
-                              className="flex-1 sm:flex-none h-14 px-10 rounded-2xl font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-3 active:scale-95 bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/30 ring-4 ring-primary/20 animate-pulse-soft"
-                            >
-                              <span className="material-symbols-outlined">
-                                chat
-                              </span>
-                              Message Pro
-                            </button>
-                          ) : (
-                            <button
-                              onClick={handleEstimateRequest}
-                              disabled={estimateRequested}
-                              className={`flex-1 sm:flex-none h-14 px-10 rounded-2xl font-black uppercase tracking-widest text-xs shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95 ${estimateRequested ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none" : "bg-primary text-white hover:bg-primary/90 hover:shadow-primary/30"}`}
-                            >
-                              <span className="material-symbols-outlined">
-                                add
-                              </span>
-                              {estimateRequested
-                                ? "Inquiry Sent"
-                                : "Request Estimate"}
-                            </button>
-                          )}
-                          <button
-                            onClick={() => {
-                              const currentFavorites = JSON.parse(
-                                localStorage.getItem("user_favorites") || "[]",
-                              );
-                              let newFavorites;
-                              if (!isFavorited) {
-                                newFavorites = [...currentFavorites, id];
-                              } else {
-                                newFavorites = currentFavorites.filter(
-                                  (fid: string) => fid !== id,
-                                );
-                              }
-                              localStorage.setItem(
-                                "user_favorites",
-                                JSON.stringify(newFavorites),
-                              );
-                              setIsFavorited(!isFavorited);
-                            }}
-                            className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 transition-all ${isFavorited ? "border-red-500 bg-red-50 text-red-500" : "border-slate-200 dark:border-slate-700 bg-white dark:bg-card-dark text-text-secondary dark:text-gray-400 hover:text-red-500 hover:border-red-200"}`}
-                          >
-                            <span
-                              className="material-symbols-outlined"
-                              style={{
-                                fontVariationSettings: isFavorited
-                                  ? "'FILL' 1"
-                                  : "'FILL' 0",
-                              }}
-                            >
-                              {isFavorited ? "favorite" : "favorite_border"}
-                            </span>
-                          </button>
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex flex-col lg:flex-row gap-8">
-              <aside className="w-full lg:w-72 flex-shrink-0">
-                <div className="sticky top-28 space-y-4">
-                  <nav className="p-3 rounded-2xl shadow-soft bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800">
-                    <div className="flex flex-col gap-1">
-                      <a
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary font-bold text-sm transition-all"
-                        href="#about"
-                      >
-                        <span className="material-symbols-outlined">
-                          person
-                        </span>
-                        <span>About</span>
-                      </a>
-                      <a
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary transition-all font-semibold text-sm"
-                        href="#portfolio"
-                      >
-                        <span className="material-symbols-outlined">
-                          grid_view
-                        </span>
-                        <span>Portfolio</span>
-                      </a>
+              {!isProView && (
+                <div className="flex items-center gap-4 mb-12 animate-fade-in-up [animation-delay:200ms]">
+                  {hasAcceptedJob ? (
+                    <button
+                      onClick={handleChat}
+                      className="flex-1 sm:flex-none h-16 px-12 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] transition-all flex items-center justify-center gap-3 active:scale-95 bg-primary text-white hover:bg-primary/90 shadow-xl shadow-primary/30 ring-8 ring-primary/5"
+                    >
+                      <span className="material-symbols-outlined">chat</span>
+                      Establish Communications
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleEstimateRequest}
+                      disabled={estimateRequested}
+                      className={`flex-1 sm:flex-none h-16 px-12 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-2xl transition-all flex items-center justify-center gap-3 active:scale-95 ${estimateRequested ? "bg-slate-200 dark:bg-slate-800/40 text-slate-400 cursor-not-allowed shadow-none" : "bg-primary text-white hover:bg-primary/90 hover:shadow-primary/30 hover:scale-[1.02]"}`}
+                    >
+                      <span className="material-symbols-outlined">{estimateRequested ? "pending" : "rocket_launch"}</span>
+                      {estimateRequested ? "Estimate Sent" : "Request an Estimate"}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      const currentFavorites = JSON.parse(localStorage.getItem("user_favorites") || "[]");
+                      let newFavorites;
+                      if (!isFavorited) {
+                        newFavorites = [...currentFavorites, id];
+                      } else {
+                        newFavorites = currentFavorites.filter((fid: string) => fid !== id);
+                      }
+                      localStorage.setItem("user_favorites", JSON.stringify(newFavorites));
+                      setIsFavorited(!isFavorited);
+                    }}
+                    className={`size-16 flex items-center justify-center rounded-2xl border-2 transition-all ${isFavorited ? "border-rose-500 bg-rose-50 dark:bg-rose-500/10 text-rose-500" : "border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl text-slate-400 hover:text-rose-500 hover:border-rose-200"}`}
+                  >
+                    <span className="material-symbols-outlined" style={{ fontVariationSettings: isFavorited ? "'FILL' 1" : "'FILL' 0" }}>
+                      {isFavorited ? "favorite" : "favorite_border"}
+                    </span>
+                  </button>
+                </div>
+              )}
 
-                      <a
-                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary transition-all font-semibold text-sm"
-                        href="#availability"
-                      >
-                        <span className="material-symbols-outlined">
-                          calendar_today
-                        </span>
-                        <span>Availability</span>
-                      </a>
-                      {(!isProView || isPreviewMode) && (
+              <div className="flex flex-col lg:flex-row gap-12 items-start">
+                <aside className="w-full lg:w-80 flex-shrink-0 lg:sticky lg:top-32">
+                  <nav className="p-4 rounded-[2.5rem] bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl border border-slate-100 dark:border-slate-800/50 shadow-2xl">
+                    <div className="flex flex-col gap-2">
+                      {[
+                        { id: "about", icon: "person", label: "Operations Bio" },
+                        { id: "portfolio", icon: "grid_view", label: "Service Catalog" },
+                        { id: "availability", icon: "calendar_today", label: "Work Calendar" },
+                        { id: "reviews", icon: "star", label: "Network Feedback", hide: isProView && !isPreviewMode }
+                      ].filter(item => !item.hide).map((item) => (
                         <a
-                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-text-secondary dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary transition-all font-semibold text-sm"
-                          href="#reviews"
+                          key={item.id}
+                          href={`#${item.id}`}
+                          className="flex items-center gap-4 px-6 py-4 rounded-2xl text-slate-500 dark:text-slate-400 hover:bg-primary hover:text-white transition-all duration-300 font-black text-[10px] uppercase tracking-widest group"
                         >
-                          <span className="material-symbols-outlined">
-                            star
-                          </span>
-                          <span>Reviews</span>
+                          <span className="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">{item.icon}</span>
+                          <span>{item.label}</span>
                         </a>
-                      )}
+                      ))}
                     </div>
                   </nav>
-                </div>
-              </aside>
+                </aside>
 
-              <div className="flex-1 flex flex-col gap-8">
-                <section
-                  className="p-8 rounded-2xl shadow-soft bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 scroll-mt-28"
-                  id="about"
-                >
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold tracking-tight text-text-primary dark:text-white">
-                      About {profileName.split(" ")[0]}
-                    </h2>
-                    {isProView && !isEditing && !isPreviewMode && (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="flex items-center gap-1 text-primary text-xs font-bold hover:underline"
-                      >
-                        <span className="material-symbols-outlined text-sm">
-                          edit
-                        </span>{" "}
-                        Edit
-                      </button>
+                <div className="flex-1 space-y-12 w-full">
+                  <section id="about" className="p-8 md:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl shadow-2xl scroll-mt-32">
+                    <div className="flex items-center justify-between mb-10">
+                      <div className="space-y-1">
+                        <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                          About <span className="text-primary">Me</span>
+                        </h2>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Skills & Expertise</p>
+                      </div>
+                      {isProView && !isEditing && !isPreviewMode && (
+                        <button
+                          onClick={() => setIsEditing(true)}
+                          className="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-sm active:scale-95"
+                        >
+                          <span className="material-symbols-outlined">edit</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {isEditing ? (
+                      <textarea
+                        value={profileAbout}
+                        onChange={(e) => setProfileAbout(e.target.value)}
+                        rows={6}
+                        className="w-full text-slate-600 dark:text-slate-300 leading-relaxed text-lg bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-xl border-2 border-primary rounded-[2rem] p-8 outline-none resize-none focus:ring-4 ring-primary/10 shadow-inner font-medium"
+                        placeholder="Describe your professional trajectory..."
+                      />
+                    ) : (
+                      <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-lg font-medium">
+                        {profileAbout}
+                      </p>
                     )}
-                  </div>
 
-                  {isEditing ? (
-                    <textarea
-                      value={profileAbout}
-                      onChange={(e) => setProfileAbout(e.target.value)}
-                      rows={6}
-                      className="w-full text-text-secondary dark:text-gray-400 leading-relaxed text-lg bg-slate-50 dark:bg-slate-800 border-2 border-primary rounded-xl p-4 outline-none resize-none focus:ring-2 ring-primary/20 shadow-inner"
-                    />
-                  ) : (
-                    <p className="text-text-secondary dark:text-gray-400 leading-relaxed text-lg">
-                      {profileAbout}
-                    </p>
-                  )}
-                  <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                      <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-text-primary dark:text-white">
-                        <span className="material-symbols-outlined text-primary">
-                          bolt
-                        </span>{" "}
-                        Skills
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {isEditing ? (
-                          <textarea
-                            value={profileSkills}
-                            onChange={(e) => setProfileSkills(e.target.value)}
-                            placeholder="Add skills separated by commas..."
-                            className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-primary rounded-xl p-3 outline-none text-sm text-text-secondary"
-                          />
-                        ) : (
-                          profileSkills
-                            .split(",")
-                            .map((skill: string) => skill.trim())
-                            .filter(Boolean)
-                            .map((skill: string) => (
-                              <span
-                                key={skill}
-                                className="px-4 py-1.5 text-sm rounded-full bg-primary/5 text-primary font-semibold border border-primary/10"
-                              >
+                    <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-12">
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                            <span className="material-symbols-outlined font-black">bolt</span>
+                          </div>
+                          <h3 className="font-black text-sm uppercase tracking-widest text-slate-900 dark:text-white">Hard Skills</h3>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          {isEditing ? (
+                            <textarea
+                              value={profileSkills}
+                              onChange={(e) => setProfileSkills(e.target.value)}
+                              placeholder="Add skills separated by commas..."
+                              className="w-full bg-slate-50/50 dark:bg-slate-800/30 border-2 border-primary rounded-2xl p-6 outline-none text-sm font-bold text-slate-700 dark:text-slate-200"
+                            />
+                          ) : (
+                            profileSkills.split(",").map(s => s.trim()).filter(Boolean).map((skill) => (
+                              <span key={skill} className="px-5 py-2 text-[10px] font-black uppercase tracking-widest rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors hover:border-primary/30">
                                 {skill}
                               </span>
                             ))
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-text-primary dark:text-white">
-                        <span className="material-symbols-outlined text-primary">
-                          contact_phone
-                        </span>{" "}
-                        Contact Info
-                      </h3>
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                          <span className="material-symbols-outlined text-text-secondary">
-                            call
-                          </span>
-                          <p className="text-xs text-text-secondary dark:text-gray-500 font-bold uppercase tracking-wider">
-                            Phone Number
-                          </p>
-                          <p className="text-text-primary dark:text-white font-bold">
-                            {profilePhone
-                              ? profilePhone
-                              : isProView
-                                ? "Add phone in settings"
-                                : "Not shared yet"}
-                          </p>
+                          )}
                         </div>
-                        <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700">
-                          <span className="material-symbols-outlined text-text-secondary">
-                            location_on
-                          </span>
-                          <div>
-                            <p className="text-xs text-text-secondary dark:text-gray-500 font-bold uppercase tracking-wider">
-                              Base Location
-                            </p>
-                            <p className="text-text-primary dark:text-white font-bold">
-                              {profileLocation}
-                            </p>
+                      </div>
+
+                      <div className="space-y-6">
+                        <div className="flex items-center gap-3">
+                          <div className="size-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                            <span className="material-symbols-outlined font-black">contact_emergency</span>
+                          </div>
+                          <h3 className="font-black text-sm uppercase tracking-widest text-slate-900 dark:text-white">Secure Contacts</h3>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-5 p-5 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-700/50 group hover:border-primary/30 transition-all">
+                            <span className="material-symbols-outlined text-slate-400 group-hover:text-primary transition-colors">call</span>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Signal Number</p>
+                              <p className="text-slate-900 dark:text-white font-black">{profilePhone || (isProView ? "Update in Settings" : "Classified")}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-5 p-5 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-700/50 group hover:border-emerald-500/30 transition-all">
+                            <span className="material-symbols-outlined text-slate-400 group-hover:text-emerald-500 transition-colors">translate</span>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Linguistic Proficiencies</p>
+                              <p className="text-slate-900 dark:text-white font-black">{profileLanguages.join(", ") || "Amharic, English"}</p>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div>
-                      <h3 className="font-bold text-lg mb-4 flex items-center gap-2 text-text-primary dark:text-white">
-                        <span className="material-symbols-outlined text-primary">
-                          translate
-                        </span>{" "}
-                        Languages
-                      </h3>
-                      <div className="flex flex-wrap gap-2">
-                        {isEditing ? (
-                          <textarea
-                            value={profileLanguages.join(", ")}
-                            onChange={(e) =>
-                              setProfileLanguages(
-                                e.target.value.split(",").map((l) => l.trim()),
-                              )
-                            }
-                            placeholder="English (Fluent), Amharic (Native)..."
-                            className="w-full bg-slate-50 dark:bg-slate-800 border-2 border-primary rounded-xl p-3 outline-none text-sm text-text-secondary"
-                          />
-                        ) : (
-                          profileLanguages.map((lang: string) => (
-                            <span
-                              key={lang}
-                              className="px-4 py-1.5 text-sm rounded-full bg-slate-100 dark:bg-slate-800 text-text-primary dark:text-white font-semibold border border-slate-200 dark:border-slate-700"
-                            >
-                              {lang}
-                            </span>
-                          ))
+                  </section>
+
+
+                  {(profilePortfolio.length > 0 || isProView) && (
+                    <section id="portfolio" className="p-8 md:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl shadow-2xl scroll-mt-32">
+                      <div className="flex items-center justify-between mb-10">
+                        <div className="space-y-1">
+                          <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                            Service <span className="text-primary">Catalog</span>
+                          </h2>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Authenticated Portfolio & Works</p>
+                        </div>
+                        {isProView && (
+                          <button
+                            onClick={() => setIsPortfolioModalOpen(true)}
+                            className="bg-primary text-white px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                          >
+                            <span className="material-symbols-outlined text-base">add</span>
+                            Add Work
+                          </button>
                         )}
                       </div>
-                    </div>
-                  </div>
-                </section>
 
-                {(profilePortfolio.length > 0 || isProView) && (
-                  <section
-                    className="p-8 rounded-2xl shadow-soft bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 scroll-mt-28"
-                    id="portfolio"
-                  >
-                    <div className="flex items-center justify-between mb-8">
-                      <div className="flex items-center gap-4">
-                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-2xl">
-                          <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">
-                            photo_library
-                          </span>
-                        </div>
-                        <h2 className="text-2xl font-bold text-text-primary dark:text-white">
-                          Portfolio & Certifications
-                        </h2>
-                      </div>
-                      {isProView && (
-                        <button
-                          onClick={() => setIsPortfolioModalOpen(true)}
-                          className="bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors flex items-center gap-2"
-                        >
-                          <span className="material-symbols-outlined text-base">
-                            add
-                          </span>
-                          Add Work
-                        </button>
-                      )}
-                    </div>
-
-                    {profilePortfolio.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        {profilePortfolio.map((item, index) => (
-                          <div
-                            key={index}
-                            className="group relative rounded-2xl overflow-hidden border border-border-color dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50"
-                          >
-                            {item.type === "file" ||
-                            item.img?.endsWith(".pdf") ? (
-                              <div className="aspect-video flex flex-col items-center justify-center p-6 text-center">
-                                <div className="p-4 bg-red-50 dark:bg-red-900/30 rounded-2xl mb-3">
-                                  <span className="material-symbols-outlined text-red-600 dark:text-red-400 text-4xl">
-                                    description
-                                  </span>
+                      {profilePortfolio.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                          {profilePortfolio.map((item, index) => (
+                            <div key={index} className="group relative rounded-[2rem] overflow-hidden border border-slate-100 dark:border-slate-800/50 bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl transition-all duration-500 hover:shadow-2xl">
+                              {item.type === "file" || item.img?.endsWith(".pdf") ? (
+                                <div className="aspect-video flex flex-col items-center justify-center p-10 text-center">
+                                  <div className="size-20 bg-rose-500/10 rounded-[2rem] mb-4 flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-rose-500 text-4xl font-black">description</span>
+                                  </div>
+                                  <p className="text-sm font-black text-slate-900 dark:text-white line-clamp-1 px-4">{item.title}</p>
+                                  <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-2">Document Fragment</p>
                                 </div>
-                                <p className="text-sm font-medium text-text-primary dark:text-white line-clamp-1 px-4">
-                                  {item.title}
-                                </p>
-                                <p className="text-xs text-text-secondary dark:text-gray-400 mt-1 uppercase">
-                                  Document File
-                                </p>
+                              ) : (
+                                <div className="aspect-video overflow-hidden">
+                                  <img src={item.img || item.url} alt={item.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 group-hover:rotate-1" />
+                                </div>
+                              )}
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-8">
+                                <p className="text-white font-black text-xl transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">{item.title}</p>
+                                <button className="mt-4 text-primary font-black text-[10px] uppercase tracking-widest flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500 delay-75">
+                                  View Artifact <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                </button>
                               </div>
-                            ) : (
-                              <img
-                                src={item.img || item.url}
-                                alt={item.title}
-                                className="w-full aspect-video object-cover transition-transform duration-500 group-hover:scale-110"
-                              />
-                            )}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 flex flex-col justify-end p-6">
-                              <p className="text-white font-medium text-lg transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                                {item.title}
-                              </p>
-                              <button className="mt-3 text-white/80 text-sm hover:text-white flex items-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 delay-75">
-                                View Full Size{" "}
-                                <span className="material-symbols-outlined text-sm">
-                                  open_in_new
-                                </span>
-                              </button>
                             </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="py-20 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[3rem] bg-slate-50/30 dark:bg-slate-900/10">
+                          <span className="material-symbols-outlined text-5xl text-slate-200 dark:text-slate-800 mb-6 font-light">collections</span>
+                          <p className="text-slate-400 dark:text-slate-500 text-sm font-black uppercase tracking-widest">No Artifacts Registered</p>
+                          {isProView && <p className="text-slate-300 dark:text-slate-600 text-[10px] mt-2 font-bold">Add projects to your portfolio to attract more customers.</p>}
+                        </div>
+                      )}
+                    </section>
+                  )}
+
+                  <section id="availability" className="p-8 md:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl shadow-2xl scroll-mt-32">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-6">
+                      <div className="space-y-1">
+                        <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                          Work <span className="text-primary">Calendar</span>
+                        </h2>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Real-time Availability Status</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-6 px-6 py-3 bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-3xl rounded-2xl border border-slate-100 dark:border-slate-700/50">
+                        {[
+                          { color: "bg-primary shadow-primary/40", label: "Ready" },
+                          { color: "bg-rose-500 shadow-rose-500/40", label: "Deployed" },
+                          { color: "bg-slate-300 dark:bg-slate-600", label: "Offline" }
+                        ].map(status => (
+                          <div key={status.label} className="flex items-center gap-2">
+                            <div className={`size-2.5 rounded-full ${status.color} shadow-lg`}></div>
+                            <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-tighter">{status.label}</span>
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      <div className="py-12 flex flex-col items-center justify-center text-center border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-3xl">
-                        <span className="material-symbols-outlined text-4xl text-slate-200 dark:text-slate-700 mb-4 font-light">
-                          collections
-                        </span>
-                        <p className="text-slate-400 dark:text-slate-500 text-sm font-medium">
-                          No portfolio items added yet.
-                        </p>
-                        {isProView && (
-                          <p className="text-slate-300 dark:text-slate-600 text-xs mt-1">
-                            Upload photos of your past work to attract more
-                            clients.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </section>
-                )}
-
-                <section
-                  className="p-8 rounded-2xl shadow-soft bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 scroll-mt-28"
-                  id="availability"
-                >
-                  <div className="flex items-center justify-between mb-8">
-                    <h2 className="text-2xl font-bold tracking-tight text-text-primary dark:text-white">
-                      Availability Calendar
-                    </h2>
-                    <div className="flex items-center gap-4 text-xs font-bold uppercase tracking-tighter">
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary-rgb),0.5)]"></div>
-                        <span className="text-text-secondary dark:text-gray-400">
-                          Available
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.5)]"></div>
-                        <span className="text-text-secondary dark:text-gray-400">
-                          Booked
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-slate-300 dark:bg-slate-600"></div>
-                        <span className="text-text-secondary dark:text-gray-400">
-                          Unavailable
-                        </span>
-                      </div>
                     </div>
-                  </div>
-                  <div className="w-full">
-                    {(() => {
-                      // Calendar Logic
-                      const daysInMonth = new Date(
-                        calendarView.year,
-                        calendarView.month + 1,
-                        0,
-                      ).getDate();
-                      const firstDayOfMonth = new Date(
-                        calendarView.year,
-                        calendarView.month,
-                        1,
-                      ).getDay();
 
-                      // Previous month filler
-                      const prevMonthLastDay = new Date(
-                        calendarView.year,
-                        calendarView.month,
-                        0,
-                      ).getDate();
-                      const prevMonthDays = [];
-                      for (let i = firstDayOfMonth - 1; i >= 0; i--) {
-                        prevMonthDays.push(prevMonthLastDay - i);
-                      }
+                    <div className="w-full">
+                      {(() => {
+                        const daysInMonth = new Date(calendarView.year, calendarView.month + 1, 0).getDate();
+                        const firstDayOfMonth = new Date(calendarView.year, calendarView.month, 1).getDay();
+                        const prevMonthLastDay = new Date(calendarView.year, calendarView.month, 0).getDate();
+                        const prevMonthDays = [];
+                        for (let i = firstDayOfMonth - 1; i >= 0; i--) { prevMonthDays.push(prevMonthLastDay - i); }
 
-                      return (
-                        <>
-                          <div className="flex justify-between items-center mb-6 px-4">
-                            <button
-                              onClick={() => {
-                                const isCurrentMonth =
-                                  calendarView.month === now.getMonth() &&
-                                  calendarView.year === now.getFullYear();
-                                if (isCurrentMonth) return; // Prevent going back from present month
-                                setCalendarView((prev) =>
-                                  prev.month === 0
-                                    ? { month: 11, year: prev.year - 1 }
-                                    : { ...prev, month: prev.month - 1 },
-                                );
-                              }}
-                              disabled={
-                                calendarView.month === now.getMonth() &&
-                                calendarView.year === now.getFullYear()
-                              }
-                              className={`p-2.5 rounded-full transition-colors border shadow-sm ${calendarView.month === now.getMonth() && calendarView.year === now.getFullYear() ? "opacity-20 cursor-not-allowed" : "hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-700"}`}
-                            >
-                              <span className="material-symbols-outlined text-xl text-text-primary dark:text-white">
-                                chevron_left
-                              </span>
-                            </button>
-                            <h3 className="font-extrabold text-xl text-text-primary dark:text-white">
-                              {monthNames[calendarView.month]}{" "}
-                              {calendarView.year}
-                            </h3>
-                            <button
-                              onClick={() =>
-                                setCalendarView((prev) =>
-                                  prev.month === 11
-                                    ? { month: 0, year: prev.year + 1 }
-                                    : { ...prev, month: prev.month + 1 },
-                                )
-                              }
-                              className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border border-slate-200 dark:border-slate-700 shadow-sm"
-                            >
-                              <span className="material-symbols-outlined text-xl text-text-primary dark:text-white">
-                                chevron_right
-                              </span>
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-7 gap-px bg-slate-200 dark:bg-slate-700 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
-                            {[
-                              "SUN",
-                              "MON",
-                              "TUE",
-                              "WED",
-                              "THU",
-                              "FRI",
-                              "SAT",
-                            ].map((day) => (
-                              <div
-                                key={day}
-                                className="bg-slate-50 dark:bg-slate-900 py-4 text-center text-xs font-black text-text-secondary dark:text-gray-400"
+                        return (
+                          <>
+                            <div className="flex justify-between items-center mb-8 px-4">
+                              <button
+                                onClick={() => {
+                                  if (calendarView.month === now.getMonth() && calendarView.year === now.getFullYear()) return;
+                                  setCalendarView(prev => prev.month === 0 ? { month: 11, year: prev.year - 1 } : { ...prev, month: prev.month - 1 });
+                                }}
+                                disabled={calendarView.month === now.getMonth() && calendarView.year === now.getFullYear()}
+                                className="size-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl flex items-center justify-center hover:bg-primary hover:text-white transition-all disabled:opacity-20"
                               >
-                                {day}
-                              </div>
-                            ))}
+                                <span className="material-symbols-outlined">chevron_left</span>
+                              </button>
+                              <h3 className="font-black text-2xl text-slate-900 dark:text-white tracking-tight text-center">
+                                {monthNames[calendarView.month]} <span className="text-primary">{calendarView.year}</span>
+                              </h3>
+                              <button
+                                onClick={() => setCalendarView(prev => prev.month === 11 ? { month: 0, year: prev.year + 1 } : { ...prev, month: prev.month + 1 })}
+                                className="size-12 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl flex items-center justify-center hover:bg-primary hover:text-white transition-all"
+                              >
+                                <span className="material-symbols-outlined">chevron_right</span>
+                              </button>
+                            </div>
 
-                            {/* Previous Month Days Filler (No numbers) */}
-                            {prevMonthDays.map((d) => (
-                              <div
-                                key={`prev-${d}`}
-                                className="bg-slate-50/30 dark:bg-slate-900/10 h-28 border-r border-b border-slate-50 dark:border-slate-700/30"
-                              ></div>
-                            ))}
+                            <div className="grid grid-cols-7 gap-4">
+                              {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map(day => (
+                                <div key={day} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest pb-2">{day}</div>
+                              ))}
+                              {prevMonthDays.map(d => (
+                                <div key={`prev-${d}`} className="h-32 rounded-3xl bg-slate-50/30 dark:bg-slate-900/10 border border-transparent opacity-20"></div>
+                              ))}
+                              {[...Array(daysInMonth)].map((_, i) => {
+                                const day = i + 1;
+                                const dateObj = new Date(calendarView.year, calendarView.month, day);
+                                const dateString = dateObj.toISOString().split("T")[0];
+                                const isToday = day === now.getDate() && calendarView.month === now.getMonth() && calendarView.year === now.getFullYear();
+                                const isPast = dateObj < new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                                const isGenerallyAvailable = availableDays.includes(dateObj.getDay());
+                                const isBookedByJob = jobDates.includes(dateString);
+                                const isManuallyBlocked = blockedDates.includes(dateString);
+                                const isAvailable = !isPast && isGenerallyAvailable && !isBookedByJob && !isManuallyBlocked;
 
-                            {/* Current Month Days */}
-                            {[...Array(daysInMonth)].map((_, i: number) => {
-                              const day = i + 1;
-                              const dateObj = new Date(
-                                calendarView.year,
-                                calendarView.month,
-                                day,
-                              );
-                              const dateString = dateObj
-                                .toISOString()
-                                .split("T")[0];
+                                let stateClasses = "bg-white/50 dark:bg-slate-800/40 hover:bg-primary hover:text-white group shadow-sm";
+                                if (isToday) stateClasses = "bg-primary text-white shadow-xl shadow-primary/30 ring-8 ring-primary/5";
+                                else if (isPast) stateClasses = "bg-slate-100/50 dark:bg-slate-900/50 opacity-40 grayscale pointer-events-none";
+                                else if (isBookedByJob) stateClasses = "bg-rose-500 text-white shadow-xl shadow-rose-500/20";
+                                else if (isManuallyBlocked) stateClasses = "bg-slate-200 dark:bg-slate-700 text-slate-400";
+                                else if (isAvailable) stateClasses = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-500/20";
 
-                              const isToday =
-                                day === now.getDate() &&
-                                calendarView.month === now.getMonth() &&
-                                calendarView.year === now.getFullYear();
-                              const isPast =
-                                dateObj <
-                                new Date(
-                                  now.getFullYear(),
-                                  now.getMonth(),
-                                  now.getDate(),
-                                );
-                              const isGenerallyAvailable =
-                                availableDays.includes(dateObj.getDay());
-                              const isBookedByJob =
-                                jobDates.includes(dateString);
-                              const isManuallyBlocked =
-                                blockedDates.includes(dateString);
-
-                              // Logic: Available only if in the present/future, generally available, and not booked or blocked
-                              const isAvailable =
-                                !isPast &&
-                                isGenerallyAvailable &&
-                                !isBookedByJob &&
-                                !isManuallyBlocked;
-
-                              let bgClass =
-                                "bg-white dark:bg-slate-800 hover:bg-primary/5 cursor-pointer";
-                              let textClass =
-                                "text-text-primary dark:text-white";
-
-                              if (isToday) {
-                                bgClass =
-                                  "bg-primary/5 dark:bg-primary/10 border-2 border-primary ring-4 ring-primary/5";
-                                textClass = "text-primary";
-                              } else if (isPast) {
-                                bgClass =
-                                  "bg-slate-50 dark:bg-slate-900/50 cursor-default grayscale opacity-60";
-                                textClass =
-                                  "text-text-secondary dark:text-gray-500";
-                              } else if (isBookedByJob) {
-                                bgClass =
-                                  "bg-rose-50 dark:bg-rose-900/10 cursor-not-allowed";
-                                textClass = "text-rose-600 font-bold";
-                              } else if (isManuallyBlocked) {
-                                bgClass =
-                                  "bg-slate-50 dark:bg-slate-800/50 cursor-pointer";
-                                textClass =
-                                  "text-text-secondary dark:text-gray-500";
-                              } else if (isAvailable) {
-                                bgClass =
-                                  "bg-emerald-50/20 dark:bg-emerald-900/5";
-                                textClass = "text-emerald-600 font-bold";
-                              }
-
-                              return (
-                                <div
-                                  key={day}
-                                  onClick={() =>
-                                    isEditing &&
-                                    !isPast &&
-                                    handleDayToggle(
-                                      dateObj.getDay(),
-                                      dateString,
-                                    )
-                                  }
-                                  className={`${bgClass} h-28 p-3 transition-all group relative border-r border-b border-slate-50 dark:border-slate-700/30 overflow-hidden ${isPast ? "pointer-events-none" : ""}`}
-                                >
-                                  <div className="flex justify-between items-start">
-                                    <span
-                                      className={`text-sm font-black ${textClass}`}
-                                    >
-                                      {day}
-                                    </span>
-                                    {isToday && (
-                                      <span className="text-[8px] bg-primary text-white px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter">
-                                        Today
-                                      </span>
-                                    )}
-                                  </div>
-
-                                  <div className="mt-4 space-y-1">
-                                    {!isPast && isBookedByJob && (
-                                      <div className="flex items-center gap-1 text-[9px] text-rose-600 font-black uppercase tracking-tighter bg-rose-100/50 dark:bg-rose-900/20 px-1.5 py-1 rounded-md">
-                                        <span
-                                          className="material-symbols-outlined text-[10px]"
-                                          style={{
-                                            fontVariationSettings: "'FILL' 1",
-                                          }}
-                                        >
-                                          event_busy
-                                        </span>
-                                        Booked
-                                      </div>
-                                    )}
-                                    {!isPast && isManuallyBlocked && (
-                                      <div className="flex items-center gap-1 text-[9px] text-slate-500 font-black uppercase tracking-tighter bg-slate-100 dark:bg-slate-700 px-1.5 py-1 rounded-md">
-                                        <span className="material-symbols-outlined text-[10px]">
-                                          block
-                                        </span>
-                                        Blocked
-                                      </div>
-                                    )}
-                                    {isAvailable && (
-                                      <div className="flex items-center gap-1 text-[9px] text-emerald-600 font-black uppercase tracking-tighter bg-emerald-100/30 dark:bg-emerald-900/20 px-1.5 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <span
-                                          className="material-symbols-outlined text-[10px]"
-                                          style={{
-                                            fontVariationSettings: "'FILL' 1",
-                                          }}
-                                        >
-                                          check_circle
-                                        </span>
-                                        Available
-                                      </div>
-                                    )}
-                                    {isPast && !isToday && (
-                                      <div className="mt-2 text-[10px] text-slate-400 font-medium italic opacity-50">
-                                        Past Date
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {isEditing && !isPast && !isBookedByJob && (
-                                    <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors pointer-events-none flex items-center justify-center">
-                                      <span className="material-symbols-outlined text-primary opacity-0 group-hover:opacity-100 scale-75 group-hover:scale-100 transition-all">
-                                        {isManuallyBlocked
-                                          ? "add_circle"
-                                          : "do_not_disturb_on"}
-                                      </span>
+                                return (
+                                  <div
+                                    key={day}
+                                    onClick={() => isEditing && !isPast && handleDayToggle(dateObj.getDay(), dateString)}
+                                    className={`h-32 p-5 rounded-[2rem] transition-all duration-300 relative border border-slate-100 dark:border-slate-800/50 flex flex-col justify-between cursor-pointer ${stateClasses}`}
+                                  >
+                                    <div className="flex justify-between items-start">
+                                      <span className="text-xl font-black">{day}</span>
+                                      {isToday && <span className="text-[8px] bg-white text-primary px-2 py-0.5 rounded-lg font-black uppercase tracking-tighter">Live</span>}
                                     </div>
-                                  )}
-                                </div>
-                              );
-                            })}
+                                    <div className="flex flex-col gap-1">
+                                      {isBookedByJob && <span className="text-[8px] font-black uppercase tracking-widest opacity-80">Reserved</span>}
+                                      {isAvailable && <span className="text-[8px] font-black uppercase tracking-widest opacity-80">Open</span>}
+                                      {isManuallyBlocked && <span className="text-[8px] font-black uppercase tracking-widest opacity-80">Locked</span>}
+                                    </div>
+                                    {isEditing && !isPast && !isBookedByJob && (
+                                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span className="material-symbols-outlined text-sm">{isManuallyBlocked ? "lock_open" : "lock"}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              {[...Array(42 - (daysInMonth + firstDayOfMonth))].map((_, i) => (
+                                <div key={`next-${i}`} className="h-32 rounded-3xl bg-slate-50/30 dark:bg-slate-900/10 opacity-20"></div>
+                              ))}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </section>
 
-                            {/* Next Month Filler (No numbers) */}
-                            {[
-                              ...Array(42 - (daysInMonth + firstDayOfMonth)),
-                            ].map((_, i) => (
-                              <div
-                                key={`next-${i}`}
-                                className="bg-slate-50/30 dark:bg-slate-900/10 h-28 border-r border-b border-slate-50 dark:border-slate-700/30"
-                              ></div>
-                            ))}
+                  {(!isProView || isPreviewMode) && (
+                    <section id="reviews" className="p-8 md:p-10 rounded-[2.5rem] border border-slate-100 dark:border-slate-800/50 bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl shadow-2xl scroll-mt-32">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between mb-12 gap-6">
+                        <div className="flex items-center gap-4">
+                          <div className="size-14 bg-amber-500/10 text-amber-500 rounded-2xl flex items-center justify-center shadow-inner">
+                            <span className="material-symbols-outlined text-3xl font-black">star</span>
                           </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </section>
-
-                {(!isProView || isPreviewMode) && (
-                  <section
-                    className="p-8 rounded-2xl shadow-soft bg-white dark:bg-card-dark border border-slate-200 dark:border-slate-800 scroll-mt-28"
-                    id="reviews"
-                  >
-                    <div className="flex items-center justify-between mb-12">
-                      <div className="flex items-center gap-4">
-                        <div className="size-14 bg-amber-500/10 text-amber-500 rounded-[1.5rem] flex items-center justify-center">
-                          <span className="material-symbols-outlined text-2xl">
-                            star
-                          </span>
+                          <div className="space-y-1">
+                            <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+                              Client <span className="text-amber-500">Testimonials</span>
+                            </h2>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verified Customer Satisfaction</p>
+                          </div>
                         </div>
-                        <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                          Client Testimonials
-                        </h2>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        {(!isProView || isPreviewMode) && (
+                        
+                        <div className="flex items-center gap-4">
                           <button
                             onClick={() => setIsReviewModalOpen(true)}
-                            className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-3 rounded-2xl text-sm font-black uppercase tracking-widest shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2"
+                            className="bg-amber-500 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
                           >
-                            <Plus size={18} />
+                            <Plus size={16} strokeWidth={3} />
                             Write a Review
                           </button>
-                        )}
-                        <div className="hidden sm:flex items-center gap-3 px-6 py-2.5 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800">
-                          <span className="text-2xl font-black text-slate-900 dark:text-white">
-                            {profileRating}
-                          </span>
-                          <div className="flex text-amber-500">
-                            <span
-                              className="material-symbols-outlined text-xl"
-                              style={{ fontVariationSettings: "'FILL' 1" }}
-                            >
-                              star
-                            </span>
+                          <div className="hidden sm:flex items-center gap-3 px-6 py-3 bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-3xl rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-inner">
+                            <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{profileRating}</span>
+                            <div className="flex text-amber-500">
+                              <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      {profileReviewsCount > 0 ? (
-                        <div className="glass-panel p-8 rounded-[3rem] border border-white/50 dark:border-slate-800/50 bg-white/50 dark:bg-slate-900/50 shadow-xl group hover:-translate-y-2 transition-transform duration-500">
-                          <div className="flex items-center gap-4 mb-6">
-                            <div className="size-12 bg-primary/10 rounded-2xl flex items-center justify-center font-black text-primary text-lg">
-                              C
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        {profileReviewsCount > 0 ? (
+                          <div className="group relative p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800/50 bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-500 overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/10 transition-colors"></div>
+                            
+                            <div className="flex items-center gap-4 mb-6 relative z-10">
+                              <div className="size-12 bg-primary/10 rounded-xl flex items-center justify-center font-black text-primary text-lg border border-primary/10">C</div>
+                              <div>
+                                <h4 className="font-black text-slate-800 dark:text-white tracking-tight">Recent Customer</h4>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Job Completed • Verified</p>
+                              </div>
                             </div>
-                            <div>
-                              <h4 className="font-black text-slate-800 dark:text-white">
-                                Recent Customer
-                              </h4>
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                Completed via Fix-Link
-                              </p>
+                            
+                            <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-8 font-medium italic relative z-10">
+                              "Exceptional quality of work and very professional communication throughout the project. Exceeded all my expectations."
+                            </p>
+                            
+                            <div className="flex items-center justify-between relative z-10">
+                              <div className="flex text-amber-500 gap-1">
+                                {[...Array(5)].map((_, i) => (
+                                  <span key={i} className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                                ))}
+                              </div>
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fix-Link Authenticated</span>
                             </div>
                           </div>
-                          <p className="text-slate-600 dark:text-gray-400 text-base leading-relaxed mb-6 font-medium italic">
-                            "Exceptional quality of work and very professional
-                            communication throughout the project."
-                          </p>
-                          <div className="flex text-amber-500 gap-1">
-                            {[...Array(5)].map((_, i) => (
-                              <span
-                                key={i}
-                                className="material-symbols-outlined text-sm"
-                                style={{ fontVariationSettings: "'FILL' 1" }}
-                              >
-                                star
-                              </span>
-                            ))}
+                        ) : (
+                          <div className="col-span-full py-24 flex flex-col items-center justify-center text-center space-y-6 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[3rem] bg-slate-50/20 dark:bg-slate-900/10">
+                            <div className="size-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300 dark:text-slate-700">
+                               <span className="material-symbols-outlined text-4xl">star</span>
+                            </div>
+                            <div className="space-y-2">
+                              <p className="text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest text-xs">No Testimonials Registered</p>
+                              <p className="text-slate-400 dark:text-slate-600 text-[10px] font-bold max-w-[200px] mx-auto">Complete your first job to receive verified customer feedback.</p>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <div className="col-span-full py-20 text-center space-y-4 bg-slate-50 dark:bg-slate-900/30 rounded-[3rem] border-2 border-dashed border-slate-200 dark:border-slate-800">
-                          <span className="material-symbols-outlined text-5xl text-slate-300">
-                            star
-                          </span>
-                          <p className="text-slate-400 font-medium">
-                            No testimonials authenticated yet.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </section>
-                )}
-              </div>
-            </div>
-          </div>
-        </main>
-        {!isProView && <CustomerFooter />}
-      </div>
-
-      <RequestEstimateModal
-        isOpen={isEstimateModalOpen}
-        onClose={() => setIsEstimateModalOpen(false)}
-        professionalName={profileName}
-        serviceId={profileServiceId}
-        professionalId={id}
-      />
-
-      {/* Add Portfolio Modal */}
-      {isPortfolioModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-card-dark rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-6">
-              <h3 className="text-xl font-black text-slate-900 dark:text-white mb-1">
-                Add Work to Portfolio
-              </h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                Showcase your past projects to customers.
-              </p>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1.5">
-                    Description / Title
-                  </label>
-                  <textarea
-                    value={newPortfolioTitle}
-                    onChange={(e) => setNewPortfolioTitle(e.target.value)}
-                    placeholder="e.g. Installed a new electrical panel..."
-                    rows={3}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm text-slate-800 dark:text-white resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-1.5">
-                    Attachment (Optional)
-                  </label>
-                  <label className="flex items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                    <div className="flex flex-col items-center gap-1 text-slate-500">
-                      <span className="material-symbols-outlined text-2xl">
-                        {newPortfolioFile ? "draft" : "upload_file"}
-                      </span>
-                      <span className="text-sm font-bold">
-                        {newPortfolioFile
-                          ? newPortfolioFile.name
-                          : "Click to upload image or PDF"}
-                      </span>
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept="image/*,.pdf"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files.length > 0) {
-                          setNewPortfolioFile(e.target.files[0]);
-                        }
-                      }}
-                    />
-                  </label>
+                        )}
+                      </div>
+                    </section>
+                  )}
                 </div>
               </div>
             </div>
-
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setIsPortfolioModalOpen(false);
-                  setNewPortfolioTitle("");
-                  setNewPortfolioFile(null);
-                }}
-                className="px-5 py-2 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddPortfolio}
-                disabled={!newPortfolioTitle.trim() && !newPortfolioFile}
-                className="px-5 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Add to Portfolio
-              </button>
-            </div>
-          </div>
+          </main>
+          {!isProView && <CustomerFooter />}
         </div>
-      )}
-      
-      {/* Review Modal */}
-      {isReviewModalOpen && (
-        <div 
-          className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
-          onClick={() => setIsReviewModalOpen(false)}
-        >
-          <div 
-            className="w-full max-w-lg bg-white dark:bg-card-dark rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-8 pt-8 pb-6 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-b border-slate-100 dark:border-slate-800">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
-                    <StarIcon size={24} fill="currentColor" />
+
+        <RequestEstimateModal
+          isOpen={isEstimateModalOpen}
+          onClose={() => setIsEstimateModalOpen(false)}
+          professionalName={profileName}
+          serviceId={profileServiceId}
+          professionalId={id}
+        />
+
+        {/* Add Portfolio Modal */}
+        {isPortfolioModalOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
+            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden border border-white/20 dark:border-slate-800 animate-in zoom-in-95 duration-300">
+              <div className="p-10">
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="size-12 bg-primary/10 text-primary rounded-2xl flex items-center justify-center shadow-inner">
+                    <span className="material-symbols-outlined text-2xl font-black">collections</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-slate-900 dark:text-white leading-tight">Rate & Review</h3>
-                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Share your experience</p>
+                    <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Add Portfolio Artifact</h3>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Showcase your expert results</p>
                   </div>
                 </div>
-                <button 
-                  onClick={() => setIsReviewModalOpen(false)}
-                  className="p-2 hover:bg-white/50 dark:hover:bg-slate-800 rounded-full transition-colors"
+
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Work Description</label>
+                    <textarea
+                      value={newPortfolioTitle}
+                      onChange={(e) => setNewPortfolioTitle(e.target.value)}
+                      placeholder="Describe the achievement..."
+                      rows={3}
+                      className="w-full bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-3xl border border-slate-100 dark:border-slate-800 rounded-2xl p-5 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 text-sm font-bold text-slate-800 dark:text-white resize-none transition-all placeholder:text-slate-400"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Visual Evidence</label>
+                    <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-[2rem] cursor-pointer hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-all group overflow-hidden relative">
+                      {newPortfolioFile ? (
+                        <div className="flex flex-col items-center gap-3 text-primary animate-in zoom-in duration-300">
+                          <span className="material-symbols-outlined text-4xl">draft</span>
+                          <span className="text-[11px] font-black uppercase tracking-widest max-w-[200px] text-center truncate px-4">{newPortfolioFile.name}</span>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-3 text-slate-400 group-hover:text-primary transition-colors">
+                          <span className="material-symbols-outlined text-4xl font-light">cloud_upload</span>
+                          <div className="text-center">
+                             <span className="text-[11px] font-black uppercase tracking-widest block">Upload Media</span>
+                             <span className="text-[9px] font-bold opacity-60">Images or PDF fragments</span>
+                          </div>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*,.pdf"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            setNewPortfolioFile(e.target.files[0]);
+                          }
+                        }}
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex gap-3">
+                <button
+                  onClick={() => {
+                    setIsPortfolioModalOpen(false);
+                    setNewPortfolioTitle("");
+                    setNewPortfolioFile(null);
+                  }}
+                  className="flex-1 py-4 text-[10px] font-black text-slate-500 hover:text-slate-700 dark:hover:text-white uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all"
                 >
-                  <span className="material-symbols-outlined text-slate-400">close</span>
+                  Dismiss
+                </button>
+                <button
+                  onClick={handleAddPortfolio}
+                  disabled={!newPortfolioTitle.trim() && !newPortfolioFile}
+                  className="flex-[2] py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] bg-primary text-white hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
+                >
+                  Register Artifact
                 </button>
               </div>
             </div>
-
-            <div className="p-8 space-y-8">
-              <div className="text-center space-y-4">
-                <p className="text-sm font-bold text-slate-500 uppercase tracking-widest">How was the service?</p>
-                <div className="flex items-center justify-center gap-2">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <button
-                      key={star}
-                      onClick={() => setReviewRating(star)}
-                      className={`transition-all duration-300 hover:scale-125 ${reviewRating >= star ? 'text-amber-500' : 'text-slate-200 dark:text-slate-700'}`}
-                    >
-                      <StarIcon 
-                        size={40} 
-                        fill={reviewRating >= star ? "currentColor" : "none"} 
-                        strokeWidth={2.5}
-                      />
-                    </button>
-                  ))}
+          </div>
+        )}
+        
+        {/* Review Modal */}
+        {isReviewModalOpen && (
+          <div 
+            className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300"
+            onClick={() => setIsReviewModalOpen(false)}
+          >
+            <div 
+              className="w-full max-w-lg bg-white/95 dark:bg-slate-900/95 backdrop-blur-3xl rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20 dark:border-slate-800"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="px-10 pt-10 pb-8 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="size-14 bg-amber-500 text-white rounded-[1.2rem] flex items-center justify-center shadow-xl shadow-amber-500/30">
+                      <StarIcon size={28} fill="currentColor" />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Rate & Review</h3>
+                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Share your experience</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setIsReviewModalOpen(false)}
+                    className="size-10 flex items-center justify-center hover:bg-white/50 dark:hover:bg-slate-800 rounded-xl transition-all group"
+                  >
+                    <span className="material-symbols-outlined text-slate-400 group-hover:rotate-90 transition-transform">close</span>
+                  </button>
                 </div>
-                <p className="text-lg font-black text-slate-800 dark:text-white">
-                  {['Poor', 'Fair', 'Good', 'Very Good', 'Exceptional'][reviewRating - 1]}
-                </p>
               </div>
 
-              <div className="space-y-3">
-                <label className="block text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Write your review</label>
-                <textarea
-                  value={reviewComment}
-                  onChange={(e) => setReviewComment(e.target.value)}
-                  placeholder="Tell us what you liked or what could be improved..."
-                  className="w-full h-32 px-5 py-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-2xl outline-none focus:border-amber-500/50 transition-colors text-sm font-medium resize-none placeholder:text-slate-400"
-                ></textarea>
-              </div>
-            </div>
+              <div className="p-10 space-y-10">
+                <div className="text-center space-y-6">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">How was the service?</p>
+                  <div className="flex items-center justify-center gap-3">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setReviewRating(star)}
+                        className={`transition-all duration-500 hover:scale-125 ${reviewRating >= star ? 'text-amber-500' : 'text-slate-200 dark:text-slate-800'}`}
+                      >
+                        <StarIcon 
+                          size={48} 
+                          fill={reviewRating >= star ? "currentColor" : "none"} 
+                          strokeWidth={2}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="pt-2">
+                    <span className="px-6 py-2 bg-amber-500/10 text-amber-500 text-xs font-black uppercase tracking-[0.2em] rounded-full">
+                      {['Poor', 'Fair', 'Good', 'Very Good', 'Exceptional'][reviewRating - 1]}
+                    </span>
+                  </div>
+                </div>
 
-            <div className="p-8 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={() => setIsReviewModalOpen(false)}
-                className="flex-1 py-4 text-sm font-black text-slate-500 uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmitReview}
-                disabled={!reviewComment.trim() || isSubmittingReview}
-                className="flex-[2] py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
-              >
-                {isSubmittingReview ? (
-                  <>
+                <div className="space-y-3">
+                  <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Write your review</label>
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Tell us what you liked or what could be improved..."
+                    className="w-full h-40 px-6 py-5 bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-3xl border border-slate-100 dark:border-slate-800 rounded-[2rem] outline-none focus:border-amber-500/50 focus:ring-4 focus:ring-amber-500/5 transition-all text-sm font-bold resize-none placeholder:text-slate-400 dark:text-white"
+                  ></textarea>
+                </div>
+              </div>
+
+              <div className="p-10 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => setIsReviewModalOpen(false)}
+                  className="flex-1 py-4 text-[10px] font-black text-slate-500 hover:text-slate-700 dark:hover:text-white uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmitReview}
+                  disabled={!reviewComment.trim() || isSubmittingReview}
+                  className="flex-[2] py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-[0.25em] rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-2xl shadow-slate-900/20 dark:shadow-white/10 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                >
+                  {isSubmittingReview ? (
                     <Loader2 size={18} className="animate-spin" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    Post Review
-                    <ChevronRight size={18} />
-                  </>
-                )}
-              </button>
+                  ) : (
+                    <>
+                      Post Review
+                      <ChevronRight size={16} strokeWidth={3} />
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        )}
+      </div>
+    );
 };
 
 export default ProfessionalProfile;

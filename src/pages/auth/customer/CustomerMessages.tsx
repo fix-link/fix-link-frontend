@@ -568,7 +568,7 @@ const CustomerMessages = () => {
                                                     <CheckCheck size={12} strokeWidth={3} />
                                                 </div>
                                             </div>
-                                            <span className="text-slate-400 dark:text-slate-500 text-[9px] font-black uppercase tracking-[0.2em] mr-4 opacity-0 group-hover:opacity-100 transition-all duration-300">Project Mission</span>
+                                            <span className="text-slate-400 dark:text-slate-500 text-[9px] font-black uppercase tracking-[0.2em] mr-4 opacity-0 group-hover:opacity-100 transition-all duration-300">Job Request</span>
                                         </div>
                                     </div>
 
@@ -866,7 +866,7 @@ const CustomerMessages = () => {
                                         </div>
                                         <div className="relative z-10">
                                             <h4 className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1 flex items-center gap-2">
-                                                Safety Protocol
+                                                Payment Protection
                                                 <div className="size-1 bg-primary rounded-full animate-pulse" />
                                             </h4>
                                             <p className="text-[10px] text-slate-400 font-bold leading-relaxed">

@@ -3,6 +3,16 @@ import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { useAuth } from "../../../context/AuthContext";
 import { getImageUrl, getReviews } from "../../../api/auth.api";
+import { 
+    Star as StarIcon, 
+    CheckCircle2, 
+    Award, 
+    MessageSquare, 
+    Users, 
+    Zap,
+    ShieldCheck,
+    RefreshCw
+} from "lucide-react";
 
 const ProfessionalReviews: React.FC = () => {
     const { user } = useAuth();
@@ -31,155 +41,178 @@ const ProfessionalReviews: React.FC = () => {
     const Stars: React.FC<{ count: number; className?: string }> = ({ count, className }) => (
         <div className={`flex items-center gap-0.5 text-amber-400 ${className}`}>
             {[...Array(5)].map((_, i) => (
-                <span key={i} className="material-symbols-outlined text-sm leading-none" style={{ fontVariationSettings: "'FILL' 1" }}>
-                    {i < Math.round(count) ? "star" : "star_outline"}
-                </span>
+                <StarIcon 
+                    key={i} 
+                    size={14} 
+                    fill={i < Math.round(count) ? "currentColor" : "none"} 
+                    className={i < Math.round(count) ? "text-amber-400" : "text-slate-300 dark:text-slate-600"} 
+                />
             ))}
         </div>
     );
 
     return (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-background-dark font-display">
+        <div className="relative flex min-h-screen w-full bg-background-light dark:bg-background-dark font-display overflow-hidden">
+            {/* Background decorative blobs - matching customer dashboard */}
+            <div className="fixed top-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob"></div>
+            <div className="fixed bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-accent-cyan/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob [animation-delay:2s]"></div>
+
             <Sidebar />
-            <div className="flex flex-1 flex-col lg:ml-64 overflow-hidden">
+            <div className="flex flex-1 flex-col lg:ml-64 relative z-10">
                 <Header />
 
-                <main className="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar space-y-10">
-                    
-                    {/* Page Header */}
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                        <div className="space-y-1">
-                            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Trust & Feedback</h1>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium max-w-md">Your reputation management and verified customer testimonials</p>
-                        </div>
+                <main className="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar relative">
+                    <div className="max-w-[1600px] mx-auto w-full">
                         
-                        <div className="flex items-center gap-8 bg-white dark:bg-slate-900/50 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm">
-                            <div className="text-center">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Rating</p>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-4xl font-black text-slate-900 dark:text-white leading-none">{rating.toFixed(1)}</span>
-                                    <div className="space-y-1">
-                                        <Stars count={rating} className="text-amber-400" />
-                                        <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-tighter">Above Average</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="w-px h-10 bg-slate-100 dark:bg-slate-800" />
-                            <div className="text-center">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Volume</p>
-                                <p className="text-4xl font-black text-slate-900 dark:text-white leading-none">{reviewsCount}</p>
-                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Verified Jobs</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Performance Metrics */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {[
-                            { label: "Rating Quality", value: `${(rating * 20).toFixed(0)}%`, icon: "workspace_premium", color: "text-amber-500", bg: "bg-amber-500/10" },
-                            { label: "Completion Rate", value: "98%", icon: "check_circle", color: "text-emerald-500", bg: "bg-emerald-500/10" },
-                            { label: "Response Time", value: "< 2h", icon: "bolt", color: "text-blue-500", bg: "bg-blue-500/10" },
-                            { label: "Repeat Customers", value: "12%", icon: "group", color: "text-purple-500", bg: "bg-purple-500/10" },
-                        ].map((stat, i) => (
-                            <div key={i} className="bg-white dark:bg-slate-900/40 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm group hover:border-primary/20 transition-all">
-                                <div className={`w-12 h-12 rounded-2xl ${stat.bg} flex items-center justify-center mb-5 group-hover:scale-110 transition-transform`}>
-                                    <span className={`material-symbols-outlined ${stat.color} text-2xl`}>{stat.icon}</span>
-                                </div>
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">{stat.label}</p>
-                                <p className="text-2xl font-black text-slate-800 dark:text-white">{stat.value}</p>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Testimonials List */}
-                    <div className="bg-white dark:bg-card-dark rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                        <div className="px-10 py-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 bg-amber-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
-                                    <span className="material-symbols-outlined">forum</span>
-                                </div>
-                                <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">Verified Testimonials</h2>
-                            </div>
-                            <div className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 rounded-full border border-slate-100 dark:border-slate-700">
-                                <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Real-time sync active</span>
-                            </div>
-                        </div>
-
-                        {loadingReviews ? (
-                            <div className="py-24 flex flex-col items-center gap-4 text-slate-400">
-                                <span className="material-symbols-outlined text-4xl animate-spin text-primary">autorenew</span>
-                                <p className="text-sm font-black uppercase tracking-widest">Loading reputation ledger...</p>
-                            </div>
-                        ) : realReviews.length === 0 ? (
-                            <div className="py-32 flex flex-col items-center gap-6">
-                                <div className="size-32 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center relative overflow-hidden group">
-                                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <span className="material-symbols-outlined text-6xl text-slate-200 dark:text-slate-700 relative z-10">verified_user</span>
-                                </div>
-                                <div className="text-center space-y-2">
-                                    <p className="text-xl font-black text-slate-900 dark:text-white">Reputation Matrix Empty</p>
-                                    <p className="text-sm font-medium text-slate-400 max-w-xs mx-auto leading-relaxed">
-                                        Your customer reviews will appear here once you complete your first verified jobs on the platform.
+                        {/* Page Header */}
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 animate-fade-in-up">
+                            <div className="space-y-3">
+                                <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-primary">Reviews</span> & Ratings
+                                </h1>
+                                <div className="flex items-center gap-2">
+                                    <span className="size-2 rounded-full bg-amber-500 animate-pulse"></span>
+                                    <p className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                        Verified customer feedback and professional performance
                                     </p>
                                 </div>
                             </div>
-                        ) : (
-                            <div className="divide-y divide-slate-50 dark:divide-slate-800">
-                                {realReviews.map((review: any) => (
-                                    <div key={review.id} className="p-10 hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors group">
-                                        <div className="flex flex-col md:flex-row gap-8">
-                                            <div className="shrink-0 flex md:flex-col items-center gap-4">
-                                                <div className="size-16 rounded-[1.5rem] overflow-hidden border-4 border-white dark:border-slate-800 shadow-xl group-hover:rotate-[-4deg] transition-transform">
-                                                    <img 
-                                                        src={getImageUrl(review.customer_profile?.profile_picture || review.customer?.profile_picture)} 
-                                                        alt="User" 
-                                                        className="size-full object-cover"
-                                                        onError={(e) => (e.currentTarget.src = `https://ui-avatars.com/api/?name=${review.customer_name || 'Customer'}&background=random`)}
-                                                    />
-                                                </div>
-                                                <div className="md:text-center">
-                                                    <div className="md:hidden">
-                                                        <h4 className="text-base font-black text-slate-900 dark:text-white">{review.customer_name || 'Customer'}</h4>
-                                                        <Stars count={review.rating} className="mt-1" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex-1 space-y-4">
-                                                <div className="hidden md:flex items-center justify-between">
-                                                    <div className="space-y-1">
-                                                        <h4 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">{review.customer_name || 'Customer'}</h4>
-                                                        <Stars count={review.rating} />
-                                                    </div>
-                                                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest bg-slate-50 dark:bg-slate-800 px-3 py-1 rounded-full">
-                                                        {new Date(review.created_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
-                                                    </p>
-                                                </div>
-
-                                                <div className="relative">
-                                                    <span className="material-symbols-outlined text-4xl text-slate-100 dark:text-slate-800 absolute -top-4 -left-2 -z-10 select-none">format_quote</span>
-                                                    <p className="text-base text-slate-600 dark:text-slate-300 font-medium leading-relaxed italic relative z-10">
-                                                        {review.comment || review.content || "Outstanding professional! The work was completed efficiently and communication was crystal clear throughout the process."}
-                                                    </p>
-                                                </div>
-
-                                                {review.job_title && (
-                                                    <div className="flex items-center gap-3 pt-4 border-t border-dashed border-slate-100 dark:border-slate-800">
-                                                        <div className="size-6 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                                                            <span className="material-symbols-outlined text-xs">verified</span>
-                                                        </div>
-                                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                                                            Project: <span className="text-slate-600 dark:text-slate-400">{review.job_title}</span>
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
+                            
+                            <div className="flex items-center gap-10 bg-white/60 dark:bg-slate-900/40 backdrop-blur-2xl p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm group">
+                                <div className="text-center">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 group-hover:text-amber-500 transition-colors">Total Rating</p>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">{rating.toFixed(1)}</span>
+                                        <div className="space-y-1.5 text-left">
+                                            <Stars count={rating} className="text-amber-400 text-lg" />
+                                            <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1">
+                                                <span className="size-1 rounded-full bg-current"></span>
+                                                Exceptional
+                                            </p>
                                         </div>
                                     </div>
-                                ))}
+                                </div>
+                                <div className="w-px h-12 bg-slate-100 dark:bg-slate-800/50" />
+                                <div className="text-center">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 group-hover:text-primary transition-colors">Volume</p>
+                                    <div className="flex flex-col items-center">
+                                        <p className="text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">{reviewsCount}</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Total Jobs</p>
+                                    </div>
+                                </div>
                             </div>
-                        )}
+                        </div>
+
+                        {/* Performance Metrics */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 animate-fade-in-up [animation-delay:100ms]">
+                            {[
+                                { label: "Rating Quality", value: `${(rating * 20).toFixed(0)}%`, icon: <Award size={24} className="text-amber-500" />, iconBg: "bg-amber-500/10" },
+                                { label: "Completion Rate", value: "98%", icon: <CheckCircle2 size={24} className="text-emerald-500" />, iconBg: "bg-emerald-500/10" },
+                                { label: "Response Speed", value: "< 2h", icon: <Zap size={24} className="text-blue-500" />, iconBg: "bg-blue-500/10" },
+                                { label: "Client Loyalty", value: "12%", icon: <Users size={24} className="text-purple-500" />, iconBg: "bg-purple-500/10" },
+                            ].map((stat, i) => (
+                                <div key={i} className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-xl p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm group hover:shadow-md transition-all hover:-translate-y-1">
+                                    <div className={`w-14 h-14 rounded-2xl ${stat.iconBg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner border border-white dark:border-slate-700`}>
+                                        {stat.icon}
+                                    </div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mb-2">{stat.label}</p>
+                                    <p className="text-3xl font-black text-slate-900 dark:text-white leading-none tracking-tight">{stat.value}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Testimonials List */}
+                        <div className="bg-white/90 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden animate-fade-in-up [animation-delay:200ms]">
+                            <div className="px-12 py-10 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 flex flex-col sm:flex-row items-center justify-between gap-6">
+                                <div className="flex items-center gap-5">
+                                    <div className="size-14 bg-amber-500/10 dark:bg-amber-500/20 rounded-[1.5rem] flex items-center justify-center border border-amber-500/10">
+                                        <MessageSquare size={24} className="text-amber-500" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Client Feedback</h2>
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Verified work records</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 px-6 py-3 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+                                    <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Feedback Sync Active</span>
+                                </div>
+                            </div>
+
+                            {loadingReviews ? (
+                                <div className="py-32 flex flex-col items-center gap-6 text-slate-400">
+                                    <RefreshCw size={48} className="animate-spin text-primary" />
+                                    <p className="text-[11px] font-black uppercase tracking-[0.3em] animate-pulse">Syncing reputation summary...</p>
+                                </div>
+                            ) : realReviews.length === 0 ? (
+                                <div className="py-40 flex flex-col items-center gap-8">
+                                    <div className="size-36 rounded-full bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center relative overflow-hidden group shadow-inner">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                                        <ShieldCheck size={72} className="text-slate-200 dark:text-slate-700 relative z-10" />
+                                    </div>
+                                    <div className="text-center space-y-3">
+                                        <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">No Ratings Yet</p>
+                                        <p className="text-sm font-medium text-slate-400 max-w-sm mx-auto leading-relaxed">
+                                            Your client feedback will appear here as you successfully complete projects on the platform.
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-50 dark:divide-slate-800/50">
+                                    {realReviews.map((review: any) => (
+                                        <div key={review.id} className="p-12 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-all group">
+                                            <div className="flex flex-col md:flex-row gap-12">
+                                                <div className="shrink-0 flex md:flex-col items-center gap-6">
+                                                    <div className="size-20 rounded-[2rem] overflow-hidden border-4 border-white dark:border-slate-800 shadow-2xl group-hover:rotate-[-6deg] transition-all duration-500 ease-out">
+                                                        <img 
+                                                            src={getImageUrl(review.customer_profile?.profile_picture || review.customer?.profile_picture)} 
+                                                            alt="User" 
+                                                            className="size-full object-cover"
+                                                            onError={(e) => (e.currentTarget.src = `https://ui-avatars.com/api/?name=${review.customer_name || 'Customer'}&background=random`)}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex-1 space-y-6">
+                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                        <div className="space-y-1.5">
+                                                            <h4 className="text-xl font-black text-slate-900 dark:text-white tracking-tight group-hover:text-primary transition-colors">
+                                                                {review.customer_name || 'Verified Customer'}
+                                                            </h4>
+                                                            <div className="flex items-center gap-4">
+                                                                <Stars count={review.rating} className="text-amber-400" />
+                                                                <span className="size-1 rounded-full bg-slate-300 dark:bg-slate-700"></span>
+                                                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                                                                    {new Date(review.created_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="relative">
+                                                        <span className="material-symbols-outlined text-7xl text-primary/5 dark:text-white/5 absolute -top-8 -left-6 -z-10 select-none font-black italic">format_quote</span>
+                                                        <p className="text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed italic relative z-10 tracking-tight">
+                                                            "{review.comment || review.content || "Exceptional service delivery. The professional demonstrated deep expertise and maintained perfect communication throughout the project lifecycle."}"
+                                                        </p>
+                                                    </div>
+
+                                                    {review.job_title && (
+                                                        <div className="flex items-center gap-4 pt-6 border-t border-dashed border-slate-100 dark:border-slate-800">
+                                                            <div className="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center shadow-sm">
+                                                                <span className="material-symbols-outlined text-sm font-black">verified</span>
+                                                            </div>
+                                                            <span className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">
+                                                                Service: <span className="text-slate-900 dark:text-white">{review.job_title}</span>
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </main>
             </div>

@@ -7,6 +7,30 @@ import { updateJobStatus } from '../../../api/jobs.api';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
 import { getMessages, sendMessage, getOrCreateConversation, markAsRead, getConversationById } from '../../../api/conversations.api';
 import { useData } from '../../../context/DataContext';
+import { 
+    Inbox, 
+    RefreshCw, 
+    Clock, 
+    User, 
+    Activity, 
+    Cpu, 
+    ArrowLeft, 
+    X, 
+    BarChart2, 
+    MoreVertical, 
+    ShieldCheck, 
+    Check, 
+    Circle, 
+    Zap, 
+    MapPin, 
+    CreditCard, 
+    Calendar, 
+    Paperclip, 
+    Send,
+    CheckCheck,
+    Flag,
+    AlertTriangle
+} from 'lucide-react';
 
 const ProfessionalMessages = () => {
     const { user } = useAuth();
@@ -16,6 +40,11 @@ const ProfessionalMessages = () => {
     const [messages, setMessages] = useState<any[]>([]);
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [isSending, setIsSending] = useState(false);
+    const [messageInput, setMessageInput] = useState("");
+    const [showStatus, setShowStatus] = useState(false);
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const [showCustomerProfile, setShowCustomerProfile] = useState(false);
+    const moreMenuRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { jobs, notifications, jobsLoading, notificationsLoading } = useData();
 
@@ -183,11 +212,17 @@ const ProfessionalMessages = () => {
         } else if (activeRequest?.customer) {
             getUserDetails(activeRequest.customer).then(setActiveUserDetails).catch(console.error);
         }
-    }, [activeRequestId, activeRequest?.customer_detail]);
+    }, [activeRequestId, activeRequest?.customer, activeRequest?.customer_detail]);
 
-    const [messageInput, setMessageInput] = useState("");
-    const [showStatus, setShowStatus] = useState(false);
-    const [showCustomerProfile, setShowCustomerProfile] = useState(false);
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (moreMenuRef.current && !moreMenuRef.current.contains(event.target as Node)) {
+                setShowMoreMenu(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const handleSendMessage = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -355,296 +390,263 @@ const ProfessionalMessages = () => {
     };
 
     return (
-        <div className="flex h-screen bg-slate-50 dark:bg-slate-950 font-display text-text-primary dark:text-white overflow-hidden">
+        <div className="flex h-screen bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white overflow-hidden transition-all duration-500 relative">
+            {/* Background decorative blobs - matching customer dashboard */}
+            <div className="fixed top-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob"></div>
+            <div className="fixed bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-accent-cyan/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob [animation-delay:2s]"></div>
+            <div className="fixed top-[30%] left-[20%] w-[30%] h-[30%] bg-accent-purple/5 rounded-full blur-[120px] pointer-events-none z-0 animate-blob [animation-delay:4s]"></div>
+
             <Sidebar />
 
-            <div className="flex flex-col flex-1 overflow-hidden lg:ml-64">
+            <div className="flex flex-col flex-1 overflow-hidden lg:ml-64 relative z-10">
                 <Header />
 
-                <main className="flex w-full flex-1 overflow-hidden items-stretch p-0 gap-0">
-                    {/* Left Sidebar: Conversation List */}
-                    <div className={`
-                        flex flex-col w-full md:w-80 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 shrink-0 transition-all duration-300
+                <main className="flex w-full flex-1 overflow-hidden items-stretch p-3 md:p-4 lg:p-4 gap-4 md:gap-4 animate-fade-in-up">
+                    {/* Left Column: Conversation List */}
+                        <div className={`
+                        flex flex-col w-full md:w-56 lg:w-60 bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[2.5rem] border border-slate-100 dark:border-slate-800/50 shadow-xl shrink-0 transition-all duration-300 overflow-hidden
                         ${requestId ? 'hidden md:flex' : 'flex'}
                     `}>
-                        <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                            <h3 className="text-sm font-black flex items-center gap-2 tracking-tight">
-                                <span className="material-symbols-outlined text-primary text-xl">inbox</span>
-                                Requests
+                        <div className="p-5 border-b border-slate-100/50 dark:border-slate-800/50 flex items-center justify-between bg-slate-50/30 dark:bg-slate-900/40">
+                            <h3 className="text-lg font-black flex items-center gap-3 tracking-tighter text-slate-900 dark:text-white">
+                                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center shadow-inner border border-primary/5">
+                                    <Inbox size={20} className="text-primary" />
+                                </div>
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">Jobs</span>
                             </h3>
                             {professionalRequests.length > 0 && (
                                 <div className="flex gap-2">
-                                    <span className="bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                        {professionalRequests.length} Total
+                                    <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-widest border border-slate-200/50 dark:border-slate-700/50">
+                                        {professionalRequests.length}
                                     </span>
-                                    {notifications.filter(n => !n.is_read && (n.message?.toLowerCase().includes('request') || n.message?.toLowerCase().includes('job'))).length > 0 && (
-                                        <span className="bg-red-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                            {notifications.filter(n => !n.is_read).length} New
-                                        </span>
-                                    )}
                                 </div>
                             )}
                         </div>
-                        <div className="flex-1 overflow-y-auto custom-scrollbar relative">
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
                             {isLoading ? (
-                                <div className="flex flex-col items-center justify-center h-full opacity-60">
-                                    <span className="material-symbols-outlined text-4xl animate-spin text-primary">autorenew</span>
-                                    <p className="text-xs font-bold mt-3">Loading requests...</p>
+                                <div className="flex flex-col items-center justify-center h-full opacity-60 py-20">
+                                    <div className="size-16 bg-primary/5 rounded-full flex items-center justify-center mb-4">
+                                        <RefreshCw size={32} className="animate-spin text-primary" />
+                                    </div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Syncing data...</p>
                                 </div>
                             ) : hydratedRequests.length === 0 ? (
-                                <div className="p-10 text-center space-y-3 opacity-40">
-                                    <span className="material-symbols-outlined text-4xl block">pending_actions</span>
-                                    <p className="text-xs font-bold leading-relaxed">No requests yet.<br />Your profile is live and visible!</p>
+                                <div className="py-20 text-center space-y-4 opacity-40">
+                                    <div className="size-20 bg-slate-50 dark:bg-slate-800 rounded-full mx-auto flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700">
+                                        <Clock size={40} className="text-slate-300 dark:text-slate-600" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[11px] font-black uppercase tracking-widest">No active leads</p>
+                                        <p className="text-[9px] font-bold max-w-[200px] mx-auto opacity-60">New project requests will appear here in real-time.</p>
+                                    </div>
                                 </div>
                             ) : (
                                 [...hydratedRequests].sort((a, b) => {
                                     const aTime = new Date(a.updated_at || a.updatedAt || a.created_at || a.createdAt || 0).getTime();
                                     const bTime = new Date(b.updated_at || b.updatedAt || b.created_at || b.createdAt || 0).getTime();
                                     return bTime - aTime;
-                                }).map(req => (
-                                    <div
-                                        key={req.id}
-                                        onClick={() => handleSelectRequest(req.id)}
-                                        className={`p-4 border-b border-slate-50 dark:border-slate-800/50 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800/30 group ${activeRequestId === req.id ? 'bg-primary/5 ring-1 ring-inset ring-primary/20' : ''}`}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="relative shrink-0">
-                                                <div className="size-11 rounded-full bg-slate-100 dark:bg-slate-800 border-2 border-white dark:border-slate-700 shadow-sm flex items-center justify-center overflow-hidden">
-                                                    {req.customer_detail?.profile_picture ? (
-                                                        <img src={getImageUrl(req.customer_detail.profile_picture)} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <span className="material-symbols-outlined text-slate-400">person</span>
+                                }).map(req => {
+                                    const isActive = activeRequestId === req.id;
+                                    const hasUnread = notifications.some(n => n.link?.includes(req.id) && !n.is_read);
+                                    
+                                    return (
+                                        <div
+                                            key={req.id}
+                                            onClick={() => handleSelectRequest(req.id)}
+                                            className={`p-5 rounded-[2rem] cursor-pointer transition-all duration-500 group relative border
+                                                ${isActive 
+                                                    ? 'bg-white dark:bg-slate-800 border-primary shadow-2xl shadow-primary/10 scale-[1.02] z-10' 
+                                                    : 'bg-transparent border-transparent hover:bg-white/50 dark:hover:bg-slate-800/40 hover:border-slate-100 dark:hover:border-slate-700/50'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="relative shrink-0">
+                                                    <div className={`size-12 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 transition-all duration-500 overflow-hidden ${isActive ? 'border-primary ring-8 ring-primary/5' : 'border-white dark:border-slate-700 shadow-sm group-hover:scale-110 group-hover:rotate-3'}`}>
+                                                        {req.customer_detail?.profile_picture ? (
+                                                            <img src={getImageUrl(req.customer_detail.profile_picture)} alt="" className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                                                                <User size={20} className="text-slate-400" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {hasUnread && (
+                                                        <div className="absolute -top-1 -right-1 z-20">
+                                                            <span className="relative flex h-4 w-4">
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                                                <span className="relative inline-flex rounded-full h-4 w-4 bg-primary border-2 border-white dark:border-slate-900 shadow-lg"></span>
+                                                            </span>
+                                                        </div>
                                                     )}
                                                 </div>
-                                                {notifications.some(n => n.link?.includes(req.id) && !n.is_read) && (
-                                                    <div className="absolute -top-1 -right-1 z-20">
-                                                        <span className="relative flex h-3 w-3">
-                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                            <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white dark:border-slate-900"></span>
+                                                <div className="min-w-0 flex-1 space-y-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className={`text-[13px] tracking-tight truncate ${isActive ? 'font-black text-slate-900 dark:text-white' : 'font-black text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors'}`}>
+                                                            {(() => {
+                                                                const detail = req.customer_detail;
+                                                                if (!detail) return "Customer Profile";
+                                                                const first = detail.first_name || detail.user?.first_name;
+                                                                const last = detail.last_name || detail.user?.last_name || "";
+                                                                return first ? `${first} ${last}`.trim() : "Verified Customer";
+                                                            })()}
+                                                        </h4>
+                                                        <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest opacity-60">
+                                                            {(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--"}
                                                         </span>
                                                     </div>
-                                                )}
-                                                {req.status === 'pending' && <div className="absolute -top-0.5 -right-0.5 size-3 bg-primary rounded-full border-2 border-white dark:border-slate-900" />}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <h4 className={`text-sm tracking-tight truncate ${activeRequestId === req.id ? 'font-black text-primary' : 'font-bold'}`}>
-                                                    {(() => {
-                                                        const detail = req.customer_detail;
-                                                        if (!detail) return "Customer";
-                                                        const first = detail.first_name || detail.user?.first_name;
-                                                        const last = detail.last_name || detail.user?.last_name || "";
-                                                        return first ? `${first} ${last}`.trim() : "Customer";
-                                                    })()}
-                                                </h4>
-                                                <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate leading-tight mt-0.5 uppercase font-medium tracking-wide">
-                                                    {req.description?.substring(0, 20)}...
-                                                </p>
-                                            </div>
-                                            <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                                <span className="text-[9px] font-black text-slate-300 dark:text-slate-600 uppercase">
-                                                    {(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--"}
-                                                </span>
-                                                {req.status === 'pending' && <span className="size-2 bg-primary rounded-full" />}
+                                                    <p className={`text-[11px] truncate leading-tight transition-colors ${isActive ? 'text-slate-500 dark:text-slate-400 font-bold' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-500'}`}>
+                                                        {req.description || "Job details hidden."}
+                                                    </p>
+                                                    <div className="flex items-center gap-2 pt-1">
+                                                        <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest border shadow-sm ${req.status === 'pending' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}>
+                                                            {req.status?.replace('_', ' ') || 'Syncing'}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))
+                                    );
+                                })
                             )}
                         </div>
                     </div>
 
                     {/* Middle Column: Messaging */}
                     <div className={`
-                        flex flex-col flex-1 bg-white dark:bg-slate-950 relative z-0 overflow-hidden transition-all
+                        flex flex-col flex-1 bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[3rem] border border-slate-100 dark:border-slate-800/50 shadow-xl relative z-0 overflow-hidden transition-all duration-500
                         ${!requestId ? 'hidden md:flex' : 'flex'}
                     `}>
-                        {isLoading ? (
-                            <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-60 p-10">
-                                <span className="material-symbols-outlined text-4xl animate-spin text-primary">autorenew</span>
-                                <div className="space-y-2">
-                                    <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">Connecting to chat...</h3>
-                                    <p className="text-sm font-medium text-text-secondary dark:text-gray-400 max-w-xs">
-                                        Fetching your requests securely.
+                        {!activeRequest ? (
+                            <div className="flex flex-col items-center justify-center h-full text-center space-y-10 p-12 animate-in fade-in zoom-in duration-1000">
+                                <div className="relative">
+                                    <div className="size-40 rounded-[3rem] bg-white dark:bg-slate-800 flex items-center justify-center shadow-2xl shadow-primary/20 border border-slate-100 dark:border-slate-700 relative z-10 overflow-hidden group">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent group-hover:scale-110 transition-transform duration-700" />
+                                        <Activity size={80} className="text-primary animate-pulse" />
+                                    </div>
+                                    <div className="absolute -top-4 -right-4 size-14 bg-primary rounded-2xl border-4 border-white dark:border-slate-900 shadow-xl z-20 flex items-center justify-center rotate-12 animate-bounce">
+                                        <Cpu size={24} className="text-white" />
+                                    </div>
+                                </div>
+                                <div className="max-w-md space-y-4">
+                                    <h3 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white leading-tight">Professional <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">Command Center</span></h3>
+                                    <p className="text-xs font-bold leading-relaxed text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] opacity-60">
+                                        Select a conversation from the list to start chatting and manage job details.
                                     </p>
                                 </div>
                             </div>
-                        ) : !activeRequest ? (
-                            (() => {
-                                const isDeepLinking = !!(urlRequestId || urlConversationId || urlMessageSessionId);
-                                if (isDeepLinking) {
-                                    return (
-                                        <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-60 p-10 animate-in fade-in">
-                                            <span className="material-symbols-outlined text-4xl animate-spin text-primary">sync</span>
-                                            <div className="space-y-2">
-                                                <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">Opening conversation...</h3>
-                                                <p className="text-sm font-medium text-text-secondary dark:text-gray-400 max-w-xs">Connecting you with your customer.</p>
-                                            </div>
-                                        </div>
-                                    );
-                                }
-                                return (
-                                    <div className="flex flex-col items-center justify-center h-full text-center space-y-8 p-12 animate-in fade-in zoom-in duration-700 bg-slate-50/50 dark:bg-slate-900/20">
-                                        <div className="relative">
-                                            <div className="size-32 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-2xl shadow-primary/20 border border-slate-100 dark:border-slate-700 relative z-10">
-                                                <span className="material-symbols-outlined text-6xl text-primary animate-pulse">quick_reference_all</span>
-                                            </div>
-                                            <div className="absolute -top-2 -right-2 size-10 bg-primary rounded-full border-4 border-white dark:border-slate-900 shadow-lg z-20 flex items-center justify-center">
-                                                <span className="material-symbols-outlined text-white text-lg font-black">bolt</span>
-                                            </div>
-                                        </div>
-                                        <div className="max-w-sm space-y-3">
-                                            <h3 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">Professional Inbox</h3>
-                                            <p className="text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
-                                                Select a customer request from the sidebar to view project requirements, address details, and start messaging.
-                                            </p>
-                                        </div>
-                                    </div>
-                                );
-                            })()
                         ) : (
                             <>
                                 {/* Chat Header */}
-                                <div className="flex items-center justify-between p-3 md:p-4 border-b border-slate-100/60 dark:border-slate-800/50 bg-white/90 dark:bg-card-dark/90 backdrop-blur-xl sticky top-0 z-20 shadow-sm transition-all">
-                                    <div className="flex items-center gap-3 md:gap-4">
+                                <div className="flex items-center justify-between p-4 md:p-6 border-b border-slate-100/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl sticky top-0 z-20 transition-all">
+                                    <div className="flex items-center gap-5 md:gap-6">
                                         <button
                                             onClick={() => setSearchParams({})}
-                                            className="md:hidden size-9 flex items-center justify-center text-slate-400 hover:text-primary transition-all bg-slate-50 dark:bg-slate-800 rounded-lg"
+                                            className="md:hidden size-10 flex items-center justify-center text-slate-400 hover:text-primary transition-all bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl"
                                         >
-                                            <span className="material-symbols-outlined text-xl">arrow_back</span>
+                                            <ArrowLeft size={20} />
                                         </button>
-                                        {/* Clickable customer identity */}
-                                        <button
-                                            onClick={() => setShowCustomerProfile(p => !p)}
-                                            className="flex items-center gap-3 md:gap-4 hover:opacity-80 transition-opacity"
-                                        >
-                                        <div className="relative group cursor-pointer">
-                                            <div className="size-12 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-md transform group-hover:scale-105 transition-transform overflow-hidden">
+                                        <div className="relative group cursor-pointer" onClick={() => setShowCustomerProfile(p => !p)}>
+                                            <div className="size-14 rounded-[1.2rem] bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-xl transform group-hover:scale-110 group-hover:rotate-3 transition-all overflow-hidden ring-8 ring-primary/5">
                                                 {(activeUserDetails?.profile_picture || activeRequest.customer_detail?.profile_picture) ? (
                                                     <img src={getImageUrl(activeUserDetails?.profile_picture || activeRequest.customer_detail.profile_picture)} alt="" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <span className="material-symbols-outlined">person</span>
+                                                    <User size={28} className="text-slate-400" />
                                                 )}
                                             </div>
-                                            <div className="absolute bottom-0 right-0 size-3.5 bg-green-500 border-[2.5px] border-white dark:border-slate-900 rounded-full shadow-sm ring-2 ring-white dark:ring-slate-950" />
+                                            <div className="absolute -bottom-1 -right-1 size-5 bg-emerald-500 border-[4px] border-white dark:border-slate-900 rounded-full shadow-lg" />
                                         </div>
-                                        <div className="flex flex-col gap-0.5 text-left">
-                                            <h3 className="text-text-primary dark:text-white text-base font-black tracking-tight leading-none">
+                                        <div className="flex flex-col gap-1">
+                                            <h3 className="text-slate-900 dark:text-white text-xl font-black tracking-tight leading-none group-hover:text-primary transition-colors">
                                                 {(() => {
                                                     const detail = activeUserDetails || activeRequest.customer_detail;
                                                     if (!detail) return "Customer";
                                                     const first = detail.first_name || detail.user?.first_name || detail.user_detail?.first_name;
                                                     const last = detail.last_name || detail.user?.last_name || detail.user_detail?.last_name || "";
-                                                    return first ? `${first} ${last}`.trim() : "Customer";
+                                                    return first ? `${first} ${last}`.trim() : "Verified Customer";
                                                 })()}
                                             </h3>
-                                            <div className="flex items-center gap-1.5 opacity-60">
-                                                <span className="size-1.5 bg-green-500 rounded-full animate-blink" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Online</span>
+                                            <div className="flex items-center gap-2.5">
+                                                <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-500/10 rounded-full border border-emerald-500/10">
+                                                    <span className="size-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
+                                                        Active Terminal
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
-                                        </button>
-
-                                        {/* Customer Mini-Profile Popup */}
-                                        {showCustomerProfile && (() => {
-                                            const detail = activeUserDetails || activeRequest.customer_detail;
-                                            const photo = detail?.profile_picture || detail?.user?.profile_picture;
-                                            const first = detail?.first_name || detail?.user?.first_name || "Customer";
-                                            const last = detail?.last_name || detail?.user?.last_name || "";
-                                            const fullName = `${first} ${last}`.trim();
-                                            const email = detail?.email || detail?.user?.email;
-                                            const phone = detail?.phonenumber || detail?.phone || detail?.user?.phonenumber;
-                                            const location = detail?.city || detail?.location || detail?.user?.city;
-                                            return (
-                                                <div
-                                                    className="absolute left-4 top-[4.5rem] z-[100] w-72 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-                                                    onClick={e => e.stopPropagation()}
-                                                >
-                                                    <div className="h-16 bg-gradient-to-r from-primary/30 to-primary/10 relative" />
-                                                    <div className="px-5 pb-5 -mt-8">
-                                                        <div className="size-16 rounded-full border-4 border-white dark:border-slate-800 overflow-hidden bg-primary/10 flex items-center justify-center shadow-lg mb-3">
-                                                            {photo ? (
-                                                                <img src={getImageUrl(photo)} alt={fullName} className="w-full h-full object-cover" />
-                                                            ) : (
-                                                                <span className="material-symbols-outlined text-3xl text-primary">person</span>
-                                                            )}
-                                                        </div>
-                                                        <h4 className="font-black text-base text-slate-900 dark:text-white">{fullName}</h4>
-                                                        <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-3">Customer</p>
-                                                        <div className="space-y-2">
-                                                            {location && (
-                                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                                    <span className="material-symbols-outlined text-sm text-slate-400">location_on</span>
-                                                                    <span className="font-medium">{location}</span>
-                                                                </div>
-                                                            )}
-                                                            {email && (
-                                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                                    <span className="material-symbols-outlined text-sm text-slate-400">mail</span>
-                                                                    <span className="font-medium truncate">{email}</span>
-                                                                </div>
-                                                            )}
-                                                            {phone && (
-                                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                                    <span className="material-symbols-outlined text-sm text-slate-400">call</span>
-                                                                    <span className="font-medium">{phone}</span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <button
-                                                            onClick={() => setShowCustomerProfile(false)}
-                                                            className="mt-4 w-full py-2 text-[11px] font-black uppercase tracking-widest rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
-                                                        >
-                                                            Close
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })()}
                                     </div>
                                     <div className="flex gap-2">
                                         <button
                                             onClick={() => setShowStatus(!showStatus)}
-                                            className={`size-10 flex lg:hidden items-center justify-center rounded-xl transition-all border ${showStatus ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' : 'text-slate-400 border-slate-100 dark:border-slate-800 hover:bg-primary/10 hover:text-primary'}`}
+                                            className={`size-11 flex xl:hidden items-center justify-center rounded-[1rem] transition-all border shadow-xl ${showStatus ? 'bg-primary text-white border-primary shadow-primary/30' : 'text-slate-400 bg-white/50 dark:bg-slate-800/50 border-slate-200/50 dark:border-slate-700/50 hover:bg-primary/10 hover:text-primary'}`}
                                         >
-                                            <span className="material-symbols-outlined text-xl">{showStatus ? 'close' : 'analytics'}</span>
+                                            {showStatus ? <X size={20} /> : <BarChart2 size={20} />}
                                         </button>
-                                        <button className="size-10 flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary/10 rounded-xl transition-all border border-slate-100 dark:border-slate-800">
-                                            <span className="material-symbols-outlined">more_vert</span>
-                                        </button>
+                                        <div className="relative" ref={moreMenuRef}>
+                                            <button 
+                                                onClick={() => setShowMoreMenu(!showMoreMenu)}
+                                                className={`size-11 flex items-center justify-center rounded-[1rem] transition-all border shadow-xl ${showMoreMenu ? 'bg-primary text-white border-primary shadow-primary/30' : 'text-slate-400 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 border-slate-200/50 dark:border-slate-700/50'}`}
+                                            >
+                                                <MoreVertical size={20} />
+                                            </button>
+                                            {showMoreMenu && (
+                                                <div className="absolute right-0 top-full mt-3 w-56 bg-white dark:bg-slate-900 rounded-[1.5rem] shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in zoom-in duration-200 z-[100]">
+                                                    <div className="p-2">
+                                                        <button 
+                                                            onClick={() => {
+                                                                setShowMoreMenu(false);
+                                                                alert("User reported successfully. Our safety team will review this interaction.");
+                                                            }}
+                                                            className="flex items-center gap-3 w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-rose-500/5 hover:text-rose-500 rounded-xl transition-all group"
+                                                        >
+                                                            <Flag size={16} className="text-slate-400 group-hover:text-rose-500 transition-colors" />
+                                                            Report User
+                                                        </button>
+                                                        <button 
+                                                            onClick={() => {
+                                                                setShowMoreMenu(false);
+                                                                alert("Conversation flagged for review.");
+                                                            }}
+                                                            className="flex items-center gap-3 w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-amber-500/5 hover:text-amber-500 rounded-xl transition-all group"
+                                                        >
+                                                            <AlertTriangle size={16} className="text-slate-400 group-hover:text-amber-500 transition-colors" />
+                                                            Flag Chat
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Messaging Canvas */}
-                                 <div className="flex-1 overflow-y-auto px-4 md:px-12 py-6 flex flex-col gap-6 relative scroll-smooth custom-scrollbar" 
-                                      style={{ 
-                                         backgroundColor: '#efeae2', // Creamy Ivory
-                                         backgroundImage: `url("data:image/svg+xml,%3Csvg width='180' height='180' viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23000' stroke-width='0.4' stroke-linecap='round' opacity='0.09'%3E%3C!-- Bear Face --%3E%3Cpath d='M20 20a5 5 0 1110 0 5 5 0 01-10 0zM18 16a2 2 0 114 0 2 2 0 01-4 0zM28 16a2 2 0 114 0 2 2 0 01-4 0zM23 21a1 1 0 112 0 1 1 0 01-2 0z'/%3E%3C!-- Heart --%3E%3Cpath d='M60 30c-2-2-5-2-7 0s-2 5 0 7l7 7 7-7c2-2 2-5 0-7s-5-2-7 0z'/%3E%3C!-- Sparkle --%3E%3Cpath d='M100 20l2 4 4 2-4 2-2 4-2-4-4-2 4-2z'/%3E%3C!-- Small Paw --%3E%3Ccircle cx='140' cy='30' r='3'/%3E%3Ccircle cx='136' cy='24' r='1.5'/%3E%3Ccircle cx='140' cy='22' r='1.5'/%3E%3Ccircle cx='144' cy='24' r='1.5'/%3E%3C!-- Chat Bubble --%3E%3Cpath d='M30 80a5 5 0 0110 0v5l-3-2-2 2z'/%3E%3C!-- Flower --%3E%3Ccircle cx='80' cy='80' r='2'/%3E%3Cpath d='M80 76a2 2 0 110 4 2 2 0 010-4zM84 80a2 2 0 11-4 0 2 2 0 014 0zM80 84a2 2 0 110-4 2 2 0 010 4zM76 80a2 2 0 114 0 2 2 0 01-4 0z'/%3E%3C!-- Star --%3E%3Cpath d='M120 70l2 5h5l-4 3 1 5-4-3-4 3 1-5-4-3h5z'/%3E%3C!-- Bone/Tool --%3E%3Cpath d='M160 80h10M158 78c1-2 3-2 4 0l-4 4zM172 78c-1-2-3-2-4 0l4 4z'/%3E%3C!-- More Hearts/Sparkles --%3E%3Cpath d='M40 130c-1-1-2.5-1-3.5 0s-1 2.5 0 3.5l3.5 3.5 3.5-3.5c1-1 1-2.5 0-3.5s-2.5-1-3.5 0z'/%3E%3Cpath d='M90 120l1 3 3 1-3 1-1 3-1-3-3-1 3-1z'/%3E%3Cpath d='M140 140c-2-2-4-2-6 0s-2 4 0 6 4 2 6 0 2-4 0-6z'/%3E%3C/g%3E%3C/svg%3E")`,
-                                         backgroundSize: '240px 240px',
-                                         backgroundAttachment: 'local'
-                                      }}>
-                                     <div className="flex justify-center mb-2 sticky top-0 z-10 pointer-events-none">
-                                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 bg-white/60 dark:bg-slate-900/60 backdrop-blur-md px-5 py-2 rounded-full border border-slate-200/50 dark:border-slate-800/50 shadow-sm">
-                                             Secure Chat Sync â€¢ {formatTime(activeRequest.created_at || activeRequest.createdAt)}
-                                         </span>
-                                     </div>
+                                <div className="flex-1 overflow-y-auto px-4 md:px-8 py-8 flex flex-col gap-8 relative scroll-smooth [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                                     {/* Message History Thread */}
-                                    <div className="flex flex-col gap-4 py-4 min-h-full">
+                                    <div className="flex flex-col gap-8 py-4 min-h-full">
+                                        <div className="flex justify-center mb-10">
+                                            <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-xl">
+                                                <ShieldCheck size={20} className="text-emerald-500" />
+                                                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
+                                                    Secure Chat History • {formatTime(activeRequest.created_at || activeRequest.createdAt)}
+                                                </span>
+                                            </div>
+                                        </div>
+
                                         {/* Original Request (Left) */}
-                                        <div className="flex justify-start animate-in fade-in slide-in-from-left-4">
-                                            <div className="flex items-end gap-2.5 max-w-[85%] group">
-                                                <div className="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-1 transition-transform hover:scale-110">
+                                        <div className="flex justify-start animate-in fade-in slide-in-from-left-8 duration-700">
+                                            <div className="flex items-end gap-4 max-w-[85%] md:max-w-[75%] group">
+                                                <div className="size-10 rounded-[1rem] bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden mb-1 ring-4 ring-slate-100 dark:ring-slate-900/50 transition-all group-hover:scale-110">
                                                     {activeUserDetails?.profile_picture || activeUserDetails?.profilePhoto ? (
                                                         <img src={getImageUrl(activeUserDetails.profile_picture || activeUserDetails.profilePhoto)} alt="" className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <span className="material-symbols-outlined text-xs">person</span>
+                                                        <User size={20} className="text-slate-400" />
                                                     )}
                                                 </div>
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="relative text-sm font-medium leading-relaxed rounded-[18px] rounded-tl-none px-4 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-md border border-slate-100 dark:border-slate-700 transition-all hover:shadow-lg">
-                                                        <div className="pr-10 md:pr-12">
-                                                            {activeRequest.description || "I'd like to request your services."}
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="relative text-[14px] font-bold leading-relaxed rounded-[1.5rem] rounded-tl-none px-6 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-xl border border-slate-100 dark:border-slate-700/50 transition-all hover:shadow-2xl">
+                                                        <div className="pb-6 text-pretty whitespace-pre-wrap">
+                                                            {activeRequest.description || "Job details sent by customer."}
                                                         </div>
-                                                        <div className="absolute bottom-1 right-3 text-[9px] font-bold tracking-tight select-none opacity-40">
+                                                        <div className="absolute left-6 bottom-3 opacity-40 text-[9px] font-black tracking-widest uppercase select-none">
                                                             {formatTime(activeRequest)}
                                                         </div>
                                                     </div>
@@ -652,53 +654,31 @@ const ProfessionalMessages = () => {
                                             </div>
                                         </div>
 
-                                        {/* System Notification: Acceptance (Right) */}
-                                        {activeRequest.status !== 'pending' && (
-                                            <div className="flex justify-end animate-in fade-in slide-in-from-right-4 duration-500 group">
-                                                <div className="flex flex-col items-end gap-1 max-w-[80%] md:max-w-[70%]">
-                                                    <div className="relative text-sm font-medium leading-relaxed rounded-[18px] rounded-tr-none px-4 py-3 bg-primary text-white shadow-lg shadow-primary/10 border border-primary/20 italic transition-all hover:shadow-xl">
-                                                        <div className="pr-12 md:pr-14">
-                                                            {activeRequest.status === 'accepted' || activeRequest.status === 'assigned' || activeRequest.status === 'booked'
-                                                                ? `I've reviewed this request and accepted the project. Chatting with customer now!`
-                                                                : activeRequest.status === 'done' || activeRequest.status === 'completed'
-                                                                ? "I've marked this job as finished. Awaiting customer confirmation and payment."
-                                                                : "Job status updated to: " + activeRequest.status}
-                                                        </div>
-                                                        <div className="absolute bottom-1 right-3 flex items-center gap-1 opacity-70 text-[9px] font-bold tracking-tight select-none">
-                                                            {formatTime(activeRequest.updated_at || activeRequest.updatedAt || activeRequest)}
-                                                            <span className="material-symbols-outlined text-[10px] font-black">done_all</span>
-                                                        </div>
-                                                    </div>
-                                                    <span className="text-slate-400 text-[9px] font-black uppercase tracking-widest mr-2 opacity-0 group-hover:opacity-100 transition-opacity">System Notification</span>
-                                                </div>
-                                            </div>
-                                        )}
-
                                         {/* Real Time Messages */}
                                         {messages.map((msg, i) => {
                                             const isMe = msg.sender === user?.id || msg.is_me;
                                             return (
-                                                <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-2.5'} animate-in fade-in slide-in-from-bottom-2`}>
+                                                <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-4'} animate-in fade-in zoom-in slide-in-from-bottom-6 duration-500`}>
                                                     {!isMe && (
-                                                        <div className="size-8 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden mb-1 transition-transform hover:scale-105">
+                                                        <div className="size-10 rounded-[1rem] bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-xl border border-slate-200/50 dark:border-slate-700/50 overflow-hidden mb-1 ring-4 ring-slate-100 dark:ring-slate-900/50 transition-all hover:scale-110">
                                                             {activeUserDetails?.profile_picture ? (
                                                                 <img src={getImageUrl(activeUserDetails.profile_picture)} alt="" className="w-full h-full object-cover" />
                                                             ) : (
-                                                                <span className="material-symbols-outlined text-xs">person</span>
+                                                                <User size={24} className="text-slate-400" />
                                                             )}
                                                         </div>
                                                     )}
-                                                    <div className={`relative max-w-[75%] md:max-w-[65%] px-4 py-2.5 shadow-md transition-all hover:shadow-lg ${
+                                                    <div className={`relative max-w-[80%] md:max-w-[70%] px-6 py-4 transition-all group/msg shadow-xl ${
                                                         isMe 
-                                                        ? 'bg-primary text-white rounded-[18px] rounded-tr-none shadow-primary/5' 
-                                                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700 rounded-[18px] rounded-tl-none shadow-slate-100/5'
+                                                        ? 'bg-gradient-to-br from-primary via-primary-light to-primary-dark text-white rounded-[1.5rem] rounded-tr-none shadow-primary/20 border border-white/10' 
+                                                        : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-100 dark:border-slate-700/50 rounded-[1.5rem] rounded-tl-none'
                                                     }`}>
-                                                        <div className="pr-12 md:pr-14">
-                                                            <p className="text-sm font-medium leading-relaxed break-words">{msg.body || msg.text || msg.content}</p>
+                                                        <div className="pb-6 text-pretty relative z-10 whitespace-pre-wrap">
+                                                            <p className="text-[14px] font-bold leading-relaxed">{msg.body || msg.text || msg.content}</p>
                                                         </div>
-                                                        <div className={`absolute bottom-1 right-3 flex items-center gap-1 text-[9px] font-bold tracking-tight select-none ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
-                                                            {formatTime(msg)}
-                                                            {isMe && <span className="material-symbols-outlined text-[10px] font-black">{msg.is_read || msg.isRead ? 'done_all' : 'done'}</span>}
+                                                        <div className={`absolute inset-x-6 bottom-3 flex items-center justify-between text-[9px] font-black tracking-widest uppercase select-none relative z-10 gap-6 ${isMe ? 'text-white/70' : 'text-slate-400'}`}>
+                                                            <span>{formatTime(msg)}</span>
+                                                            {isMe && (msg.is_read || msg.isRead ? <CheckCheck size={12} className="text-white/70" /> : <Check size={12} className="text-white/70" />)}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -708,241 +688,257 @@ const ProfessionalMessages = () => {
                                     </div>
                                 </div>
 
-                                {/* Send Bar with WhatsApp Clean UI */}
-                                <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 px-6 pb-6">
-                                    <div className="flex items-center gap-2 max-w-5xl mx-auto">
-                                        <div className="flex-1 flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-1.5 ring-1 ring-slate-200/50 dark:ring-slate-700 shadow-sm focus-within:bg-white dark:focus-within:bg-slate-800 transition-all focus-within:ring-primary/20">
-                                            <button type="button" className="text-slate-400 hover:text-primary transition-all p-1">
-                                                <span className="material-symbols-outlined text-2xl">sentiment_satisfied</span>
+                                {/* Send Bar */}
+                                <form onSubmit={handleSendMessage} className="p-4 md:p-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border-t border-slate-100/50 dark:border-slate-800/50">
+                                    <div className="flex items-center gap-4 max-w-5xl mx-auto">
+                                        <div className="flex items-center gap-2">
+                                            <button type="button" className="size-10 flex items-center justify-center transition-all bg-white dark:bg-slate-800 hover:bg-primary/10 hover:text-primary rounded-xl text-slate-400 border border-slate-200/50 dark:border-slate-700/50 shadow-lg">
+                                                <Paperclip size={20} />
                                             </button>
+                                        </div>
+                                        <div className="flex-1 flex items-center bg-white dark:bg-slate-800 rounded-[1.5rem] px-6 py-2.5 ring-1 ring-slate-200/50 dark:ring-slate-700/50 shadow-2xl focus-within:ring-primary/40 focus-within:shadow-primary/5 transition-all group">
                                             <input
-                                                className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2 px-2"
-                                                placeholder="Message..."
+                                                className="flex-1 bg-transparent border-none focus:ring-0 text-[14px] font-bold text-slate-700 dark:text-white placeholder-slate-400/60 outline-none"
+                                                placeholder="Type your message..."
                                                 type="text"
                                                 value={messageInput}
                                                 onChange={(e) => setMessageInput(e.target.value)}
                                                 disabled={isSending}
                                             />
-                                            <button type="button" className="text-slate-400 hover:text-primary transition-all p-1">
-                                                <span className="material-symbols-outlined text-2xl">attachment</span>
-                                            </button>
                                         </div>
                                         <button
                                             type="submit"
-                                            className="size-11 flex items-center justify-center bg-primary text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/30 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                                            className="size-11 flex items-center justify-center bg-primary text-white rounded-xl hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-primary/30 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 group overflow-hidden relative"
                                             disabled={!messageInput.trim() || isSending}
                                         >
-                                            {isSending ? (
-                                                <span className="material-symbols-outlined text-xl animate-spin">refresh</span>
-                                            ) : (
-                                                <span className="material-symbols-outlined text-xl ml-1">send</span>
-                                            )}
+                                            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                                                <Send size={20} className="group-hover:-rotate-12 transition-transform" />
                                         </button>
                                     </div>
                                 </form>
                             </>
                         )}
-                    </div>                    {/* Right Sidebar: Timeline with Clean Look */}
+                    </div>
+
+                    {/* Right Column: Timeline & Details */}
                     <div className={`
-                        ${showStatus ? 'fixed inset-0 z-[60] flex bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm p-6 animate-in fade-in slide-in-from-right duration-300' : 'hidden'} 
-                        xl:relative xl:inset-auto xl:z-0 xl:flex xl:bg-white xl:dark:bg-slate-900 border-l border-slate-100 dark:border-slate-800 xl:p-0 
-                        w-full xl:w-80 2xl:w-96 flex-col gap-0 overflow-y-auto custom-scrollbar pr-0 shrink-0
+                        ${showStatus ? 'fixed inset-0 z-[60] flex bg-white/95 dark:bg-slate-950/95 backdrop-blur-3xl p-6 animate-in fade-in slide-in-from-right-8 duration-700' : 'hidden'} 
+                        xl:relative xl:inset-auto xl:z-0 xl:flex bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[2.5rem] border border-slate-100 dark:border-slate-800/50 shadow-xl
+                        w-full xl:w-64 2xl:w-72 flex-col gap-0 overflow-hidden shrink-0 min-h-0
                     `}>
                         {showStatus && (
                             <button
                                 onClick={() => setShowStatus(false)}
-                                className="xl:hidden absolute top-6 right-6 size-10 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 shadow-lg z-[70] border-2 border-white dark:border-slate-700"
+                                className="xl:hidden absolute top-8 right-8 size-14 bg-white dark:bg-slate-800 rounded-[1.2rem] flex items-center justify-center text-slate-600 dark:text-slate-300 shadow-2xl z-[70] border border-slate-200/50 dark:border-slate-700/50"
                             >
-                                <span className="material-symbols-outlined">close</span>
+                                <X size={24} />
                             </button>
                         )}
-                        {activeRequest ? (
-                            <div className="flex flex-col gap-6">
-                                <div className="bg-white dark:bg-card-dark rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/60 dark:border-slate-800 p-8">
-                                    <h3 className="text-sm font-black text-text-primary dark:text-white uppercase tracking-[0.15em] mb-10 text-center">Project Timeline</h3>
-    
-                                    <div className="relative flex flex-col gap-12">
-                                        <div className="absolute left-[11px] top-6 bottom-6 w-1 bg-slate-100 dark:bg-slate-800 rounded-full" />
-    
-                                        {jobSteps.map((step, index) => {
-                                            const isCompleted = step.status === 'completed';
-                                            const isCurrent = step.status === 'current';
-    
-                                            return (
-                                                <div key={index} className={`flex gap-6 relative group transition-all duration-500 ${!isCompleted && !isCurrent ? 'opacity-40 grayscale' : ''}`}>
-                                                    <div className="relative shrink-0 z-10">
-                                                        {isCompleted ? (
-                                                            <div className="size-[26px] bg-green-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-green-500/40 ring-4 ring-white dark:ring-slate-900">
-                                                                <span className="material-symbols-outlined text-sm font-black">check</span>
-                                                            </div>
-                                                        ) : isCurrent ? (
-                                                            <div className="size-[26px] bg-primary rounded-full flex items-center justify-center text-white shadow-lg shadow-primary/40 ring-4 ring-white dark:ring-slate-900">
-                                                                <div className="size-2.5 bg-white rounded-full animate-ping" />
-                                                            </div>
-                                                        ) : (
-                                                            <div className="size-[26px] bg-slate-200 dark:bg-slate-700 rounded-full ring-4 ring-white dark:ring-slate-900" />
-                                                        )}
+                        <div className="flex-1 min-h-0 flex flex-col overflow-y-auto custom-scrollbar p-6 space-y-8">
+                            {activeRequest ? (
+                                <>
+                                    {/* Action Status Card */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3">
+                                            <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                                <Zap size={20} className="text-primary" />
+                                            </div>
+                                            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Project Journey</h3>
+                                        </div>
+
+                                        <div className="space-y-8 relative">
+                                            {/* Timeline Connector Line */}
+                                            <div className="absolute left-[19px] top-4 bottom-4 w-0.5 bg-slate-100 dark:bg-slate-800/50" />
+
+                                            {jobSteps.map((step, idx) => (
+                                                <div key={idx} className="relative flex gap-6 group">
+                                                    <div className={`size-10 rounded-xl shrink-0 flex items-center justify-center z-10 transition-all duration-500 border-4 border-white dark:border-slate-900 shadow-xl
+                                                        ${step.status === 'completed' ? 'bg-emerald-500 text-white' : 
+                                                          step.status === 'current' ? 'bg-primary text-white animate-pulse ring-4 ring-primary/20' : 
+                                                          'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-600'}
+                                                    `}>
+                                                            {step.status === 'completed' ? <Check size={16} /> : 
+                                                             step.status === 'current' ? <RefreshCw size={16} className="animate-spin" /> : 
+                                                             <Circle size={16} />}
                                                     </div>
-    
-                                                    <div className="flex flex-col flex-1 gap-0.5">
+                                                    <div className="flex-1 pt-0.5 space-y-2">
                                                         <div className="flex items-center justify-between">
-                                                            <span className={`text-sm font-black tracking-tight ${isCurrent ? 'text-primary' : 'text-slate-700 dark:text-slate-300'}`}>
+                                                            <p className={`text-[13px] font-black tracking-tight ${step.status === 'upcoming' ? 'text-slate-400 dark:text-slate-600' : 'text-slate-900 dark:text-white'}`}>
                                                                 {step.title}
-                                                            </span>
-                                                            {step.date && <span className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-tighter">{step.date}</span>}
+                                                            </p>
+                                                            {step.date && <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 opacity-60">{step.date}</span>}
                                                         </div>
-                                                        <span className={`text-[11px] font-bold ${isCurrent ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-                                                            {isCompleted ? 'Phase Finalized' : isCurrent ? 'Active Phase â€¢ Action required' : 'Future Milestone'}
-                                                        </span>
-    
-                                                        {isCurrent && step.actionRequired && (
-                                                            <div className="mt-4 p-4 bg-primary/5 rounded-xl border border-primary/20 space-y-3 animate-in fade-in slide-in-from-top-2">
-                                                                <p className="text-[10px] font-black text-primary leading-tight">
-                                                                    {activeRequest.status === 'pending'
-                                                                        ? "New request! Review the details and accept to begin."
-                                                                        : (activeRequest.status === 'accepted' || activeRequest.status === 'assigned')
-                                                                        ? "You accepted the job! Awaiting customer payment via Escrow."
-                                                                        : activeRequest.status === 'booked'
-                                                                        ? "Payment Secured! You can now start the work."
-                                                                        : activeRequest.status === 'in_progress'
-                                                                        ? "Work in progress. Mark finished when you're done!"
-                                                                        : activeRequest.status === 'done'
-                                                                        ? "Work marked done! Awaiting customer's final approval."
-                                                                        : "Job successfully completed!"}
+                                                        {step.actionRequired && step.status === 'current' && (
+                                                            <div className="bg-primary/5 rounded-[1.2rem] border border-primary/10 p-5 space-y-4 animate-in zoom-in slide-in-from-top-4 duration-500">
+                                                                <p className="text-[10px] font-black uppercase tracking-[0.15em] text-primary/80 leading-relaxed">
+                                                                    {activeRequest.status === 'pending' ? "Accept the job to start working." :
+                                                                     activeRequest.status === 'booked' ? "Customer has confirmed. You can start the job now." :
+                                                                     activeRequest.status === 'in_progress' ? "You are currently working on this job. Mark it as done when finished." :
+                                                                     "Finalizing the job."}
                                                                 </p>
-                                                                {(activeRequest.status === 'pending' || activeRequest.status === 'assigned') ? (
-                                                                    <div className="flex flex-col gap-2 w-full mt-2">
-                                                                        <button 
-                                                                            onClick={handleAccept}
-                                                                            className="w-full py-2.5 bg-primary text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:shadow-lg transition-all flex items-center justify-center gap-2"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-sm">handshake</span>
-                                                                            Accept Request
-                                                                        </button>
-                                                                        <button 
-                                                                            onClick={handleDecline}
-                                                                            className="w-full py-2 bg-slate-100 dark:bg-slate-800 text-slate-500 text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-slate-200 transition-all flex items-center justify-center gap-2"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-sm">close</span>
-                                                                            Decline Request
-                                                                        </button>
-                                                                    </div>
-                                                                ) : activeRequest.status === 'booked' ? (
-                                                                    <button 
-                                                                        onClick={handleStartJob}
-                                                                        className="w-full py-2.5 bg-blue-500 text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-blue-600 transition-all flex items-center justify-center gap-2 shadow-sm"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-sm">play_circle</span>
-                                                                        Start Job Now
-                                                                    </button>
-                                                                ) : activeRequest.status === 'in_progress' && (
-                                                                    <button 
-                                                                        onClick={handleMarkDone}
-                                                                        className="w-full py-2.5 bg-emerald-500 text-white text-[10px] font-black rounded-lg uppercase tracking-wider hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 shadow-sm"
-                                                                    >
-                                                                        <span className="material-symbols-outlined text-sm">task_alt</span>
-                                                                        Mark Work as Finished
-                                                                    </button>
-                                                                )}
+                                                                <div className="flex flex-col gap-2">
+                                                                    {activeRequest.status === 'pending' && (
+                                                                        <div className="flex gap-2">
+                                                                            <button onClick={handleAccept} className="flex-1 py-3 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Accept</button>
+                                                                            <button onClick={handleDecline} className="flex-1 py-3 bg-white dark:bg-slate-800 text-slate-500 text-[10px] font-black rounded-xl uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:text-rose-500 transition-all">Decline</button>
+                                                                        </div>
+                                                                    )}
+                                                                    {activeRequest.status === 'booked' && (
+                                                                        <button onClick={handleStartJob} className="w-full py-3.5 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all">Start Job</button>
+                                                                    )}
+                                                                    {activeRequest.status === 'in_progress' && (
+                                                                        <button onClick={handleMarkDone} className="w-full py-3.5 bg-emerald-500 text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all">Finish Job</button>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-    
-                                {activeRequest?.status === 'completed' && (
-                                    <div className="mt-8 p-4 bg-amber-500/10 rounded-xl border border-amber-500/20 animate-in zoom-in">
-                                        <div className="flex items-center gap-2 mb-2 text-amber-600">
-                                            <span className="material-symbols-outlined text-lg">payments</span>
-                                            <h5 className="text-[10px] font-black uppercase tracking-widest">Payment Released</h5>
+                                            ))}
                                         </div>
-                                        <p className="text-[10px] text-amber-700 font-bold leading-relaxed">
-                                            The customer approved the work! Your balance has been updated (+{activeRequest.budget || '1,500'} ETB).
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Job Details card â€” always visible below timeline */}
-                                <div className="bg-white dark:bg-card-dark rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-200/60 dark:border-slate-800 p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-primary text-lg">assignment_late</span>
-                                            <h3 className="text-[10px] font-black text-text-primary dark:text-white uppercase tracking-[0.15em]">Job Details</h3>
-                                        </div>
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID-{activeRequest.id.substring(0, 6)}</span>
                                     </div>
 
-                                    <div className="space-y-3">
-                                        <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800 italic">
-                                            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
-                                                "{activeRequest.description || "No description provided."}"
-                                            </p>
+                                    {/* Mission Details Card */}
+                                    <div className="space-y-6 pt-6 border-t border-slate-100 dark:border-slate-800/50">
+                                        <div className="flex items-center gap-3">
+                                            <div className="size-10 rounded-xl bg-accent-purple/10 flex items-center justify-center">
+                                                <Zap size={20} className="text-accent-purple" />
+                                            </div>
+                                            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Project Snapshot</h3>
                                         </div>
 
-                                        <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                                            <span className="material-symbols-outlined text-slate-400 text-lg">location_on</span>
-                                            <div>
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Location</p>
-                                                <p className="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">
-                                                    {activeRequest.address || activeRequest.city || activeRequest.location || "Addis Ababa"}
+                                        <div className="space-y-4">
+                                            <div className="p-5 bg-slate-50/50 dark:bg-slate-800/30 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 shadow-inner">
+                                                <p className="text-xs font-bold text-slate-600 dark:text-slate-400 leading-relaxed italic opacity-80">
+                                                    "{activeRequest.description || "Job details pending."}"
                                                 </p>
                                             </div>
-                                        </div>
 
-                                        <div className="flex items-center gap-3 px-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700">
-                                            <span className="material-symbols-outlined text-emerald-500 text-lg">payments</span>
-                                            <div>
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Budget</p>
-                                                <p className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                                                    {activeRequest.budget ? `ETB ${activeRequest.budget}` : "Flexible"}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {activeRequest.scheduled_at && (
-                                            <div className="flex items-center gap-3 px-3 py-2.5 bg-primary/5 rounded-xl border border-primary/10">
-                                                <span className="material-symbols-outlined text-primary text-lg">event_available</span>
-                                                <div>
-                                                    <p className="text-[9px] font-black uppercase tracking-widest text-primary opacity-70">Scheduled</p>
-                                                    <p className="text-xs font-black text-primary">
-                                                        {new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
-                                                    </p>
+                                            <div className="grid grid-cols-1 gap-3">
+                                                <div className="flex items-center gap-4 p-4 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 transition-all hover:border-primary/20 group">
+                                                    <div className="size-10 rounded-xl bg-primary/5 flex items-center justify-center transition-all group-hover:scale-110">
+                                                        <MapPin size={20} className="text-primary" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Location</p>
+                                                        <p className="text-[13px] font-black text-slate-800 dark:text-white truncate">{activeRequest.address || activeRequest.city || "Addis Ababa"}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-4 p-4 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 transition-all hover:border-emerald-500/20 group">
+                                                    <div className="size-10 rounded-xl bg-emerald-500/5 flex items-center justify-center transition-all group-hover:scale-110">
+                                                        <CreditCard size={20} className="text-emerald-500" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Project Budget</p>
+                                                        <p className="text-[13px] font-black text-emerald-600 dark:text-emerald-400">{activeRequest.budget ? `ETB ${activeRequest.budget}` : "To be negotiated"}</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        )}
 
-                                        {/* Accept/Decline â€” only when still pending */}
-                                        {activeRequest.status === 'pending' && (
-                                            <div className="flex gap-2 pt-1">
-                                                <button
-                                                    onClick={handleAccept}
-                                                    className="flex-1 py-2.5 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
-                                                >
-                                                    Accept
-                                                </button>
-                                                <button
-                                                    onClick={handleDecline}
-                                                    className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-red-50 hover:text-red-500 transition-all"
-                                                >
-                                                    Decline
-                                                </button>
-                                            </div>
-                                        )}
+                                            {activeRequest.scheduled_at && (
+                                                <div className="p-4 bg-primary/5 rounded-[1.5rem] border border-primary/10 flex items-center gap-4 shadow-inner">
+                                                    <div className="size-10 rounded-xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20">
+                                                        <Calendar size={20} className="text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-primary opacity-60 mb-0.5">Scheduled Date</p>
+                                                        <p className="text-[13px] font-black text-primary">
+                                                            {new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center p-12 space-y-6 opacity-20 grayscale transition-all duration-1000">
+                                    <div className="size-32 rounded-[2.5rem] border-2 border-dashed border-slate-300 dark:border-slate-700 flex items-center justify-center">
+                                        <span className="material-symbols-outlined text-5xl font-light">monitoring</span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <p className="text-[11px] font-black uppercase tracking-[0.3em]">Details Offline</p>
+                                        <p className="text-[9px] font-bold max-w-[180px] mx-auto leading-relaxed">Select a job to see project details and progress.</p>
                                     </div>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="h-full flex flex-col items-center justify-center text-center p-12 space-y-4 opacity-20 grayscale border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl">
-                                <span className="material-symbols-outlined text-6xl">query_stats</span>
-                                <p className="text-xs font-black uppercase tracking-widest">Pipeline Empty</p>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </main>
             </div>
+
+            {/* Customer Detail Card Modal */}
+            {showCustomerProfile && activeRequest && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 sm:p-10 backdrop-blur-md bg-slate-900/40 animate-in fade-in duration-300">
+                    <div 
+                        className="absolute inset-0" 
+                        onClick={() => setShowCustomerProfile(false)}
+                    />
+                    <div className="relative w-full max-w-xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl border border-white/20 dark:border-slate-800 overflow-hidden animate-in zoom-in slide-in-from-bottom-8 duration-500">
+                        {/* Modal Header/Hero */}
+                        <div className="p-10 pb-0 flex flex-col items-center text-center">
+                            <div className="size-24 rounded-3xl bg-primary/10 flex items-center justify-center mb-6 border border-primary/20 shadow-inner">
+                                {activeUserDetails?.profile_picture || activeRequest.customer_detail?.profile_picture ? (
+                                    <img src={getImageUrl(activeUserDetails?.profile_picture || activeRequest.customer_detail.profile_picture)} alt="" className="size-full object-cover rounded-3xl" />
+                                ) : (
+                                    <User size={48} className="text-primary" />
+                                )}
+                            </div>
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
+                                {(() => {
+                                    const detail = activeUserDetails || activeRequest.customer_detail;
+                                    if (!detail) return "Valued Client";
+                                    const first = detail.first_name || detail.user?.first_name || detail.user_detail?.first_name;
+                                    const last = detail.last_name || detail.user?.last_name || detail.user_detail?.last_name || "";
+                                    return first ? `${first} ${last}`.trim() : "Verified Customer";
+                                })()}
+                            </h2>
+                            <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-full border border-slate-100 dark:border-slate-800">
+                                <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Verified Identity</p>
+                            </div>
+                        </div>
+
+                        <div className="p-10 space-y-10">
+                            {/* Contact & Logistics Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Communication</p>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-black text-slate-800 dark:text-white">
+                                            {(activeUserDetails || activeRequest.customer_detail)?.phonenumber || (activeUserDetails || activeRequest.customer_detail)?.phone || "Private Information"}
+                                        </p>
+                                        <p className="text-xs font-bold text-slate-400">{(activeUserDetails || activeRequest.customer_detail)?.email || "Email pending"}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Project Location</p>
+                                    <p className="text-sm font-black text-slate-800 dark:text-white">{activeRequest.address || activeRequest.city || "Addis Ababa, ET"}</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Budget Estimate</p>
+                                    <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                                        {activeRequest.budget ? `ETB ${activeRequest.budget}` : "To be negotiated"}
+                                    </p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Date</p>
+                                    <p className="text-sm font-black text-slate-800 dark:text-white">
+                                        {activeRequest.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { day: 'numeric', month: 'short' }) : "Not scheduled yet"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button 
+                                onClick={() => setShowCustomerProfile(false)}
+                                className="w-full py-5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                            >
+                                Close Detail
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

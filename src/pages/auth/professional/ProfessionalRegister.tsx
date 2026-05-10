@@ -194,7 +194,7 @@ const ProfessionalRegister = () => {
                 <User size={24} />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Personal Identity</h2>
+                <h2 className="text-2xl font-bold text-text-light dark:text-text-dark">Personal Info</h2>
                 <p className="text-sm text-subtext-light dark:text-subtext-dark">Your basic details and profile appearance.</p>
               </div>
             </div>

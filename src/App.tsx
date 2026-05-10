@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Home from "./pages/home/Home";
 import EmailSignup from "./pages/signup/EmailSignup";
 import VerifyOTP from "./pages/signup/VerifyOTP";
@@ -24,10 +24,33 @@ import PaymentCheckout from "./pages/auth/customer/PaymentCheckout";
 import PaymentSuccess from "./pages/auth/customer/PaymentSuccess";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
+import { useEffect } from "react";
+import { useTheme } from "./context/ThemeContext";
+
+const ThemeManager = () => {
+  const { theme } = useTheme();
+  const location = useLocation();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    // Standard approach: Home page and Auth flow are theme-neutral (usually light or brand-fixed)
+    // Only apply dashboard dark mode if we're in the dashboard areas
+    const isDashboard = location.pathname.startsWith('/customer') || location.pathname.startsWith('/professional');
+    
+    if (isDashboard && theme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [theme, location.pathname]);
+
+  return null;
+};
 
 function App() {
   return (
     <BrowserRouter>
+      <ThemeManager />
       <ScrollToTop />
       <Routes>
         {/* Home Page */}
