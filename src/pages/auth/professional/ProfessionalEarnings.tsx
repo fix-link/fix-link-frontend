@@ -3,13 +3,13 @@ import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { useAuth } from "../../../context/AuthContext";
 import { useData } from "../../../context/DataContext";
-import { getEarningsSummary, withdrawFunds } from "../../../api/payments.api";
-import { 
-    TrendingUp, 
-    Clock, 
-    CreditCard, 
-    ArrowUpRight, 
-    FileText, 
+import { getEarningsSummary, listPayments, withdrawFunds } from "../../../api/payments.api";
+import {
+    TrendingUp,
+    Clock,
+    CreditCard,
+    ArrowUpRight,
+    FileText,
     Lock,
     CheckCircle2,
     RefreshCw
@@ -64,7 +64,7 @@ const ProfessionalEarnings: React.FC = () => {
             alert("No funds available for withdrawal.");
             return;
         }
-        
+
         const method = user?.preferred_payout_method || "telebirr";
         const account = user?.payout_account_number || user?.phonenumber;
 
@@ -207,7 +207,7 @@ const ProfessionalEarnings: React.FC = () => {
                             <div className="absolute top-0 right-0 w-[50%] h-[100%] bg-gradient-to-l from-emerald-500/10 to-transparent pointer-events-none"></div>
                             <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none animate-blob"></div>
                             <div className="absolute bottom-[-20%] left-[-10%] w-80 h-80 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none animate-blob [animation-delay:2s]"></div>
-                            
+
                             <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-16">
                                 <div className="flex flex-col lg:flex-row items-center gap-12 text-center lg:text-left">
                                     <div className="size-32 rounded-[2.5rem] bg-white/5 flex items-center justify-center backdrop-blur-2xl border border-white/10 shadow-3xl group-hover:scale-105 transition-all duration-700 group-hover:rotate-6">
@@ -227,12 +227,12 @@ const ProfessionalEarnings: React.FC = () => {
                                     </div>
                                 </div>
 
-                                <button 
+                                <button
                                     onClick={handleWithdraw}
                                     disabled={isWithdrawing || availableToWithdraw <= 0}
                                     className={`relative z-10 px-16 py-7 rounded-[2rem] font-black text-[12px] uppercase tracking-[0.3em] transition-all duration-500 shadow-3xl hover:scale-[1.03] active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:scale-100 flex items-center justify-center gap-6 group/btn overflow-hidden
-                                        ${availableToWithdraw > 0 
-                                            ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/30' 
+                                        ${availableToWithdraw > 0
+                                            ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/30'
                                             : 'bg-slate-800 text-slate-500 border border-white/5'}`}
                                 >
                                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500 ease-out"></div>
@@ -289,9 +289,9 @@ const ProfessionalEarnings: React.FC = () => {
                                                 .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())
                                                 .map((job: any) => (
                                                     <div key={job.id} className="flex items-center gap-6 px-10 py-7 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all duration-300 group">
-                                                         <div className="size-14 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-inner">
-                                                             <CheckCircle2 size={24} className="text-emerald-500" />
-                                                         </div>
+                                                        <div className="size-14 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-inner">
+                                                            <CheckCircle2 size={24} className="text-emerald-500" />
+                                                        </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-[15px] font-black text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors tracking-tight">{job.title || "Job Details"}</p>
                                                             <div className="flex items-center gap-3 mt-1.5">
@@ -321,17 +321,17 @@ const ProfessionalEarnings: React.FC = () => {
                             {/* Active/Pending Earnings */}
                             <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[3rem] border border-slate-100 dark:border-slate-800/50 shadow-xl overflow-hidden flex flex-col transition-all duration-500 hover:shadow-2xl">
                                 <div className="px-10 py-8 border-b border-slate-100 dark:border-slate-800/50 bg-amber-500/5 dark:bg-amber-500/10 flex items-center justify-between">
-                                     <div className="flex items-center gap-5">
-                                         <div className="size-12 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/10 shadow-inner">
-                                             <Lock size={24} className="text-amber-500" />
-                                         </div>
-                                         <div>
-                                             <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight">Pending Payouts</h2>
-                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Funds held securely</p>
-                                         </div>
-                                     </div>
-                                     <span className="px-4 py-1.5 bg-amber-500/10 rounded-full text-[10px] font-black text-amber-600 uppercase tracking-[0.2em]">{myActiveJobs.length} active</span>
-                                 </div>
+                                    <div className="flex items-center gap-5">
+                                        <div className="size-12 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/10 shadow-inner">
+                                            <Lock size={24} className="text-amber-500" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight">Pending Payouts</h2>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Funds held securely</p>
+                                        </div>
+                                    </div>
+                                    <span className="px-4 py-1.5 bg-amber-500/10 rounded-full text-[10px] font-black text-amber-600 uppercase tracking-[0.2em]">{myActiveJobs.length} active</span>
+                                </div>
 
                                 <div className="flex-1 max-h-[550px] overflow-y-auto custom-scrollbar">
                                     {myActiveJobs.length === 0 ? (

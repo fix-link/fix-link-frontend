@@ -20,8 +20,10 @@ import {
     CreditCard,
     Briefcase,
     Phone,
-    Search
+    Search,
+    AlertTriangle
 } from 'lucide-react';
+import DisputeModal from "../../../components/DisputeModal";
 
 const STATUS_COLORS: Record<string, string> = {
     pending:     "bg-amber-100 text-amber-700 border-amber-200",
@@ -53,6 +55,9 @@ const ProfessionalJobs: React.FC = () => {
     const [activeFilter, setActiveFilter] = useState("All");
     const [search, setSearch] = useState("");
     const [selectedJob, setSelectedJob] = useState<any>(null);
+
+    const [disputeModalOpen, setDisputeModalOpen] = useState(false);
+    const [selectedJobForDispute, setSelectedJobForDispute] = useState<any>(null);
 
     // Filter only this professional's jobs
     const myJobs = useMemo(() =>
@@ -389,17 +394,30 @@ const ProfessionalJobs: React.FC = () => {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-8 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex gap-4">
+                        <div className="p-8 bg-slate-50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-4">
                             <Link 
                                 to={`/professional/messages?requestId=${selectedJob.id}`}
-                                className="flex-1 py-5 bg-primary text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all"
+                                className="flex-1 min-w-[200px] py-5 bg-primary text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all"
                             >
                                 <Terminal size={18} />
                                 Open Message Center
                             </Link>
+                            {['in_progress', 'done', 'completed'].includes(selectedJob.status) && (
+                                <button 
+                                    onClick={() => {
+                                        setSelectedJobForDispute(selectedJob);
+                                        setDisputeModalOpen(true);
+                                        setSelectedJob(null);
+                                    }}
+                                    className="px-8 py-5 bg-red-50 dark:bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl border border-red-200 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20 flex items-center gap-2 transition-all active:scale-95"
+                                >
+                                    <AlertTriangle size={18} />
+                                    Raise Dispute
+                                </button>
+                            )}
                             <button 
                                 onClick={() => setSelectedJob(null)}
-                                className="px-10 py-5 bg-white dark:bg-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl border border-slate-100 dark:border-slate-700 hover:bg-slate-100 transition-all"
+                                className="px-10 py-5 bg-white dark:bg-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl border border-slate-100 dark:border-slate-700 hover:bg-slate-100 transition-all active:scale-95"
                             >
                                 Close
                             </button>
@@ -407,6 +425,18 @@ const ProfessionalJobs: React.FC = () => {
                     </div>
                 </div>
             )}
+
+            <DisputeModal 
+                isOpen={disputeModalOpen}
+                onClose={() => { setDisputeModalOpen(false); setSelectedJobForDispute(null); }}
+                jobId={selectedJobForDispute?.id || ''}
+                jobTitle={selectedJobForDispute?.title || ''}
+                againstUserId={selectedJobForDispute?.customer || ''}
+                onSuccess={() => {
+                    alert("Dispute raised successfully. Our team will review it shortly.");
+                    refreshJobs();
+                }}
+            />
         </div>
     );
 };
