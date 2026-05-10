@@ -15,10 +15,23 @@ const CustomerHome = () => {
   useEffect(() => {
     console.log("CustomerHome: Fetching professionals and categories...");
     
+    // 1. Try to load from cache for instant UI
+    const cached = localStorage.getItem('cached_professionals');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProfessionals(parsed);
+          setLoading(false); // Show cache immediately
+        }
+      } catch (e) {
+        console.warn("CustomerHome: Failed to parse cache", e);
+      }
+    }
+    
     Promise.all([getProfessionals(), getServiceCategories()])
       .then(([userData, categoriesData]) => {
-        console.log("CustomerHome: Raw User Data:", userData);
-        console.log("CustomerHome: Raw Categories Data:", categoriesData);
+        console.log("CustomerHome: Fresh data received");
 
         const categoryMap: Record<string, string> = {};
         if (Array.isArray(categoriesData)) {
@@ -72,8 +85,9 @@ const CustomerHome = () => {
             };
           });
 
-        console.log(`CustomerHome: Displaying ${verifiedProfessionals.length} professionals.`);
         setProfessionals(verifiedProfessionals);
+        // Update cache for next time
+        localStorage.setItem('cached_professionals', JSON.stringify(verifiedProfessionals));
         setLoading(false);
       })
       .catch((err) => {
