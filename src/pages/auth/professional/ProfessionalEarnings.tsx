@@ -9,7 +9,6 @@ const ProfessionalEarnings: React.FC = () => {
     const { user } = useAuth();
     const { jobs, jobsLoading } = useData();
     const [earningsSummary, setEarningsSummary] = useState<any>(null);
-    const [loadingSummary, setLoadingSummary] = useState(true);
     const [isWithdrawing, setIsWithdrawing] = useState(false);
 
     useEffect(() => {
@@ -19,8 +18,6 @@ const ProfessionalEarnings: React.FC = () => {
                 setEarningsSummary(summary);
             } catch (err) {
                 console.error("Failed to fetch earnings summary", err);
-            } finally {
-                setLoadingSummary(false);
             }
         };
         fetchSummary();

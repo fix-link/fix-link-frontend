@@ -6,7 +6,7 @@ import { markNotificationAsRead, type Notification } from "../../../../api/notif
 import { useData } from "../../../../context/DataContext";
 import { getImageUrl } from "../../../../api/auth.api";
 import {
-  ChevronDown, MapPin, Building2, Navigation, ArrowRight, SearchX, Search,
+  ChevronDown, MapPin, Navigation, ArrowRight, SearchX, Search,
   LayoutDashboard, MessageSquare, Calendar, Bell, BellOff, Clock, Settings, LogOut, Sparkles
 } from "lucide-react";
 

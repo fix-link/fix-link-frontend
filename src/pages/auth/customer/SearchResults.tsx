@@ -6,8 +6,8 @@ import CustomerFooter from "./components/CustomerFooter";
 import FiltersSidebar from "./components/FiltersSidebar";
 import { getProfessionals, getServiceCategories } from "../../../api/jobs.api";
 import { 
-  Search, SlidersHorizontal, ArrowUpDown, 
-  MapPin, Loader2, SearchX, ChevronDown,
+  Search, ArrowUpDown, 
+  Loader2, SearchX, ChevronDown,
   Check, Star, Briefcase
 } from "lucide-react";
 
@@ -28,9 +28,6 @@ const SearchResults = () => {
     const [selectedRating, setSelectedRating] = useState<number>(0);
     const [selectedExperience, setSelectedExperience] = useState<string[]>([]);
     const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
-
-    // New Filters
-    const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
     const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<string>("recommended");
 
@@ -110,11 +107,9 @@ const SearchResults = () => {
             (exp === "Senior (5+ yrs)" && pro.experience === "Senior")
         );
 
-        const matchesAvailability = selectedAvailability.length === 0 || selectedAvailability.includes(pro.availability);
+        const matchesLanguage = selectedLanguages.length === 0 || (pro.languages && pro.languages.some((lang: string) => selectedLanguages.includes(lang)));
 
-        const matchesLanguage = selectedLanguages.length === 0 || pro.languages.some((lang: string) => selectedLanguages.includes(lang));
-
-        return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesAvailability && matchesLanguage;
+        return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesLanguage;
     }).sort((a: any, b: any) => {
         if (sortBy === "rating") return b.rating - a.rating;
         if (sortBy === "reviews") return b.reviews - a.reviews;
@@ -139,7 +134,6 @@ const SearchResults = () => {
         setSelectedRating(0);
         setSelectedExperience([]);
         setVerifiedOnly(false);
-        setSelectedAvailability([]);
         setSelectedLanguages([]);
     };
 
@@ -266,8 +260,6 @@ const SearchResults = () => {
                                     setSelectedExperience={setSelectedExperience}
                                     verifiedOnly={verifiedOnly}
                                     setVerifiedOnly={setVerifiedOnly}
-                                    selectedAvailability={selectedAvailability}
-                                    setSelectedAvailability={setSelectedAvailability}
                                     selectedLanguages={selectedLanguages}
                                     setSelectedLanguages={setSelectedLanguages}
                                     onClearAll={handleClearAll}

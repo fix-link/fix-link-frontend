@@ -105,7 +105,6 @@ const CustomerHome = () => {
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [selectedExperience, setSelectedExperience] = useState<string[]>([]);
   const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
-  const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<string>("recommended");
 
@@ -132,10 +131,9 @@ const CustomerHome = () => {
         (exp === "Senior (5+ yrs)" && pro.experience === "Senior")
       );
 
-      const matchesAvailability = selectedAvailability.length === 0 || (pro.availability && selectedAvailability.includes(pro.availability));
       const matchesLanguage = selectedLanguages.length === 0 || (pro.languages && pro.languages.some((lang: string) => selectedLanguages.includes(lang)));
 
-      return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesAvailability && matchesLanguage;
+      return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesLanguage;
     })
     .sort((a: any, b: any) => {
       if (sortBy === "rating") return b.rating - a.rating;
@@ -156,7 +154,6 @@ const CustomerHome = () => {
     setSelectedRating(0);
     setSelectedExperience([]);
     setVerifiedOnly(false);
-    setSelectedAvailability([]);
     setSelectedLanguages([]);
   };
 
@@ -251,8 +248,6 @@ const CustomerHome = () => {
                   setSelectedExperience={setSelectedExperience}
                   verifiedOnly={verifiedOnly}
                   setVerifiedOnly={setVerifiedOnly}
-                  selectedAvailability={selectedAvailability}
-                  setSelectedAvailability={setSelectedAvailability}
                   selectedLanguages={selectedLanguages}
                   setSelectedLanguages={setSelectedLanguages}
                   onClearAll={handleClearAll}

@@ -12,8 +12,6 @@ interface FiltersSidebarProps {
     setSelectedExperience: React.Dispatch<React.SetStateAction<string[]>>;
     verifiedOnly: boolean;
     setVerifiedOnly: (val: boolean) => void;
-    selectedAvailability: string[];
-    setSelectedAvailability: React.Dispatch<React.SetStateAction<string[]>>;
     selectedLanguages: string[];
     setSelectedLanguages: React.Dispatch<React.SetStateAction<string[]>>;
     onClearAll: () => void;
@@ -30,8 +28,6 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
     setSelectedExperience,
     verifiedOnly,
     setVerifiedOnly,
-    selectedAvailability,
-    setSelectedAvailability,
     selectedLanguages,
     setSelectedLanguages,
     onClearAll,

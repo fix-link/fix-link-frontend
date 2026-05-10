@@ -3,10 +3,8 @@ import { createJob } from "../../../../api/jobs.api";
 import { useAuth } from "../../../../context/AuthContext";
 import LocationInput from "../../../../components/LocationInput";
 import { 
-  X, Calendar, 
-  Wallet, MapPin, Send, 
-  CheckCircle2, Loader2, LocateFixed,
-  FileText
+  X, Send, 
+  CheckCircle2, Loader2, LocateFixed
 } from "lucide-react";
 
 interface RequestEstimateModalProps {
