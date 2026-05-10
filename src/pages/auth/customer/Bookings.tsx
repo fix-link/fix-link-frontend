@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { 
   Plus, Calendar, User, MessageCircle, CheckCircle2, 
   Hourglass, AlertCircle, ShieldCheck, XCircle, CreditCard,
-  ChevronRight, ArrowRight, Loader2, Star
+  ChevronRight, Loader2, Star
 } from "lucide-react";
 
 interface Job {

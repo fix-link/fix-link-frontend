@@ -7,10 +7,10 @@ import { getImageUrl, getUserDetails } from '../../../api/auth.api';
 import { getMessages, sendMessage, markAsRead, getOrCreateConversation, getConversationById } from '../../../api/conversations.api';
 import { useData } from '../../../context/DataContext';
 import {
-  MessageSquare, User, ArrowLeft, ChevronRight, Phone, Video, 
+  MessageSquare, User, ArrowLeft, ChevronRight, 
   Activity, X, CheckCheck, Check, Smile, Paperclip, Loader2, Send, 
-  CheckCircle2, CreditCard, ShieldCheck, Flag, Star, MapPin, Calendar, 
-  Shield, Zap, Lock, RefreshCw, Hammer, MoreHorizontal, Search, Settings, 
+  CheckCircle2, CreditCard, ShieldCheck, Star, MapPin, Calendar, 
+  Shield, Zap, RefreshCw, MoreHorizontal,
   Mic, Image as ImageIcon, Sparkles
 } from "lucide-react";
 
