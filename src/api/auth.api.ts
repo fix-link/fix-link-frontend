@@ -1,7 +1,8 @@
 import axios from "axios";
 import type { Role, User } from "../types/auth.types";
 
-const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "") + "/api";
+const _rawBase = (import.meta.env.VITE_API_URL || "https://fix-link-5332f899c079.herokuapp.com").replace(/\/+$/, "").replace(/\/api$/, "");
+const API_URL = _rawBase + "/api";
 
 // Create axios instance
 export const api = axios.create({

@@ -149,7 +149,7 @@ const PaymentSuccess = () => {
                 <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-600 mt-10">
                     {isSyncing 
                         ? "Connecting to global decentralized nodes..." 
-                        : "Fixed-Link Secure Transmission Complete"}
+                        : "Fixed-Link Secure Payment Complete"}
                 </p>
             </main>
 

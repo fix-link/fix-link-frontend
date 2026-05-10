@@ -4,11 +4,24 @@ import { useNavigate, Link } from "react-router-dom";
 import { markNotificationAsRead, type Notification } from "../../../../api/notifications.api";
 import { useData } from "../../../../context/DataContext";
 import { getImageUrl } from "../../../../api/auth.api";
+import { useTheme } from "../../../../context/ThemeContext";
+import { 
+    Bell, 
+    BellOff, 
+    Clock, 
+    Menu, 
+    ChevronDown, 
+    Sun, 
+    Moon, 
+    Settings, 
+    LogOut
+} from 'lucide-react';
 
 const Header: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const { notifications, refreshNotifications } = useData();
+    const { theme, toggleTheme } = useTheme();
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const unreadNotifications = notifications.filter(n => !n.is_read);
@@ -68,14 +81,14 @@ const Header: React.FC = () => {
 
 
     return (
-        <header className="sticky top-0 z-[100] flex items-center justify-between bg-white/80 dark:bg-gray-900/80 px-6 py-4 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
+        <header className="sticky top-0 z-[100] flex items-center justify-between bg-white/70 dark:bg-slate-900/70 px-6 py-4 backdrop-blur-xl border-b border-slate-100 dark:border-slate-800">
 
             {/* LEFT */}
             <div className="flex items-center gap-3">
                 <button className="lg:hidden">
-                    <span className="material-symbols-outlined">menu</span>
+                    <Menu size={24} />
                 </button>
-                <h2 className="text-2xl font-bold">Dashboard</h2>
+                <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight hidden sm:block">Dashboard</h2>
             </div>
 
             {/* RIGHT */}
@@ -87,7 +100,7 @@ const Header: React.FC = () => {
                         onClick={() => setShowNotifications(!showNotifications)}
                         className="relative flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
-                        <span className="material-symbols-outlined">notifications</span>
+                        <Bell size={20} />
                         {unreadNotifications.length > 0 && (
                             <span className="absolute right-2 top-2 h-4 w-4 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center font-bold">
                                 {unreadNotifications.length}
@@ -104,7 +117,7 @@ const Header: React.FC = () => {
                             <div className="max-h-96 overflow-y-auto custom-scrollbar">
                                 {notifications.length === 0 ? (
                                     <div className="px-8 py-12 text-center">
-                                        <span className="material-symbols-outlined text-slate-300 text-4xl mb-3">notifications_off</span>
+                                        <BellOff size={40} className="text-slate-300 mb-3" />
                                         <p className="text-slate-400 text-sm font-medium">No alerts yet</p>
                                     </div>
                                 ) : (
@@ -171,7 +184,7 @@ const Header: React.FC = () => {
                                                         {getDescriptiveMessage(n)}
                                                     </p>
                                                     <p className="text-[10px] text-slate-400 mt-1.5 font-bold flex items-center gap-1">
-                                                        <span className="material-symbols-outlined text-[12px]">schedule</span>
+                                                        <Clock size={12} />
                                                         {n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now"}
                                                     </p>
                                                 </div>
@@ -207,9 +220,10 @@ const Header: React.FC = () => {
                             </span>
                             <span className="text-[10px] uppercase tracking-widest font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded italic">Professional</span>
                         </div>
-                        <span className="material-symbols-outlined hidden sm:block text-slate-400 text-lg transition-transform" style={{ transform: showProfileMenu ? 'rotate(180deg)' : 'none' }}>
-                            expand_more
-                        </span>
+                        <ChevronDown 
+                            size={18} 
+                            className={`hidden sm:block text-slate-400 transition-transform duration-300 ${showProfileMenu ? 'rotate-180' : ''}`} 
+                        />
                     </button>
 
                     {/* Dropdown Menu */}
@@ -227,12 +241,26 @@ const Header: React.FC = () => {
                             </div>
 
                             <div className="py-2">
+                                {/* Dark Mode Toggle */}
+                                <button
+                                    onClick={toggleTheme}
+                                    className="w-full flex items-center justify-between px-5 py-3 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {theme === 'dark' ? <Sun size={18} className="text-slate-400" /> : <Moon size={18} className="text-slate-400" />}
+                                        <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                                    </div>
+                                    <div className={`relative w-9 h-5 rounded-full transition-colors duration-300 ${theme === 'dark' ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 ${theme === 'dark' ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                                    </div>
+                                </button>
+
                                 <Link
                                     to="/account-settings"
                                     onClick={() => setShowProfileMenu(false)}
                                     className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-text-primary dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                                 >
-                                    <span className="material-symbols-outlined text-xl text-slate-400">settings</span>
+                                    <Settings size={18} className="text-slate-400" />
                                     Account Setting
                                 </Link>
                             </div>
@@ -242,7 +270,7 @@ const Header: React.FC = () => {
                                     onClick={handleLogout}
                                     className="w-full text-left px-5 py-3 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-3 transition-colors text-red-500"
                                 >
-                                    <span className="material-symbols-outlined text-xl">logout</span>
+                                    <LogOut size={18} />
                                     Signout
                                 </button>
                             </div>

@@ -3,7 +3,17 @@ import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { useAuth } from "../../../context/AuthContext";
 import { useData } from "../../../context/DataContext";
-import { getEarningsSummary, listPayments, withdrawFunds } from "../../../api/payments.api";
+import { getEarningsSummary, withdrawFunds } from "../../../api/payments.api";
+import { 
+    TrendingUp, 
+    Clock, 
+    CreditCard, 
+    ArrowUpRight, 
+    FileText, 
+    Lock,
+    CheckCircle2,
+    RefreshCw
+} from "lucide-react";
 
 const ProfessionalEarnings: React.FC = () => {
     const { user } = useAuth();
@@ -111,190 +121,259 @@ const ProfessionalEarnings: React.FC = () => {
     };
 
     return (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-background-dark font-display">
+        <div className="relative flex min-h-screen w-full bg-background-light dark:bg-background-dark font-display overflow-hidden">
+            {/* Background decorative blobs - matching customer dashboard */}
+            <div className="fixed top-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob"></div>
+            <div className="fixed bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-accent-cyan/10 rounded-full blur-[120px] pointer-events-none z-0 animate-blob [animation-delay:2s]"></div>
+            <div className="fixed top-[20%] left-[30%] w-[35%] h-[35%] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none z-0 animate-blob [animation-delay:4s]"></div>
+
             <Sidebar />
-            <div className="flex flex-1 flex-col lg:ml-64 overflow-hidden">
+            <div className="flex flex-1 flex-col lg:ml-64 relative z-10">
                 <Header />
 
-                <main className="flex-1 overflow-y-auto p-6 lg:p-10 custom-scrollbar space-y-8">
+                <main className="flex-1 overflow-y-auto p-6 md:p-10 lg:p-14 custom-scrollbar relative">
+                    <div className="max-w-[1600px] mx-auto w-full space-y-12">
 
-                    {/* Page Header */}
-                    <div>
-                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Earnings</h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">Your payment history and payout summary</p>
-                    </div>
-
-                    {/* Stats Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        {[
-                            {
-                                label: "Total Earned",
-                                value: `${totalEarned.toLocaleString()} ETB`,
-                                icon: "payments",
-                                gradient: "from-emerald-500 to-teal-600",
-                                sub: `${myCompletedJobs.length} completed jobs`,
-                            },
-                            {
-                                label: "Pending Release",
-                                value: `${pendingAmount.toLocaleString()} ETB`,
-                                icon: "hourglass_empty",
-                                gradient: "from-amber-500 to-orange-500",
-                                sub: `${myActiveJobs.length} active jobs in escrow`,
-                            },
-                            {
-                                label: "Avg. Per Job",
-                                value: `${avgPerJob.toLocaleString()} ETB`,
-                                icon: "trending_up",
-                                gradient: "from-blue-500 to-indigo-600",
-                                sub: "Based on completed jobs",
-                            },
-                        ].map(card => (
-                            <div key={card.label} className={`relative overflow-hidden rounded-2xl p-6 text-white shadow-lg bg-gradient-to-br ${card.gradient}`}>
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="rounded-xl bg-white/20 p-3 backdrop-blur-md">
-                                        <span className="material-symbols-outlined text-2xl">{card.icon}</span>
-                                    </div>
-                                </div>
-                                <p className="text-xs font-black uppercase tracking-widest opacity-80 mb-1">{card.label}</p>
-                                <h3 className="text-3xl font-black">{card.value}</h3>
-                                <p className="text-xs font-medium opacity-70 mt-2">{card.sub}</p>
-                                <div className="absolute -bottom-6 -right-6 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Withdrawal Section */}
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-slate-900 dark:bg-white rounded-[2rem] p-8 md:p-10 shadow-2xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
-                        
-                        <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-                            <div className="size-20 rounded-[2rem] bg-white/10 dark:bg-slate-900/10 flex items-center justify-center backdrop-blur-xl border border-white/20 dark:border-slate-800/20 rotate-[-4deg]">
-                                <span className="material-symbols-outlined text-4xl text-emerald-400">account_balance_wallet</span>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400">Withdrawable Balance</p>
-                                <h2 className="text-4xl md:text-5xl font-black text-white dark:text-slate-900 tracking-tighter">
-                                    {availableToWithdraw.toLocaleString()} <span className="text-lg opacity-50">ETB</span>
-                                </h2>
-                                <p className="text-xs font-medium text-slate-400 dark:text-slate-500 max-w-xs">
-                                    Funds are automatically moved here 24h after job completion.
-                                </p>
-                            </div>
-                        </div>
-
-                        <button 
-                            onClick={handleWithdraw}
-                            disabled={isWithdrawing || availableToWithdraw <= 0}
-                            className={`relative z-10 px-10 py-5 rounded-[1.5rem] font-black text-xs uppercase tracking-widest transition-all shadow-xl hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:hover:scale-100 flex items-center gap-3
-                                ${availableToWithdraw > 0 
-                                    ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/20' 
-                                    : 'bg-slate-700 text-slate-400'}`}
-                        >
-                            {isWithdrawing ? (
-                                <span className="material-symbols-outlined animate-spin">autorenew</span>
-                            ) : (
-                                <span className="material-symbols-outlined">payments</span>
-                            )}
-                            {isWithdrawing ? "Processing..." : "Request Payout"}
-                        </button>
-                    </div>
-
-                    {/* Earnings History */}
-                    <div className="bg-white dark:bg-card-dark rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-lg">receipt_long</span>
-                                </div>
-                                <h2 className="text-base font-black text-slate-800 dark:text-white">Completed Job Payments</h2>
-                            </div>
-                            <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{myCompletedJobs.length} records</span>
-                        </div>
-
-                        {jobsLoading && myCompletedJobs.length === 0 ? (
-                            <div className="py-16 flex flex-col items-center gap-3 text-slate-400">
-                                <span className="material-symbols-outlined text-4xl animate-spin text-primary">autorenew</span>
-                                <p className="text-sm font-bold">Loading earnings...</p>
-                            </div>
-                        ) : myCompletedJobs.length === 0 ? (
-                            <div className="py-20 flex flex-col items-center gap-4">
-                                <div className="w-20 h-20 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-4xl text-slate-300">payments</span>
-                                </div>
-                                <p className="text-base font-black text-slate-600 dark:text-white">No earnings yet</p>
-                                <p className="text-sm font-medium text-slate-400 text-center max-w-xs">
-                                    Completed jobs with confirmed payments will appear here.
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="divide-y divide-slate-50 dark:divide-slate-800">
-                                {[...myCompletedJobs]
-                                    .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())
-                                    .map((job: any) => (
-                                        <div key={job.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                            <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center shrink-0">
-                                                <span className="material-symbols-outlined text-emerald-600 dark:text-emerald-400 text-lg">check_circle</span>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-black text-slate-800 dark:text-white truncate">{job.title || "Service Job"}</p>
-                                                <p className="text-xs text-slate-400 font-medium mt-0.5">{getCustomerName(job)}</p>
-                                            </div>
-                                            <div className="text-right shrink-0">
-                                                <p className="text-sm font-black text-emerald-600">
-                                                    {getAmount(job) > 0 ? `+${getAmount(job).toLocaleString()} ETB` : "Amount TBD"}
-                                                </p>
-                                                <p className="text-[10px] text-slate-400 font-bold mt-0.5">
-                                                    {job.updated_at
-                                                        ? new Date(job.updated_at).toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" })
-                                                        : "—"}
-                                                </p>
-                                            </div>
-                                            <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                                                Released
-                                            </span>
-                                        </div>
-                                    ))}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Active/Pending Earnings */}
-                    {myActiveJobs.length > 0 && (
-                        <div className="bg-white dark:bg-card-dark rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-                            <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-amber-50/50 dark:bg-amber-900/10 flex items-center justify-between">
+                        {/* Page Header */}
+                        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 animate-fade-in-up">
+                            <div className="space-y-3">
+                                <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                                    Earnings <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-emerald-400 to-accent-cyan">Summary</span>
+                                </h1>
                                 <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
-                                        <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">hourglass_empty</span>
+                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 rounded-full">
+                                        <span className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Secure Payments</span>
                                     </div>
-                                    <h2 className="text-base font-black text-slate-800 dark:text-white">In Escrow (Pending Release)</h2>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                        Track your income and withdraw funds easily
+                                    </p>
                                 </div>
                             </div>
-                            <div className="divide-y divide-slate-50 dark:divide-slate-800">
-                                {myActiveJobs.map((job: any) => (
-                                    <div key={job.id} className="flex items-center gap-4 px-6 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                        <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
-                                            <span className="material-symbols-outlined text-amber-600 dark:text-amber-400 text-lg">lock</span>
+                        </div>
+
+                        {/* Stats Row */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 animate-fade-in-up [animation-delay:100ms]">
+                            {[
+                                {
+                                    label: "Total Income",
+                                    value: `${totalEarned.toLocaleString()} ETB`,
+                                    icon: <CreditCard size={28} className="text-emerald-500" />,
+                                    accent: "text-emerald-500",
+                                    iconBg: "bg-emerald-500/10 dark:bg-emerald-500/20",
+                                    sub: `${myCompletedJobs.length} Completed Jobs`,
+                                },
+                                {
+                                    label: "Pending Payouts",
+                                    value: `${pendingAmount.toLocaleString()} ETB`,
+                                    icon: <Clock size={28} className="text-amber-500" />,
+                                    accent: "text-amber-500",
+                                    iconBg: "bg-amber-500/10 dark:bg-amber-500/20",
+                                    sub: `${myActiveJobs.length} Active Jobs`,
+                                },
+                                {
+                                    label: "Average Income",
+                                    value: `${avgPerJob.toLocaleString()} ETB`,
+                                    icon: <TrendingUp size={28} className="text-blue-500" />,
+                                    accent: "text-blue-500",
+                                    iconBg: "bg-blue-500/10 dark:bg-blue-500/20",
+                                    sub: "Average earnings per job",
+                                },
+                            ].map(card => (
+                                <div key={card.label} className="group relative overflow-hidden rounded-[2.5rem] bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl p-10 border border-slate-100 dark:border-slate-800/50 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all duration-500 hover:shadow-2xl hover:-translate-y-2">
+                                    <div className="relative z-10 flex flex-col gap-6">
+                                        <div className={`size-16 rounded-2xl ${card.iconBg} flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 shadow-inner border border-slate-100/50 dark:border-slate-700/50`}>
+                                            {card.icon}
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-black text-slate-800 dark:text-white truncate">{job.title || "Service Job"}</p>
-                                            <p className="text-xs text-slate-400 font-medium mt-0.5">
-                                                Status: <span className="capitalize font-bold text-amber-600">{job.status?.replace(/_/g, " ")}</span>
-                                            </p>
+                                        <div>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mb-3">{card.label}</p>
+                                            <h3 className="text-4xl font-black text-slate-900 dark:text-white leading-none tracking-tight">{card.value}</h3>
+                                            <div className="flex items-center gap-2 mt-4">
+                                                <div className={`size-1.5 rounded-full ${card.accent.replace('text-', 'bg-')} animate-pulse`}></div>
+                                                <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                                                    {card.sub}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="text-right shrink-0">
-                                            <p className="text-sm font-black text-amber-600">
-                                                {getAmount(job) > 0 ? `${getAmount(job).toLocaleString()} ETB` : "Pending"}
-                                            </p>
-                                            <p className="text-[10px] text-slate-400 font-bold mt-0.5">In escrow</p>
-                                        </div>
-                                        <span className="hidden sm:inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                                            Locked
-                                        </span>
                                     </div>
-                                ))}
+                                    <div className={`absolute -right-8 -bottom-8 w-32 h-32 rounded-full ${card.accent.replace('text-', 'bg-')} opacity-[0.03] dark:opacity-[0.05] blur-3xl group-hover:opacity-[0.1] transition-all duration-700`} />
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Withdrawal Section */}
+                        <div className="bg-slate-900 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[3.5rem] p-10 lg:p-16 shadow-2xl relative overflow-hidden group border border-white/5 animate-fade-in-up [animation-delay:200ms]">
+                            {/* Decorative elements */}
+                            <div className="absolute top-0 right-0 w-[50%] h-[100%] bg-gradient-to-l from-emerald-500/10 to-transparent pointer-events-none"></div>
+                            <div className="absolute top-[-20%] right-[-10%] w-96 h-96 bg-primary/10 rounded-full blur-[100px] pointer-events-none animate-blob"></div>
+                            <div className="absolute bottom-[-20%] left-[-10%] w-80 h-80 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none animate-blob [animation-delay:2s]"></div>
+                            
+                            <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-16">
+                                <div className="flex flex-col lg:flex-row items-center gap-12 text-center lg:text-left">
+                                    <div className="size-32 rounded-[2.5rem] bg-white/5 flex items-center justify-center backdrop-blur-2xl border border-white/10 shadow-3xl group-hover:scale-105 transition-all duration-700 group-hover:rotate-6">
+                                        <span className="material-symbols-outlined text-7xl text-emerald-400 font-light">account_balance_wallet</span>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-center lg:justify-start gap-3">
+                                            <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.8)]"></span>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-400">Withdrawable Balance</p>
+                                        </div>
+                                        <h2 className="text-7xl lg:text-8xl font-black text-white tracking-tighter leading-none">
+                                            {availableToWithdraw.toLocaleString()} <span className="text-3xl font-bold opacity-30 tracking-normal ml-3">ETB</span>
+                                        </h2>
+                                        <p className="text-sm font-medium text-slate-400 max-w-sm leading-relaxed mx-auto lg:mx-0">
+                                            Your revenue is authenticated and cleared for immediate dispatch to <span className="text-white font-black tracking-wide uppercase text-xs">Telebirr</span> or <span className="text-white font-black tracking-wide uppercase text-xs">CBE</span>.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button 
+                                    onClick={handleWithdraw}
+                                    disabled={isWithdrawing || availableToWithdraw <= 0}
+                                    className={`relative z-10 px-16 py-7 rounded-[2rem] font-black text-[12px] uppercase tracking-[0.3em] transition-all duration-500 shadow-3xl hover:scale-[1.03] active:scale-95 disabled:opacity-30 disabled:grayscale disabled:hover:scale-100 flex items-center justify-center gap-6 group/btn overflow-hidden
+                                        ${availableToWithdraw > 0 
+                                            ? 'bg-emerald-500 text-white hover:bg-emerald-400 shadow-emerald-500/30' 
+                                            : 'bg-slate-800 text-slate-500 border border-white/5'}`}
+                                >
+                                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500 ease-out"></div>
+                                    <span className="relative flex items-center gap-4">
+                                        {isWithdrawing ? (
+                                            <RefreshCw size={24} className="animate-spin" />
+                                        ) : (
+                                            <ArrowUpRight size={24} className="group-hover/btn:rotate-12 transition-transform" />
+                                        )}
+                                        {isWithdrawing ? "Processing..." : "Withdraw Funds"}
+                                    </span>
+                                </button>
                             </div>
                         </div>
-                    )}
+
+                        {/* History Tabs/Lists */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 animate-fade-in-up [animation-delay:300ms]">
+                            {/* Earnings History */}
+                            <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[3rem] border border-slate-100 dark:border-slate-800/50 shadow-xl overflow-hidden flex flex-col transition-all duration-500 hover:shadow-2xl">
+                                <div className="px-10 py-8 border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/30 dark:bg-slate-900/40 flex items-center justify-between">
+                                    <div className="flex items-center gap-5">
+                                        <div className="size-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center border border-emerald-500/10 shadow-inner">
+                                            <FileText size={24} className="text-emerald-500" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight">Income History</h2>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Confirmed payments</p>
+                                        </div>
+                                    </div>
+                                    <span className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{myCompletedJobs.length} jobs</span>
+                                </div>
+
+                                <div className="flex-1 max-h-[550px] overflow-y-auto custom-scrollbar">
+                                    {jobsLoading && myCompletedJobs.length === 0 ? (
+                                        <div className="py-32 flex flex-col items-center gap-6 text-slate-400">
+                                            <div className="size-16 bg-primary/5 rounded-full flex items-center justify-center">
+                                                <span className="material-symbols-outlined text-4xl animate-spin text-primary font-light">autorenew</span>
+                                            </div>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Syncing encrypted ledger...</p>
+                                        </div>
+                                    ) : myCompletedJobs.length === 0 ? (
+                                        <div className="py-32 flex flex-col items-center gap-8 text-center">
+                                            <div className="size-24 bg-slate-50/50 dark:bg-slate-800/50 rounded-full flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700">
+                                                <span className="material-symbols-outlined text-4xl text-slate-300 font-light">payments</span>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <p className="text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">No transaction data</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Complete your first job to see history.</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y divide-slate-100/50 dark:divide-slate-800/30">
+                                            {[...myCompletedJobs]
+                                                .sort((a, b) => new Date(b.updated_at || b.created_at || 0).getTime() - new Date(a.updated_at || a.created_at || 0).getTime())
+                                                .map((job: any) => (
+                                                    <div key={job.id} className="flex items-center gap-6 px-10 py-7 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all duration-300 group">
+                                                         <div className="size-14 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/10 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 shadow-inner">
+                                                             <CheckCircle2 size={24} className="text-emerald-500" />
+                                                         </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-[15px] font-black text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors tracking-tight">{job.title || "Job Details"}</p>
+                                                            <div className="flex items-center gap-3 mt-1.5">
+                                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.15em]">{getCustomerName(job)}</p>
+                                                                <span className="size-1 rounded-full bg-slate-300"></span>
+                                                                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.15em]">Job ID: {job.id.substring(0, 8)}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right shrink-0 space-y-1.5">
+                                                            <p className="text-[18px] font-black text-emerald-500 tracking-tighter">
+                                                                +{getAmount(job).toLocaleString()} <span className="text-[11px] font-bold ml-1 opacity-70">ETB</span>
+                                                            </p>
+                                                            <div className="flex items-center justify-end gap-1.5">
+                                                                <span className="material-symbols-outlined text-[14px] text-slate-400">event</span>
+                                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                                                                    {job.updated_at ? new Date(job.updated_at).toLocaleDateString([], { day: "numeric", month: "short" }) : "—"}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Active/Pending Earnings */}
+                            <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[3rem] border border-slate-100 dark:border-slate-800/50 shadow-xl overflow-hidden flex flex-col transition-all duration-500 hover:shadow-2xl">
+                                <div className="px-10 py-8 border-b border-slate-100 dark:border-slate-800/50 bg-amber-500/5 dark:bg-amber-500/10 flex items-center justify-between">
+                                     <div className="flex items-center gap-5">
+                                         <div className="size-12 bg-amber-500/10 rounded-2xl flex items-center justify-center border border-amber-500/10 shadow-inner">
+                                             <Lock size={24} className="text-amber-500" />
+                                         </div>
+                                         <div>
+                                             <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight">Pending Payouts</h2>
+                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Funds held securely</p>
+                                         </div>
+                                     </div>
+                                     <span className="px-4 py-1.5 bg-amber-500/10 rounded-full text-[10px] font-black text-amber-600 uppercase tracking-[0.2em]">{myActiveJobs.length} active</span>
+                                 </div>
+
+                                <div className="flex-1 max-h-[550px] overflow-y-auto custom-scrollbar">
+                                    {myActiveJobs.length === 0 ? (
+                                        <div className="py-32 flex flex-col items-center gap-8 text-center">
+                                            <div className="size-24 bg-slate-50/50 dark:bg-slate-800/50 rounded-full flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700">
+                                                <span className="material-symbols-outlined text-4xl text-slate-300 font-light">lock_open</span>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <p className="text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">Escrow clear</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No funds currently held in transit.</p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y divide-slate-100/50 dark:divide-slate-800/30">
+                                            {myActiveJobs.map((job: any) => (
+                                                <div key={job.id} className="flex items-center gap-6 px-10 py-7 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-all duration-300 group">
+                                                    <div className="size-14 rounded-2xl bg-amber-500/5 dark:bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/10 group-hover:scale-110 transition-all duration-500 shadow-inner">
+                                                        <span className="material-symbols-outlined text-amber-500 text-2xl font-black">lock</span>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-[15px] font-black text-slate-900 dark:text-white truncate tracking-tight leading-tight">{job.title || "Job details hidden"}</p>
+                                                        <div className="flex items-center gap-3 mt-1.5">
+                                                            <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-md text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                                                {job.status?.replace(/_/g, " ")}
+                                                            </span>
+                                                            <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest italic">Verification Pending</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right shrink-0 space-y-1.5">
+                                                        <p className="text-[18px] font-black text-amber-500 tracking-tighter">
+                                                            {getAmount(job) > 0 ? `${getAmount(job).toLocaleString()}` : "—"} <span className="text-[11px] font-bold ml-1 opacity-70">ETB</span>
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Secured</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 
                 </main>
             </div>

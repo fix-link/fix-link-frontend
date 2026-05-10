@@ -212,7 +212,7 @@ const AccountSettings = () => {
                                         <div className="size-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
                                             <CheckCircle2 size={20} />
                                         </div>
-                                        <span className="font-black text-sm">Synchronized successfully.</span>
+                                        <span className="font-black text-sm">Updated successfully.</span>
                                     </div>
                                 )}
 
@@ -247,7 +247,7 @@ const AccountSettings = () => {
                                                 />
                                             </div>
                                             <div className="text-center md:text-left space-y-1">
-                                                <h3 className="font-black text-3xl text-slate-900 dark:text-white">Profile Identity</h3>
+                                                <h3 className="font-black text-3xl text-slate-900 dark:text-white">Profile Details</h3>
                                                 <p className="text-slate-500 dark:text-slate-400 font-medium">Update your photo and persona details here.</p>
                                             </div>
                                         </div>
@@ -382,7 +382,7 @@ const AccountSettings = () => {
                                                     />
                                                 </div>
                                                 <div className="space-y-3">
-                                                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Confirm Protocol</label>
+                                                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Confirm Changes</label>
                                                     <input
                                                         type="password"
                                                         value={confirmPassword}
@@ -412,7 +412,7 @@ const AccountSettings = () => {
                                         <div className="space-y-1">
                                             <h4 className="text-red-500 font-black text-sm uppercase tracking-widest flex items-center gap-2">
                                                 <AlertTriangle size={16} />
-                                                Deactivation Protocol
+                                                Close Account
                                             </h4>
                                             <p className="text-slate-500 dark:text-slate-500 text-xs font-medium">Permanently dissolve your account and purge all data.</p>
                                         </div>

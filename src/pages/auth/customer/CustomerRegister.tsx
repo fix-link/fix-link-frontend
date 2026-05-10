@@ -326,7 +326,7 @@ const CustomerRegister = () => {
               {loading ? (
                 <div className="flex items-center gap-3">
                     <LoadingSpinner />
-                    <span className="animate-pulse">Initializing Identity...</span>
+                    <span className="animate-pulse">Setting up your account...</span>
                 </div>
               ) : (
                 <>

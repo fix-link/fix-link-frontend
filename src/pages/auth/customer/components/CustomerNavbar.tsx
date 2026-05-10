@@ -5,6 +5,7 @@ import { getServiceCategories } from "../../../../api/jobs.api";
 import { markNotificationAsRead, type Notification } from "../../../../api/notifications.api";
 import { useData } from "../../../../context/DataContext";
 import { getImageUrl } from "../../../../api/auth.api";
+import { useTheme } from "../../../../context/ThemeContext";
 import {
   ChevronDown, MapPin, Navigation, ArrowRight, SearchX, Search,
   LayoutDashboard, MessageSquare, Calendar, Bell, BellOff, Clock, Settings, LogOut, Sparkles
@@ -26,6 +27,7 @@ const LOCATIONS = [
 const CustomerNavbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   // Search State
   const [location, setLocation] = useState("Addis Ababa");
@@ -328,6 +330,21 @@ const CustomerNavbar = () => {
               </div>
 
               <div className="p-2 space-y-1">
+                {/* Dark Mode Toggle */}
+                <button
+                  onClick={toggleTheme}
+                  className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg">{theme === 'dark' ? '☀️' : '🌙'}</span>
+                    <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                  </div>
+                  <div className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${theme === 'dark' ? 'bg-primary' : 'bg-slate-200'}`}>
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 ${theme === 'dark' ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                  </div>
+                </button>
+
+                <div className="h-px bg-slate-100 dark:bg-slate-800/50 my-1 mx-2"></div>
                 <Link
                   to="/account-settings"
                   onClick={() => setShowProfileMenu(false)}
