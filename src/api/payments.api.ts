@@ -6,6 +6,16 @@ export interface PaymentInitializationResponse {
   detail?: string;
 }
 
+export interface EarningsSummary {
+  total_payments: number;
+  gross_earned: string;
+  released_total: string;
+  withdrawn_total: string;
+  pending_withdrawal_total: string;
+  available_withdrawal_total: string;
+  currency: string;
+}
+
 /**
  * Initialize an Escrow checkout session via Chapa.
  * POST /api/payments/initialize/
@@ -73,16 +83,28 @@ export const verifyPayment = async (paymentId: string) => {
   return response.data;
 };
 
-export const getEarningsSummary = async () => {
-  const response = await api.get("/payments/earnings/summary/");
+export const getEarningsSummary = async (professionalId: string): Promise<EarningsSummary> => {
+  const response = await api.get(`/payments/earnings/summary/?professional=${professionalId}`);
+  return response.data as EarningsSummary;
+};
+
+export const listPayments = async (params?: { job_id?: string; professional?: string }) => {
+  const qs = new URLSearchParams();
+  if (params?.job_id) qs.set("job_id", params.job_id);
+  if (params?.professional) qs.set("professional", params.professional);
+  const response = await api.get(`/payments/${qs.toString() ? `?${qs.toString()}` : ""}`);
   return response.data;
 };
 
-export const withdrawFunds = async (amount: number, method: string, account: string) => {
-  const response = await api.post("/payments/withdraw/", {
-    amount,
-    method,
-    account_number: account
-  });
+export const withdrawFunds = async (args: {
+  payment_id?: string;
+  escrow_id?: string;
+  payout_beneficiary_id?: string;
+  bank_code?: string;
+  account_name?: string;
+  account_number?: string;
+  amount?: number | string;
+}) => {
+  const response = await api.post("/payments/withdraw/", args);
   return response.data;
 };

@@ -3,7 +3,7 @@ import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { useAuth } from "../../../context/AuthContext";
 import { useData } from "../../../context/DataContext";
-import { getEarningsSummary, withdrawFunds } from "../../../api/payments.api";
+import { getEarningsSummary, listPayments, withdrawFunds } from "../../../api/payments.api";
 
 const ProfessionalEarnings: React.FC = () => {
     const { user } = useAuth();
@@ -15,7 +15,8 @@ const ProfessionalEarnings: React.FC = () => {
     useEffect(() => {
         const fetchSummary = async () => {
             try {
-                const summary = await getEarningsSummary();
+                if (!user?.id) return;
+                const summary = await getEarningsSummary(user.id);
                 setEarningsSummary(summary);
             } catch (err) {
                 console.error("Failed to fetch earnings summary", err);
@@ -24,7 +25,7 @@ const ProfessionalEarnings: React.FC = () => {
             }
         };
         fetchSummary();
-    }, []);
+    }, [user?.id]);
 
     const myCompletedJobs = useMemo(() =>
         jobs.filter((j: any) =>
@@ -39,9 +40,13 @@ const ProfessionalEarnings: React.FC = () => {
         ), [jobs, user?.id]);
 
     // Use backend values if available, fallback to frontend calculations
-    const totalEarned = earningsSummary?.total_earned || myCompletedJobs.reduce((sum: number, j: any) => sum + Number(j.price || j.budget || 0), 0);
-    const pendingAmount = earningsSummary?.pending_release || myActiveJobs.reduce((sum: number, j: any) => sum + Number(j.price || j.budget || 0), 0);
-    const availableToWithdraw = earningsSummary?.withdrawable_balance || 0;
+    const totalEarned =
+        Number(earningsSummary?.gross_earned ?? NaN) ||
+        myCompletedJobs.reduce((sum: number, j: any) => sum + Number(j.price || j.budget || 0), 0);
+    const pendingAmount =
+        Number(earningsSummary?.pending_withdrawal_total ?? NaN) ||
+        myActiveJobs.reduce((sum: number, j: any) => sum + Number(j.price || j.budget || 0), 0);
+    const availableToWithdraw = Number(earningsSummary?.available_withdrawal_total ?? 0);
 
     const avgPerJob = myCompletedJobs.length > 0
         ? Math.round(totalEarned / myCompletedJobs.length)
@@ -65,10 +70,31 @@ const ProfessionalEarnings: React.FC = () => {
 
         setIsWithdrawing(true);
         try {
-            await withdrawFunds(availableToWithdraw, method, account);
+            if (!user?.id) throw new Error("Not authenticated.");
+
+            // NOTE: backend withdraw endpoint currently requires a payment_id or escrow_id.
+            // We withdraw against the most recent released payment. Multiple withdrawals may be required
+            // if the professional's available balance spans multiple payments.
+            const paymentsPayload = await listPayments({ professional: user.id });
+            const payments = Array.isArray(paymentsPayload?.results) ? paymentsPayload.results : (Array.isArray(paymentsPayload) ? paymentsPayload : []);
+            const candidate = payments.find((p: any) => String(p.status).toLowerCase() === "released" || String(p?.escrow?.status).toLowerCase() === "released");
+
+            if (!candidate?.id) {
+                throw new Error("No released payment found to withdraw from yet.");
+            }
+
+            const accountName = `${user?.first_name || ""} ${user?.last_name || ""}`.trim() || user?.username || "Professional";
+
+            await withdrawFunds({
+                payment_id: candidate.id,
+                amount: String(availableToWithdraw),
+                bank_code: method,
+                account_name: accountName,
+                account_number: account,
+            });
             alert("Withdrawal request sent successfully!");
             // Refresh summary
-            const summary = await getEarningsSummary();
+            const summary = await getEarningsSummary(user.id);
             setEarningsSummary(summary);
         } catch (err: any) {
             alert(`Withdrawal failed: ${err.message || "Unknown error"}`);
