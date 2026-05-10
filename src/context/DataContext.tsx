@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, type React
 import { useAuth } from "./AuthContext";
 import { listJobs } from "../api/jobs.api";
 import { getNotifications, type Notification } from "../api/notifications.api";
+import { connectNotificationsSocket } from "../api/realtime";
 
 interface DataContextType {
     jobs: any[];
@@ -86,6 +87,29 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             clearInterval(interval);
             document.removeEventListener("visibilitychange", maybeRefresh);
         };
+    }, [user?.id, refreshJobs, refreshNotifications]);
+
+    // Real-time notifications (WebSocket)
+    useEffect(() => {
+        if (!user?.id) return;
+
+        const cleanup = connectNotificationsSocket({
+            onEvent: (ev) => {
+                // Any notification event -> refresh notifications.
+                // For job-related events, refreshing jobs keeps UI in sync too.
+                if (ev?.event_type) {
+                    refreshNotifications();
+                    if (String(ev.event_type).toLowerCase().includes("job")) {
+                        refreshJobs();
+                    }
+                }
+            },
+            onError: () => {
+                // silently ignore; polling still keeps UI updated
+            },
+        });
+
+        return () => cleanup();
     }, [user?.id, refreshJobs, refreshNotifications]);
 
     // Clear all data when user changes to prevent cross-user data leakage

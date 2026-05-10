@@ -137,11 +137,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (!user) return;
 
         try {
-            const { updateUserProfile } = await import("../api/auth.api");
-            const updatedUser = await updateUserProfile(user.id, userData);
+            const { updateUserProfile, updateProfessionalDetails } = await import("../api/auth.api");
+            
+            let updatedUser;
+            let newUserData = { ...user };
 
-            // Backend returns full user, so we update our state
-            const newUserData = { ...user, ...updatedUser };
+            if (user.role === "professional" && !(userData instanceof FormData)) {
+                // Split fields
+                const proFields = ["city", "subcity", "house_number", "location", "gender", "skills", "preferred_payout_method", "payout_account_number", "availability", "service_categories"];
+                const proData: Record<string, any> = {};
+                const userDataToUpdate: Partial<User> = {};
+                
+                Object.keys(userData).forEach((key) => {
+                    if (proFields.includes(key)) {
+                        proData[key] = (userData as any)[key];
+                    } else if (key !== "blocked_dates" && key !== "available_days" && key !== "portfolio") {
+                        (userDataToUpdate as any)[key] = (userData as any)[key];
+                    }
+                });
+
+                if ((userData as any).available_days !== undefined) {
+                    proData.availability = JSON.stringify((userData as any).available_days);
+                }
+
+                // Update base user
+                if (Object.keys(userDataToUpdate).length > 0) {
+                    updatedUser = await updateUserProfile(user.id, userDataToUpdate);
+                    newUserData = { ...newUserData, ...updatedUser };
+                }
+
+                // Update professional profile
+                if (Object.keys(proData).length > 0) {
+                    const updatedPro = await updateProfessionalDetails(proData);
+                    newUserData = { ...newUserData, ...updatedPro };
+                }
+            } else {
+                updatedUser = await updateUserProfile(user.id, userData);
+                newUserData = { ...newUserData, ...updatedUser };
+            }
+
             setUser(newUserData);
             localStorage.setItem("user", JSON.stringify(newUserData));
             return newUserData;

@@ -1,7 +1,7 @@
 import axios from "axios";
 import type { Role, User } from "../types/auth.types";
 
-const API_URL = (import.meta.env.VITE_API_URL || "https://fix-link-5332f899c079.herokuapp.com").replace(/\/$/, "") + "/api";
+const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "") + "/api";
 
 // Create axios instance
 export const api = axios.create({
@@ -24,11 +24,11 @@ export const getImageUrl = (path: string | null | undefined): string => {
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
   console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, token ? "With Token" : "No Token");
-  
+
   // Guard against invalid/expired/undefined token strings
   // Do NOT send the token for login, register, or token refresh endpoints
   const isAuthEndpoint = config.url?.includes('/login') || config.url?.includes('/register') || config.url?.includes('/token');
-  
+
   if (token && token !== "undefined" && token !== "null" && !isAuthEndpoint) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -55,7 +55,7 @@ const handleLogout = (error: any) => {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
   localStorage.removeItem("user");
-  
+
   delete api.defaults.headers.common["Authorization"];
 
   const path = window.location.pathname;
@@ -74,10 +74,10 @@ api.interceptors.response.use(
 
     // If error is 401 and we haven't already retried
     if (error.response?.status === 401 && !originalRequest._retry) {
-      
+
       // If a refresh is already in progress, queue the request
       if (isRefreshing) {
-        return new Promise(function(resolve, reject) {
+        return new Promise(function (resolve, reject) {
           failedQueue.push({ resolve, reject });
         }).then(token => {
           originalRequest.headers['Authorization'] = 'Bearer ' + token;
@@ -97,20 +97,21 @@ api.interceptors.response.use(
       }
 
       try {
-        // Try to fetch a new access token (backend requires double /api prefix here)
-        const { data } = await axios.post(`${API_URL}/api/token/refresh/`, { refresh: refreshToken });
-        
+        // Try to fetch a new access token
+        // API_URL already ends with "/api"
+        const { data } = await axios.post(`${API_URL}/token/refresh/`, { refresh: refreshToken });
+
         localStorage.setItem("access_token", data.access);
         if (data.refresh) {
-            localStorage.setItem("refresh_token", data.refresh); // If backend rotates refresh tokens
+          localStorage.setItem("refresh_token", data.refresh); // If backend rotates refresh tokens
         }
-        
+
         api.defaults.headers.common['Authorization'] = 'Bearer ' + data.access;
         originalRequest.headers['Authorization'] = 'Bearer ' + data.access;
-        
+
         processQueue(null, data.access);
         isRefreshing = false;
-        
+
         // Retry the original request with the new token
         return api(originalRequest);
       } catch (refreshError) {
@@ -119,7 +120,7 @@ api.interceptors.response.use(
         return handleLogout(error);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -189,7 +190,7 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
       fd.append("password", formData.password);
       fd.append("first_name", formData.firstName);
       fd.append("last_name", formData.lastName);
-      
+
       if (isProfessional) {
         fd.append("phonenumber", formData.phone); // ✅ ADDED THIS
         fd.append("profession", formData.serviceCategory);
@@ -197,13 +198,13 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
         if (formData.gender) fd.append("gender", formData.gender);
         if (formData.dateOfBirth) fd.append("date_of_birth", formData.dateOfBirth);
         if (formData.shortBio) fd.append("bio", formData.shortBio);
-        
+
         // If location is provided, parse it into city/subcity if they are missing
         const city = formData.city || (formData.location?.split(',')[0]?.trim());
         const subcity = formData.subcity || (formData.location?.split(',')[1]?.trim() || "");
         if (city) fd.append("city", city);
         if (subcity) fd.append("subcity", subcity);
-        
+
         if (formData.houseNumber) fd.append("house_number", formData.houseNumber);
         if (formData.payoutMethod) fd.append("preferred_payout_method", formData.payoutMethod);
         if (formData.accountNumber) fd.append("payout_account_number", formData.accountNumber);
@@ -355,7 +356,7 @@ export const updateUserProfile = async (id: string, data: Partial<User> | FormDa
 
     if (!(data instanceof FormData)) {
       // Map frontend fields back to backend if needed
-       payload = {
+      payload = {
         ...data,
         phonenumber: (data as any).phone || (data as any).phonenumber,
         bio: data.bio || (data as any).shortBio,
@@ -483,6 +484,11 @@ export const blockDate = async (userId: string, date: string, note?: string) => 
   return response.data;
 };
 
+export const unblockDate = async (userId: string, date: string) => {
+  const response = await api.delete(`/users/${userId}/calendar/block/?date=${date}`);
+  return response.data;
+};
+
 /**
  * Reviews
  */
@@ -504,8 +510,35 @@ export const createReview = async (professionalId: string, rating: number, comme
     rating: Math.round(rating),
     comment: comment
   };
-  
+
   const response = await api.post('/reviews/', payload);
+  return response.data;
+};
+
+/**
+ * Professional Specific
+ */
+export const updateProfessionalDetails = async (data: Record<string, any>) => {
+  try {
+    const response = await api.patch('/users/professional-detail/', data);
+    clearUserDetailsCache();
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.detail || "Failed to update professional details");
+  }
+};
+
+export const addPortfolioItem = async (file: File) => {
+  const fd = new FormData();
+  fd.append("file", file);
+  const response = await api.post('/portfolios/', fd, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+  return response.data;
+};
+
+export const deletePortfolioItem = async (portfolioId: string) => {
+  const response = await api.delete(`/portfolios/${portfolioId}/`);
   return response.data;
 };
 

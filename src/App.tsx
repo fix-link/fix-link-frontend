@@ -48,9 +48,9 @@ function App() {
         <Route
           path="/customer/home"
           element={
-            // <ProtectedRoute role="customer">
+            <ProtectedRoute role="customer">
               <CustomerHome />
-            // {/* </ProtectedRoute> */}
+            </ProtectedRoute>
           }
         />
         <Route
@@ -96,9 +96,9 @@ function App() {
         <Route
           path="/professional/home"
           element={
-            // <ProtectedRoute role="professional">
+            <ProtectedRoute role="professional">
               <ProfessionalHome />
-            // </ProtectedRoute>
+            </ProtectedRoute>
           }
         />
         <Route
