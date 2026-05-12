@@ -318,6 +318,27 @@ export const loginUser = async (email: string, password: string) => {
 };
 
 /**
+ * Google Login
+ */
+export const googleLogin = async (credential: string) => {
+  try {
+    const response = await api.post("/users/google-login/", {
+      credential
+    });
+
+    return {
+      success: true,
+      user: response.data.user,
+      access: response.data.access,
+      refresh: response.data.refresh,
+      is_new: response.data.is_new // Helper to know if we need onboarding
+    };
+  } catch (error: any) {
+    throw new Error(parseError(error));
+  }
+};
+
+/**
  * In-memory cache for user details fetched during this session.
  * This prevents repeated GET /users/{id}/ calls when the same profile is reused.
  */

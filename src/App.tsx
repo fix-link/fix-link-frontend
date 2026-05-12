@@ -4,6 +4,7 @@ import EmailSignup from "./pages/signup/EmailSignup";
 import VerifyOTP from "./pages/signup/VerifyOTP";
 import ChooseRole from "./pages/auth/ChooseRole";
 import CustomerRegister from "./pages/auth/customer/CustomerRegister";
+import Onboarding from "./pages/auth/Onboarding";
 import ProfessionalRegister from "./pages/auth/professional/ProfessionalRegister";
 import CustomerHome from "./pages/auth/customer/CustomerHome";
 import SearchResults from "./pages/auth/customer/SearchResults";
@@ -59,6 +60,7 @@ function App() {
         <Route path="/signup/email" element={<EmailSignup />} />
         <Route path="/signup/verify" element={<VerifyOTP />} />
         <Route path="/signup/role" element={<ChooseRole />} />
+        <Route path="/signup/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
         {/* Registration */}
         <Route path="/signup/customer" element={<CustomerRegister />} />
