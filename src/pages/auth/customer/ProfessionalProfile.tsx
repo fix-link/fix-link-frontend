@@ -51,7 +51,7 @@ const Stars = ({ count, className = "" }: { count: number; className?: string })
 const ProfessionalProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(
     !window.location.pathname.startsWith("/professional"),
   );
@@ -128,6 +128,8 @@ const ProfessionalProfile = () => {
   const [profileLocation, setProfileLocation] = useState("");
   const [profileLanguages, setProfileLanguages] = useState<string[]>([]);
   const [profilePortfolio, setProfilePortfolio] = useState<any[]>([]);
+  const [realReviews, setRealReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
   const [estimateRequested, setEstimateRequested] = useState(false);
   const [availableDays, setAvailableDays] = useState<number[]>([
     0, 1, 2, 3, 4, 5, 6,
@@ -141,7 +143,8 @@ const ProfessionalProfile = () => {
   const [profileServiceId, setProfileServiceId] = useState<string | undefined>(
     undefined,
   );
-  const [isProfessional] = useState(true);
+  const isProfessionalUser = user?.role === "professional" || (user as any)?.user_type === "professional" || !!user?.profession;
+  const isOwnProfile = id === user?.id || (isProView && !id);
   const [isFavorited, setIsFavorited] = useState(() => {
     const favorites = JSON.parse(
       localStorage.getItem("user_favorites") || "[]",
@@ -184,7 +187,10 @@ const ProfessionalProfile = () => {
   useEffect(() => {
     const fetchProfileData = async () => {
       const targetId = isProView ? user?.id : id;
-      if (!targetId) return;
+      if (!targetId) {
+        setIsLoading(false);
+        return;
+      }
 
       const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 
@@ -361,6 +367,20 @@ const ProfessionalProfile = () => {
     fetchJobsData();
   }, [id, user, isProView]);
 
+  // Fetch real reviews for this professional
+  useEffect(() => {
+    const targetId = isProView ? user?.id : id;
+    if (!targetId) return;
+    setLoadingReviews(true);
+    getReviews(targetId)
+      .then((data) => {
+        const list = Array.isArray(data) ? data : (data?.results || []);
+        setRealReviews(list);
+      })
+      .catch((err) => console.warn('ProfessionalProfile: Reviews fetch failed', err))
+      .finally(() => setLoadingReviews(false));
+  }, [id, isProView, user?.id]);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("review") === "true") {
@@ -426,23 +446,29 @@ const ProfessionalProfile = () => {
     setIsSubmittingReview(true);
     try {
       const jobId = new URLSearchParams(window.location.search).get("jobId") || undefined;
-      await createReview(id, reviewRating, reviewComment, jobId);
-      alert("Thank you! Your review has been submitted.");
+      const newReview = await createReview(id, reviewRating, reviewComment, jobId);
+      // Optimistically prepend the new review so the user sees it immediately
+      const optimisticReview = {
+        id: newReview?.id || Date.now().toString(),
+        rating: reviewRating,
+        comment: reviewComment,
+        created_at: new Date().toISOString(),
+        customer_name: user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'You',
+        customer_profile: { profile_picture: (user as any)?.profile_picture || user?.profilePhoto },
+        ...newReview,
+      };
+      setRealReviews(prev => [optimisticReview, ...prev]);
       setIsReviewModalOpen(false);
       setReviewComment("");
-
-      // Refresh reviews on page
-      const data = await getReviews(id);
-      const list = Array.isArray(data) ? data : (data.results || []);
-      setProfilePortfolio(list); // Wait, I should have a reviews state? 
-      // Actually, professional profile uses 'professional.reviews' which is derived from state in some places.
-      // I'll just reload to be safe and sync everything.
-      window.location.reload();
+      // Re-fetch in background to get accurate server data
+      getReviews(id).then(data => {
+        const list = Array.isArray(data) ? data : (data?.results || []);
+        setRealReviews(list);
+      }).catch(() => {});
     } catch (err: any) {
       console.error("Failed to submit review:", err);
       const backendError = err.response?.data;
       let errorMessage = "Failed to submit review.";
-
       if (backendError) {
         if (typeof backendError === 'string') errorMessage += ` ${backendError}`;
         else if (backendError.detail) errorMessage += ` ${backendError.detail}`;
@@ -451,7 +477,6 @@ const ProfessionalProfile = () => {
       } else {
         errorMessage += ` ${err.message || "Unknown error"}`;
       }
-
       alert(errorMessage);
     } finally {
       setIsSubmittingReview(false);
@@ -547,34 +572,32 @@ const ProfessionalProfile = () => {
     profileImage: profileImage || defaultAvatar,
     phone: profilePhone,
     about: profileAbout,
-    skills: profileSkills
-      .split(",")
-      .map((s: string) => s.trim())
-      .filter(Boolean),
+    skills: Array.isArray(profileSkills) 
+      ? profileSkills 
+      : (typeof profileSkills === "string" ? profileSkills : "")
+          .split(",")
+          .map((s: string) => s.trim())
+          .filter(Boolean),
     languages: profileLanguages,
     portfolio: profilePortfolio,
-    reviews: [
-      {
-        name: "Elias Tesfaye",
-        date: "Oct 12, 2024",
-        rating: 5,
-        content: `${profileName.split(" ")[0]} was exceptionally professional. They finished the work ahead of schedule. Highly recommend!`,
-        image:
-          "https://lh3.googleusercontent.com/aida-public/AB6AXuDDKa3eBgX2EeYh5Q75Q2Hbj0WjYe9IsF6t8KEV_eon4ge-xUBSkfEBHSsNHawHOdb8_fds3jx3ExL153TixBekkr3Gz2QpCq4RQ9-FSEUOcNrjf8HbC1zxP0hZNWNoyhndiVgLFPSTUw7O7Lvnru6ec_4UfiadbcECznu62_dPvFQqcAtec45a__4aGi6kJseaX_iFqECznu62_dPvFQqcAtec45a__4aGi6kJseaX_iFqEC9P2RU8uQ68dB10a1V-aUMlf9-9imF_FaN_zP4LbJDc7icuIUD_qu_ZaTI-EqxsJh-FQ",
-      },
-      {
-        name: "Aster Bekele",
-        date: "Sep 28, 2024",
-        rating: 5,
-        content:
-          "Excellent service. Explained everything clearly before starting. Best in Addis.",
-        image:
-          "https://lh3.googleusercontent.com/aida-public/AB6AXuACoZiPLzz95MnWiTcKwFSDZIsMZdrgjDIRDAIOqrKhbRCGL6qFqAjxRvHPLMkhHDRLtHgIqSwAlAcabY3HJ6Tp2uLQjyed__myy7gGZM4soPbPodDahgHZhXsAx1txGP4Tjv0jV1sdrDTgHkD5r71EUwRTOEkT6lmny6hAzI9b9hHyZ-rm0aXh8W24KqJFLflvC-MXinoXnPwcOPz2JG3stMIbPBiAaSKMMcd0dN8qbqLqsmG7JxoYHmckq-0oVZEa7fj9ew0Jcg",
-      },
-    ],
+    reviews: [], // Using realReviews state in the JSX instead of this hardcoded list
   };
 
-  if (!isProfessional) {
+  if (isLoading || authLoading) {
+    return (
+      <div className="flex h-screen w-full flex-col bg-background-light dark:bg-background-dark">
+        {!isProView ? <CustomerNavbar /> : <Header />}
+        <div className="flex-1 flex flex-col items-center justify-center p-10">
+          <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+          <p className="text-text-secondary dark:text-gray-400 font-medium">
+            Loading professional profile...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isProfessionalUser && !id) {
     return (
       <div className="flex h-screen w-full flex-col bg-background-light dark:bg-background-dark">
         {!isProView ? <CustomerNavbar /> : <Header />}
@@ -602,16 +625,6 @@ const ProfessionalProfile = () => {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background-light dark:bg-background-dark">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-slate-200 border-t-primary"></div>
-          <p className="font-bold text-text-secondary">Loading Profile...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div
@@ -1181,20 +1194,22 @@ const ProfessionalProfile = () => {
                             <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
                               Client <span className="text-amber-500">Testimonials</span>
                             </h2>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verified Customer Satisfaction</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Verified Customer Satisfaction • {realReviews.length} Reviews</p>
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center gap-4">
-                          <button
-                            onClick={() => setIsReviewModalOpen(true)}
-                            className="bg-amber-500 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-                          >
-                            <Plus size={16} strokeWidth={3} />
-                            Write a Review
-                          </button>
+                          {!isProView && !isOwnProfile && !isProfessionalUser && (
+                            <button
+                              onClick={() => setIsReviewModalOpen(true)}
+                              className="bg-amber-500 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                            >
+                              <Plus size={16} strokeWidth={3} />
+                              Write a Review
+                            </button>
+                          )}
                           <div className="hidden sm:flex items-center gap-3 px-6 py-3 bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-3xl rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-inner">
-                            <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{profileRating}</span>
+                            <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{profileRating.toFixed(1)}</span>
                             <div className="flex text-amber-500">
                               <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                             </div>
@@ -1202,44 +1217,84 @@ const ProfessionalProfile = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {profileReviewsCount > 0 ? (
-                          <div className="group relative p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800/50 bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-500 overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-amber-500/10 transition-colors"></div>
-                            
-                            <div className="flex items-center gap-4 mb-6 relative z-10">
-                              <div className="size-12 bg-primary/10 rounded-xl flex items-center justify-center font-black text-primary text-lg border border-primary/10">C</div>
-                              <div>
-                                <h4 className="font-black text-slate-800 dark:text-white tracking-tight">Recent Customer</h4>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Job Completed • Verified</p>
-                              </div>
-                            </div>
-                            
-                            <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-8 font-medium italic relative z-10">
-                              "Exceptional quality of work and very professional communication throughout the project. Exceeded all my expectations."
-                            </p>
-                            
-                            <div className="flex items-center justify-between relative z-10">
-                              <div className="flex text-amber-500 gap-1">
-                                {[...Array(5)].map((_, i) => (
-                                  <span key={i} className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
-                                ))}
-                              </div>
-                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Fix-Link Authenticated</span>
-                            </div>
+                      {loadingReviews ? (
+                        <div className="py-16 flex flex-col items-center gap-4 text-slate-400">
+                          <div className="size-10 border-4 border-slate-200 dark:border-slate-700 border-t-amber-500 rounded-full animate-spin" />
+                          <p className="text-[10px] font-black uppercase tracking-widest animate-pulse">Loading reviews...</p>
+                        </div>
+                      ) : realReviews.length === 0 ? (
+                        <div className="py-24 flex flex-col items-center justify-center text-center space-y-6 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[3rem] bg-slate-50/20 dark:bg-slate-900/10">
+                          <div className="size-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300 dark:text-slate-700">
+                            <span className="material-symbols-outlined text-4xl">star</span>
                           </div>
-                        ) : (
-                          <div className="col-span-full py-24 flex flex-col items-center justify-center text-center space-y-6 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[3rem] bg-slate-50/20 dark:bg-slate-900/10">
-                            <div className="size-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-300 dark:text-slate-700">
-                               <span className="material-symbols-outlined text-4xl">star</span>
-                            </div>
-                            <div className="space-y-2">
-                              <p className="text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest text-xs">No Testimonials Registered</p>
-                              <p className="text-slate-400 dark:text-slate-600 text-[10px] font-bold max-w-[200px] mx-auto">Complete your first job to receive verified customer feedback.</p>
-                            </div>
+                          <div className="space-y-2">
+                            <p className="text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest text-xs">No Reviews Yet</p>
+                            <p className="text-slate-400 dark:text-slate-600 text-[10px] font-bold max-w-[200px] mx-auto">Be the first to leave a review after completing a project.</p>
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {realReviews.map((review: any, idx: number) => {
+                            const customerName = review.customer_name || 
+                              review.reviewer_name ||
+                              (review.customer_detail?.first_name ? `${review.customer_detail.first_name} ${review.customer_detail.last_name || ''}`.trim() : null) ||
+                              (review.reviewer_detail?.first_name ? `${review.reviewer_detail.first_name} ${review.reviewer_detail.last_name || ''}`.trim() : null) ||
+                              (review.user_detail?.first_name ? `${review.user_detail.first_name} ${review.user_detail.last_name || ''}`.trim() : null) ||
+                              'Verified Customer';
+                            const avatarUrl = getImageUrl(review.customer_profile?.profile_picture || review.customer_detail?.profile_picture || review.customer?.profile_picture);
+                            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=random&color=fff&bold=true`;
+                            const ratingVal = Number(review.rating) || 0;
+                            const reviewDate = review.created_at
+                              ? new Date(review.created_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
+                              : '';
+                            const comment = review.comment || review.content || '';
+
+                            return (
+                              <div key={review.id || idx} className="flex gap-5 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800/50 bg-white/60 dark:bg-slate-900/40 backdrop-blur-xl hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 group">
+                                {/* Avatar */}
+                                <div className="shrink-0">
+                                  <img
+                                    src={avatarUrl || fallbackAvatar}
+                                    alt={customerName}
+                                    onError={(e) => { e.currentTarget.src = fallbackAvatar; }}
+                                    className="size-12 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                </div>
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                                    <div>
+                                      <h4 className="font-black text-slate-900 dark:text-white tracking-tight text-sm group-hover:text-amber-500 transition-colors">
+                                        {customerName}
+                                      </h4>
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{reviewDate}</p>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                      {[1,2,3,4,5].map(s => (
+                                        <span key={s} className="material-symbols-outlined text-[16px] text-amber-400" style={{ fontVariationSettings: `'FILL' ${s <= ratingVal ? 1 : 0}` }}>star</span>
+                                      ))}
+                                      <span className="text-xs font-black text-slate-500 dark:text-slate-400 ml-1">{ratingVal.toFixed(1)}</span>
+                                    </div>
+                                  </div>
+                                  {comment ? (
+                                    <p className="text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed italic">
+                                      "{comment}"
+                                    </p>
+                                  ) : (
+                                    <p className="text-sm text-slate-400 font-medium italic">No written comment.</p>
+                                  )}
+                                  {review.job_title && (
+                                    <div className="mt-3 flex items-center gap-2">
+                                      <span className="material-symbols-outlined text-xs text-primary">verified</span>
+                                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Service: <span className="text-slate-700 dark:text-slate-300">{review.job_title}</span></span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </section>
                   )}
                 </div>

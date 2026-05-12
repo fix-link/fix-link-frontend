@@ -46,8 +46,8 @@ const DisputeModal: React.FC<DisputeModalProps> = ({ isOpen, onClose, jobId, job
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}></div>
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center p-4 pt-24 overflow-y-auto">
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onClick={onClose}></div>
             
             <div className="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl border border-slate-200/50 dark:border-slate-800/50 overflow-hidden transform transition-all animate-in fade-in zoom-in duration-300">
                 <div className="px-8 py-6 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">

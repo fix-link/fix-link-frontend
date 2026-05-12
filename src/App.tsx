@@ -35,7 +35,7 @@ const ThemeManager = () => {
     const root = document.documentElement;
     // Standard approach: Home page and Auth flow are theme-neutral (usually light or brand-fixed)
     // Only apply dashboard dark mode if we're in the dashboard areas
-    const isDashboard = location.pathname.startsWith('/customer') || location.pathname.startsWith('/professional');
+    const isDashboard = location.pathname.startsWith('/customer') || location.pathname.startsWith('/professional') || location.pathname.startsWith('/account-settings');
     
     if (isDashboard && theme === "dark") {
       root.classList.add("dark");

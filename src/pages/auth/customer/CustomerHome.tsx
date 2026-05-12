@@ -72,6 +72,10 @@ const CustomerHome = () => {
             const area = prof.subcity || userData.subcity || prof.neighborhood || userData.neighborhood || '';
             const locationString = city && area ? `${city}, ${area}` : city || area || 'Addis Ababa';
 
+            // Map years_of_experience -> experience level label
+            const yoe = Number(prof.years_of_experience || userData.years_of_experience || 0);
+            const experienceLevel = yoe >= 5 ? 'Senior' : yoe >= 3 ? 'Mid-level' : 'Junior';
+
             return {
               id: prof.id || prof.user_id || userData.id,
               name: `${firstName} ${lastName}`.trim() || prof.username || userData.username || "Anonymous Professional",
@@ -81,7 +85,11 @@ const CustomerHome = () => {
               price: prof.hourly_rate || 0,
               verified: prof.is_verified_professional || false,
               image: getImageUrl(prof.profile_picture || userData.profile_picture),
-              location: locationString
+              location: locationString,
+              experience: experienceLevel,
+              languages: Array.isArray(prof.languages || userData.languages)
+                ? (prof.languages || userData.languages)
+                : (prof.languages || userData.languages || '').toString().split(',').map((l: string) => l.trim()).filter(Boolean),
             };
           });
 
@@ -125,13 +133,14 @@ const CustomerHome = () => {
       const matchesRating = pro.rating >= selectedRating;
       const matchesVerified = verifiedOnly ? pro.verified : true;
 
-      const matchesExperience = selectedExperience.length === 0 || selectedExperience.some(exp =>
-        (exp === "Junior (1-2 yrs)" && pro.experience === "Junior") ||
-        (exp === "Mid-level (3-5 yrs)" && pro.experience === "Mid-level") ||
-        (exp === "Senior (5+ yrs)" && pro.experience === "Senior")
-      );
+      const matchesExperience = selectedExperience.length === 0 || selectedExperience.some(exp => {
+        if (exp === "Junior (1-2 yrs)") return pro.experience === "Junior";
+        if (exp === "Mid-level (3-5 yrs)") return pro.experience === "Mid-level";
+        if (exp === "Senior (5+ yrs)") return pro.experience === "Senior";
+        return false;
+      });
 
-      const matchesLanguage = selectedLanguages.length === 0 || (pro.languages && pro.languages.some((lang: string) => selectedLanguages.includes(lang)));
+      const matchesLanguage = selectedLanguages.length === 0 || (Array.isArray(pro.languages) && pro.languages.some((lang: string) => selectedLanguages.includes(lang)));
 
       return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesLanguage;
     })
@@ -141,9 +150,8 @@ const CustomerHome = () => {
       if (sortBy === "price-low") return a.price - b.price;
       if (sortBy === "price-high") return b.price - a.price;
       if (sortBy === "experience") {
-        const aVal = a.experience === "Senior" ? 3 : (a.experience === "Mid-level" ? 2 : 1);
-        const bVal = b.experience === "Senior" ? 3 : (b.experience === "Mid-level" ? 2 : 1);
-        return bVal - aVal;
+        const rank = (e: string) => e === "Senior" ? 3 : e === "Mid-level" ? 2 : 1;
+        return rank(b.experience) - rank(a.experience);
       }
       return 0;
     });

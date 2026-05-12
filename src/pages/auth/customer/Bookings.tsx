@@ -280,7 +280,7 @@ const Bookings = () => {
                         </div>
                         {booking.assigned_to && (
                           <Link
-                            to={`/customer/messages/${booking.id}`}
+                            to={`/customer/messages?requestId=${booking.id}`}
                             className="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 hover:text-primary hover:border-primary/30 transition-all shadow-sm group/msg"
                             title="Message Professional"
                           >
@@ -329,7 +329,7 @@ const Bookings = () => {
                             <CreditCard size={16} />
                           </div>
                           <span className="text-[15px] font-black text-slate-900 dark:text-white">
-                            {booking.budget ? `${booking.budget} ETB` : 'Flex Rates'}
+                            {booking.budget ? `${parseFloat(String(booking.budget)).toFixed(2)} ETB` : 'Flex Rates'}
                           </span>
                         </div>
                         <div className="flex items-center gap-4">

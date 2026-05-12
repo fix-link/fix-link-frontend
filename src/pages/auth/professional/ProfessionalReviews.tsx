@@ -177,7 +177,12 @@ const ProfessionalReviews: React.FC = () => {
                                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                                         <div className="space-y-1.5">
                                                             <h4 className="text-xl font-black text-slate-900 dark:text-white tracking-tight group-hover:text-primary transition-colors">
-                                                                {review.customer_name || 'Verified Customer'}
+                                                                {review.customer_name || 
+                                                                    review.reviewer_name ||
+                                                                    (review.customer_detail?.first_name ? `${review.customer_detail.first_name} ${review.customer_detail.last_name || ''}`.trim() : null) ||
+                                                                    (review.reviewer_detail?.first_name ? `${review.reviewer_detail.first_name} ${review.reviewer_detail.last_name || ''}`.trim() : null) ||
+                                                                    (review.user_detail?.first_name ? `${review.user_detail.first_name} ${review.user_detail.last_name || ''}`.trim() : null) ||
+                                                                    'Verified Customer'}
                                                             </h4>
                                                             <div className="flex items-center gap-4">
                                                                 <Stars count={review.rating} className="text-amber-400" />

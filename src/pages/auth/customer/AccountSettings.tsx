@@ -166,7 +166,7 @@ const AccountSettings = () => {
     };
 
     return (
-        <div className="flex h-screen w-full overflow-hidden bg-background-light dark:bg-background-dark font-display relative">
+        <div className="flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950 font-display relative">
             {/* Background Decor */}
             <div className="fixed top-[-10%] right-[-5%] w-[40%] h-[40%] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
             <div className="fixed bottom-[-10%] left-[-5%] w-[40%] h-[40%] bg-accent-purple/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
@@ -187,9 +187,9 @@ const AccountSettings = () => {
                             </p>
                         </div>
 
-                        <div className="glass-panel overflow-hidden rounded-[40px] border border-slate-200/50 dark:border-slate-800/50 shadow-2xl relative">
+                        <div className="overflow-hidden rounded-[40px] border border-slate-200/50 dark:border-slate-800/50 shadow-2xl relative bg-white/90 dark:bg-slate-900/80 backdrop-blur-xl">
                             {/* Modern Tabs */}
-                            <div className="flex p-3 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800/50">
+                            <div className="flex p-3 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                                 <button
                                     onClick={() => setActiveTab("personal")}
                                     className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-[28px] font-black text-sm transition-all duration-300 ${activeTab === 'personal' ? 'bg-primary text-white shadow-lg shadow-primary/20 translate-y-[-2px]' : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50'}`}
@@ -481,14 +481,6 @@ const AccountSettings = () => {
                     background: linear-gradient(135deg, #0d93f2 0%, #075985 100%);
                     -webkit-background-clip: text;
                     -webkit-text-fill-color: transparent;
-                }
-                .glass-panel {
-                    background: rgba(255, 255, 255, 0.7);
-                    backdrop-filter: blur(40px);
-                    -webkit-backdrop-filter: blur(40px);
-                }
-                .dark .glass-panel {
-                    background: rgba(15, 23, 42, 0.4);
                 }
                 @keyframes shake {
                     0%, 100% { transform: translateX(0); }

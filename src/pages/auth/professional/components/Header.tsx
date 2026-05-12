@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { useAuth } from "../../../../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { markNotificationAsRead, type Notification } from "../../../../api/notifications.api";
+import { markNotificationAsRead, markAllAsRead, type Notification } from "../../../../api/notifications.api";
 import { useData } from "../../../../context/DataContext";
 import { getImageUrl } from "../../../../api/auth.api";
 import { useTheme } from "../../../../context/ThemeContext";
@@ -112,8 +112,21 @@ const Header: React.FC = () => {
                         <div className="absolute right-0 top-full mt-3 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
                                 <span className="font-black text-sm text-gray-900 dark:text-white">Recent Alerts</span>
-                                <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{unreadNotifications.length} New</span>
-                            </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{unreadNotifications.length} New</span>
+                                    {unreadNotifications.length > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                markAllAsRead().then(() => refreshNotifications()).catch(() => refreshNotifications());
+                                            }}
+                                            title="Mark all as read"
+                                            className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">done_all</span>
+                                        </button>
+                                    )}
+                                </div>
+                             </div>
                             <div className="max-h-96 overflow-y-auto custom-scrollbar">
                                 {notifications.length === 0 ? (
                                     <div className="px-8 py-12 text-center">
