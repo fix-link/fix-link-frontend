@@ -19,8 +19,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const { user } = useAuth();
     const [jobs, setJobs] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    
+    // Use a flag to track if we've EVER completed a fetch to prevent flashing "0"
+    const [hasInitiallyFetched, setHasInitiallyFetched] = useState(false);
+    
+    // Loading is true if we are actively fetching OR if we have a user but haven't fetched anything yet
     const [jobsLoading, setJobsLoading] = useState(false);
     const [notificationsLoading, setNotificationsLoading] = useState(false);
+
+    const isLoadingJobs = jobsLoading || (!!user?.id && !hasInitiallyFetched);
+    const isLoadingNotifications = notificationsLoading || (!!user?.id && !hasInitiallyFetched);
 
     const refreshJobs = useCallback(async () => {
         if (!user?.id) {
@@ -33,6 +41,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         try {
             const data = await listJobs();
             setJobs(Array.isArray(data) ? data : []);
+            setHasInitiallyFetched(true);
             console.log("DataContext: refreshJobs completed, jobs:", data?.length);
         } catch (error) {
             console.error("DataContext: refreshJobs failed", error);
@@ -45,6 +54,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const refreshNotifications = useCallback(async () => {
         if (!user?.id) {
             setNotifications([]);
+            setNotificationsLoading(false);
             return;
         }
 
@@ -52,6 +62,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         try {
             const data = await getNotifications();
             setNotifications(data);
+            setHasInitiallyFetched(true);
         } catch (error) {
             console.error("DataContext: refreshNotifications failed", error);
             setNotifications([]);
@@ -61,32 +72,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }, [user?.id]);
 
     useEffect(() => {
-        if (!user?.id) {
-            setJobs([]);
-            setNotifications([]);
-            return;
-        }
-
-        refreshJobs();
-        refreshNotifications();
-    }, [user?.id]); // Removed refreshJobs, refreshNotifications from deps to prevent unnecessary re-runs
-
-    useEffect(() => {
-        if (!user?.id) return;
-
-        const maybeRefresh = () => {
-            if (document.visibilityState !== "visible") return;
-            refreshNotifications();
+        if (user?.id) {
             refreshJobs();
-        };
+            refreshNotifications();
 
-        const interval = setInterval(maybeRefresh, 30000);
-        document.addEventListener("visibilitychange", maybeRefresh);
-
-        return () => {
-            clearInterval(interval);
-            document.removeEventListener("visibilitychange", maybeRefresh);
-        };
+            const interval = setInterval(() => {
+                refreshJobs();
+                refreshNotifications();
+            }, 30000); // Poll every 30s
+            return () => clearInterval(interval);
+        }
     }, [user?.id, refreshJobs, refreshNotifications]);
 
     // Real-time notifications (WebSocket)
@@ -125,8 +120,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             value={{
                 jobs,
                 notifications,
-                jobsLoading,
-                notificationsLoading,
+                jobsLoading: isLoadingJobs,
+                notificationsLoading: isLoadingNotifications,
                 refreshJobs,
                 refreshNotifications,
             }}

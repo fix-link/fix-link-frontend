@@ -54,13 +54,17 @@ const ProfessionalMessages = () => {
     const isLoading = (jobsLoading || notificationsLoading) && jobs.length === 0;
 
     useEffect(() => {
-        if (!user?.id) {
+        const userId = (user as any)?.user?.id || user?.id;
+        const proId = (user as any)?.id;
+
+        if (!userId) {
             setProfessionalRequests([]);
             return;
         }
 
         const myRequests = jobs.filter((job: any) =>
-            job.assigned_to === user?.id || job.professional === user?.id
+            job.assigned_to === userId || job.assigned_to === proId || 
+            job.professional === userId || job.professional === proId
         );
 
         console.log("ProfessionalMessages: My Jobs:", myRequests);
@@ -177,7 +181,9 @@ const ProfessionalMessages = () => {
                     return list;
                 });
                 // Mark as read
-                if (list.some(m => !m.is_read && m.sender !== user?.id)) {
+                const userId = (user as any)?.user?.id || user?.id;
+                const proId = (user as any)?.id;
+                if (list.some(m => !m.is_read && m.sender !== userId && m.sender !== proId)) {
                     markAsRead(conversationId);
                 }
             } catch (err) {
@@ -658,7 +664,9 @@ const ProfessionalMessages = () => {
 
                                         {/* Real Time Messages */}
                                         {messages.map((msg, i) => {
-                                            const isMe = msg.sender === user?.id || msg.is_me;
+                                            const userId = (user as any)?.user?.id || user?.id;
+                                            const proId = (user as any)?.id;
+                                            const isMe = msg.sender === userId || msg.sender === proId || msg.is_me;
                                             return (
                                                 <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-4'} animate-in fade-in zoom-in slide-in-from-bottom-6 duration-500`}>
                                                     {!isMe && (

@@ -11,14 +11,23 @@ const ProfessionalHome: React.FC = () => {
   // ✅ Use shared DataContext — no duplicate polling, no lag
   const { jobs: allJobs, jobsLoading } = useData();
 
-  // Filter only this professional's jobs
-  const jobs = allJobs.filter((j: any) =>
-    j.professional === user?.id ||
-    j.assigned_to === user?.id ||
-    (j.professional_detail?.id === user?.id)
-  );
+  // Filter only this professional's jobs - handle both UUID and integer IDs
+  const userId = (user as any)?.user?.id || user?.id;
+  const proId = (user as any)?.id; // Usually integer for pros
+  
+  const jobs = allJobs.filter((j: any) => {
+    const jPro = j.professional;
+    const jAssigned = j.assigned_to;
+    const jProDetailId = j.professional_detail?.id;
+    
+    return (
+      jPro === userId || jPro === proId ||
+      jAssigned === userId || jAssigned === proId ||
+      jProDetailId === userId || jProDetailId === proId
+    );
+  });
 
-  const loading = jobsLoading && allJobs.length === 0;
+
 
   // Stats — use price OR budget whichever the backend sends
   const getAmount = (j: any) => Number(j.price || j.budget || 0);
@@ -71,9 +80,13 @@ const ProfessionalHome: React.FC = () => {
                                         <span className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
                                         <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">System Live</span>
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                        {activeJobsCount > 0 ? `Active Jobs: ${activeJobsCount}` : "Awaiting New Jobs"}
-                                    </p>
+                                    {jobsLoading ? (
+                                        <div className="h-4 w-24 bg-slate-100 dark:bg-slate-800 rounded animate-pulse"></div>
+                                    ) : (
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                                            {activeJobsCount > 0 ? `Active Jobs: ${activeJobsCount}` : "Awaiting New Jobs"}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
@@ -81,7 +94,11 @@ const ProfessionalHome: React.FC = () => {
                                 <div className="px-6 py-3">
                                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Avg Rating</p>
                                     <div className="flex items-center gap-2 justify-center">
-                                        <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{rating.toFixed(1)}</span>
+                                        {jobsLoading ? (
+                                            <div className="h-6 w-10 bg-slate-100 dark:bg-slate-800 rounded animate-pulse"></div>
+                                        ) : (
+                                            <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{Number(rating).toFixed(1)}</span>
+                                        )}
                                         <span className="material-symbols-outlined text-amber-500 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
                                     </div>
                                 </div>
@@ -100,36 +117,40 @@ const ProfessionalHome: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 animate-fade-in-up [animation-delay:100ms]">
                             <StatsCard
                                 title="Jobs Completed"
-                                count={loading ? 0 : completedJobsCount}
+                                count={completedJobsCount}
                                 icon="task_alt"
                                 color="bg-emerald-500"
+                                loading={jobsLoading}
                             />
                             <StatsCard
                                 title="Active Engagements"
-                                count={loading ? 0 : activeJobsCount}
+                                count={activeJobsCount}
                                 icon="rocket_launch"
                                 color="bg-blue-500"
+                                loading={jobsLoading}
                             />
                             <StatsCard
                                 title="Net Revenue"
-                                count={loading ? 0 : totalEarnings}
+                                count={totalEarnings}
                                 icon="payments"
                                 color="bg-purple-500"
                                 isCurrency
+                                loading={jobsLoading}
                             />
                             <StatsCard
                                 title="Experience Score"
-                                count={loading ? 0 : rating}
+                                count={rating}
                                 icon="verified_user"
                                 color="bg-orange-500"
                                 isRating
+                                loading={jobsLoading}
                             />
                         </div>
 
                         {/* MAIN CONTENT - Organized grid */}
                         <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 animate-fade-in-up [animation-delay:200ms]">
                             <div className="lg:col-span-2">
-                                <ScheduleList jobs={scheduledJobs} loading={loading} />
+                                <ScheduleList jobs={scheduledJobs} loading={jobsLoading} />
                             </div>
                             <div className="space-y-10">
                                 <QuickActions />

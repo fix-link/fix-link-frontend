@@ -183,61 +183,63 @@ const ProfessionalProfile = () => {
     "December",
   ];
 
+  const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
+  const applyData = (userData: any, catList: any[]) => {
+    // Name resolution
+    const first = userData.first_name || "";
+    const last = userData.last_name || "";
+    const rawName = (first || last) ? `${first} ${last}`.trim() : (isUUID(userData.name || "") ? "" : userData.name || "");
+    const finalName = rawName || userData.username || "Service Professional";
+    setProfileName(finalName);
+
+    // Role resolution
+    let resolvedRole = userData.profession_name || "";
+    const isGeneric = (str: string) => !str || isUUID(str) || str === "Professional Specialist" || str === "Service Professional" || str === "Member";
+
+    if (isGeneric(resolvedRole)) {
+      const candidate = userData.profession;
+      const sc = userData.service_categories;
+      const primaryId = sc && Array.isArray(sc) && sc.length > 0 ? sc[0] : candidate;
+
+      if (primaryId && !isUUID(primaryId)) {
+        resolvedRole = primaryId;
+      } else if (primaryId && isUUID(primaryId)) {
+        const matched = catList.find((c: any) => c.id === primaryId);
+        if (matched) resolvedRole = matched.name;
+      }
+    }
+    setProfileRole(resolvedRole || "Service Professional");
+
+    setProfileAbout(userData.bio || "");
+    setProfileSkills(userData.skills || "");
+    setProfileExperience(userData.years_of_experience?.toString() || "0");
+    
+    const city = userData.city || "";
+    const area = userData.subcity || userData.neighborhood || "";
+    setProfileLocation(city && area ? `${city}, ${area}` : city || area || "Addis Ababa");
+
+    setProfilePhone(userData.phonenumber || userData.phone || "");
+    setProfileImage(getImageUrl(userData.profile_picture || userData.profilePhoto));
+    setProfileLanguages(userData.languages || ["Amharic", "English"]);
+    setProfilePortfolio(userData.portfolio || []);
+    setProfileRating(userData.average_rating || userData.rating || 0);
+    setProfileReviewsCount(userData.total_jobs_completed || userData.reviews_count || 0);
+    setProfilePrice(userData.hourly_rate || userData.base_price || 0);
+
+    if (userData.available_days) {
+      setAvailableDays(userData.available_days);
+    }
+  };
+
   // Use effect to initialize or update data
   useEffect(() => {
     const fetchProfileData = async () => {
-      const targetId = isProView ? user?.id : id;
+      const targetId = isProView ? ((user as any)?.user?.id || user?.id) : id;
       if (!targetId) {
         setIsLoading(false);
         return;
       }
-
-      const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-
-      const applyData = (userData: any, catList: any[]) => {
-        // Name resolution
-        const rawName = userData.first_name ? `${userData.first_name} ${userData.last_name || ""}`.trim() : isUUID(userData.name || "") ? "" : userData.name || "";
-        const finalName = isUUID(rawName) ? "Professional Specialist" : (rawName || "User");
-        setProfileName(finalName);
-
-        // Role resolution
-        let resolvedRole = userData.profession_name || "";
-        const isGeneric = (str: string) => !str || isUUID(str) || str === "Professional Specialist" || str === "Member";
-
-        if (isGeneric(resolvedRole)) {
-          const candidate = userData.profession;
-          const sc = userData.service_categories;
-          const primaryId = sc && Array.isArray(sc) && sc.length > 0 ? sc[0] : candidate;
-
-          if (primaryId && !isUUID(primaryId)) {
-            resolvedRole = primaryId;
-          } else if (primaryId && isUUID(primaryId)) {
-            const matched = catList.find((c: any) => c.id === primaryId);
-            if (matched) resolvedRole = matched.name;
-          }
-        }
-        setProfileRole(resolvedRole || "Professional Specialist");
-
-        setProfileAbout(userData.bio || `With extensive experience in ${resolvedRole || "their field"}, ${finalName.split(" ")[0]} provides high-quality service.`);
-        setProfileSkills(userData.skills || "");
-        setProfileExperience(userData.years_of_experience?.toString() || "0");
-        
-        const city = userData.city || "";
-        const area = userData.subcity || userData.neighborhood || "";
-        setProfileLocation(city && area ? `${city}, ${area}` : city || area || "Addis Ababa");
-
-        setProfilePhone(userData.phonenumber || userData.phone || "");
-        setProfileImage(getImageUrl(userData.profile_picture || userData.profilePhoto));
-        setProfileLanguages(userData.languages || ["Amharic", "English"]);
-        setProfilePortfolio(userData.portfolio || []);
-        setProfileRating(userData.average_rating || userData.rating || 0);
-        setProfileReviewsCount(userData.total_jobs_completed || userData.reviews_count || 0);
-        setProfilePrice(userData.hourly_rate || userData.base_price || 0);
-
-        if (userData.available_days) {
-          setAvailableDays(userData.available_days);
-        }
-      };
 
       // 1. Try Cache for instant UI
       const cached = localStorage.getItem(`prof_profile_${targetId}`);
@@ -425,13 +427,15 @@ const ProfessionalProfile = () => {
         }
 
         // Call the centralized updateUser from AuthContext which handles API + state sync
-        await updateUser(patch);
+        const updated = await updateUser(patch);
+
+        if (updated) {
+          applyData(updated, serviceCategories);
+          localStorage.setItem(`prof_profile_${user.id}`, JSON.stringify(updated));
+        }
 
         setIsEditing(false);
         alert("Profile updated successfully!");
-
-        // Refresh local data to be sure everything is in sync
-        window.location.reload();
       } catch (err: any) {
         console.error("Save failed:", err);
         const msg = err.message || "Failed to save changes. Please try again.";
@@ -568,7 +572,7 @@ const ProfessionalProfile = () => {
     experience: `${profileExperience}+ years experience`,
     location: profileLocation,
     coverImage:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCVqLxahM8mBBENqzv_93ZaZeNL1f0E4OzaxyeOFzKw3OmNbp_zAyVx3JtjzUkCcPITJYiDapRmZtn_EutJF9SyzhnQ47oEkrtpf_jkjYABsBbV2tyj8e9WaqpeNQBOKuU9gk8fPtFDxKzEmVI1H1HYd1VtpX_XZnxZV8jzd8tGafsAt9maXvNzTDR8sbsW1KfEJQ-3aQeOKZar1jTjMwaVQsT8m4MKp1md-ihGBr36VqI7SnxPjsrNrGTqY0ua9N7_QRGDkEMx3Q",
+      "https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2000&auto=format&fit=crop",
     profileImage: profileImage || defaultAvatar,
     phone: profilePhone,
     about: profileAbout,
@@ -637,7 +641,7 @@ const ProfessionalProfile = () => {
 
         {isProView && <Sidebar />}
         <div
-          className={`flex flex-col flex-1 relative z-10 ${isProView ? "overflow-hidden lg:ml-64" : "w-full"}`}
+          className={`flex flex-col flex-1 relative z-10 ${isProView ? "overflow-y-auto overflow-x-visible lg:ml-64" : "w-full"}`}
         >
           {!isProView ? <CustomerNavbar /> : <Header />}
           <main
@@ -672,7 +676,7 @@ const ProfessionalProfile = () => {
                         className="px-10 py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 group"
                       >
                         <span className="material-symbols-outlined text-base group-hover:rotate-12 transition-transform">save</span>
-                        Contact Info
+                        Update Info
                       </button>
                     </div>
                   ) : (
@@ -689,9 +693,9 @@ const ProfessionalProfile = () => {
                 </div>
               )}
 
-              <div className="w-full rounded-[2.5rem] shadow-2xl bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl mb-12 border border-slate-100 dark:border-slate-800/50 overflow-hidden animate-fade-in-up [animation-delay:100ms]">
+              <div className="w-full rounded-[2.5rem] shadow-2xl bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl mb-12 border border-slate-100 dark:border-slate-800/50 animate-fade-in-up [animation-delay:100ms]">
                 <div
-                  className="h-60 bg-cover bg-center relative group"
+                  className="h-60 bg-cover bg-center relative group rounded-t-[2.5rem] overflow-hidden"
                   style={{
                     backgroundImage: `url('${user?.cover_image ? getImageUrl(user.cover_image) : professional.coverImage}')`,
                   }}
@@ -756,7 +760,7 @@ const ProfessionalProfile = () => {
                             />
                           ) : (
                             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                              {profileName || "Professional Specialist"}
+                              {profileName || "Service Professional"}
                             </h1>
                           )}
                           {professional.verified && !isEditing && (

@@ -82,7 +82,11 @@ const ProfessionalReviews: React.FC = () => {
                                 <div className="text-center">
                                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 group-hover:text-amber-500 transition-colors">Total Rating</p>
                                     <div className="flex items-center gap-4">
-                                        <span className="text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">{rating.toFixed(1)}</span>
+                                        {loadingReviews ? (
+                                            <div className="h-10 w-12 bg-slate-100 dark:bg-slate-800 rounded animate-pulse"></div>
+                                        ) : (
+                                            <span className="text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">{rating.toFixed(1)}</span>
+                                        )}
                                         <div className="space-y-1.5 text-left">
                                             <Stars count={rating} className="text-amber-400 text-lg" />
                                             <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1">
@@ -96,7 +100,11 @@ const ProfessionalReviews: React.FC = () => {
                                 <div className="text-center">
                                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 group-hover:text-primary transition-colors">Volume</p>
                                     <div className="flex flex-col items-center">
-                                        <p className="text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">{reviewsCount}</p>
+                                        {loadingReviews ? (
+                                            <div className="h-10 w-12 bg-slate-100 dark:bg-slate-800 rounded animate-pulse"></div>
+                                        ) : (
+                                            <p className="text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">{reviewsCount}</p>
+                                        )}
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Total Jobs</p>
                                     </div>
                                 </div>

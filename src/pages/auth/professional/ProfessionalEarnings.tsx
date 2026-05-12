@@ -26,8 +26,9 @@ const ProfessionalEarnings: React.FC = () => {
     useEffect(() => {
         const fetchSummary = async () => {
             try {
-                if (!user?.id) return;
-                const summary = await getEarningsSummary(user.id);
+                const userId = (user as any)?.user?.id || user?.id;
+                if (!userId) return;
+                const summary = await getEarningsSummary(userId);
                 setEarningsSummary(summary);
             } catch (err) {
                 console.error("Failed to fetch earnings summary", err);
@@ -36,17 +37,25 @@ const ProfessionalEarnings: React.FC = () => {
         fetchSummary();
     }, [user?.id]);
 
-    const myCompletedJobs = useMemo(() =>
-        jobs.filter((j: any) =>
-            (j.professional === user?.id || j.assigned_to === user?.id) &&
+    const myCompletedJobs = useMemo(() => {
+        const userId = (user as any)?.user?.id || user?.id;
+        const proId = (user as any)?.id;
+        
+        return jobs.filter((j: any) =>
+            (j.professional === userId || j.professional === proId || j.assigned_to === userId || j.assigned_to === proId) &&
             ["completed", "approved"].includes(j.status)
-        ), [jobs, user?.id]);
+        );
+    }, [jobs, user?.id]);
 
-    const myActiveJobs = useMemo(() =>
-        jobs.filter((j: any) =>
-            (j.professional === user?.id || j.assigned_to === user?.id) &&
+    const myActiveJobs = useMemo(() => {
+        const userId = (user as any)?.user?.id || user?.id;
+        const proId = (user as any)?.id;
+        
+        return jobs.filter((j: any) =>
+            (j.professional === userId || j.professional === proId || j.assigned_to === userId || j.assigned_to === proId) &&
             ["accepted", "booked", "in_progress", "done"].includes(j.status)
-        ), [jobs, user?.id]);
+        );
+    }, [jobs, user?.id]);
 
     // Use backend values if available, fallback to frontend calculations
     const totalEarned =
@@ -79,12 +88,13 @@ const ProfessionalEarnings: React.FC = () => {
 
         setIsWithdrawing(true);
         try {
-            if (!user?.id) throw new Error("Not authenticated.");
+            const userId = (user as any)?.user?.id || user?.id;
+            if (!userId) throw new Error("Not authenticated.");
 
             // NOTE: backend withdraw endpoint currently requires a payment_id or escrow_id.
             // We withdraw against the most recent released payment. Multiple withdrawals may be required
             // if the professional's available balance spans multiple payments.
-            const paymentsPayload = await listPayments({ professional: user.id });
+            const paymentsPayload = await listPayments({ professional: userId });
             const payments = Array.isArray(paymentsPayload?.results) ? paymentsPayload.results : (Array.isArray(paymentsPayload) ? paymentsPayload : []);
             const candidate = payments.find((p: any) => String(p.status).toLowerCase() === "released" || String(p?.escrow?.status).toLowerCase() === "released");
 
@@ -103,7 +113,7 @@ const ProfessionalEarnings: React.FC = () => {
             });
             alert("Withdrawal request sent successfully!");
             // Refresh summary
-            const summary = await getEarningsSummary(user.id);
+            const summary = await getEarningsSummary(userId);
             setEarningsSummary(summary);
         } catch (err: any) {
             alert(`Withdrawal failed: ${err.message || "Unknown error"}`);
@@ -164,6 +174,7 @@ const ProfessionalEarnings: React.FC = () => {
                                     accent: "text-emerald-500",
                                     iconBg: "bg-emerald-500/10 dark:bg-emerald-500/20",
                                     sub: `${myCompletedJobs.length} Completed Jobs`,
+                                    loading: jobsLoading
                                 },
                                 {
                                     label: "Pending Payouts",
@@ -172,6 +183,7 @@ const ProfessionalEarnings: React.FC = () => {
                                     accent: "text-amber-500",
                                     iconBg: "bg-amber-500/10 dark:bg-amber-500/20",
                                     sub: `${myActiveJobs.length} Active Jobs`,
+                                    loading: jobsLoading
                                 },
                                 {
                                     label: "Average Income",
@@ -180,6 +192,7 @@ const ProfessionalEarnings: React.FC = () => {
                                     accent: "text-blue-500",
                                     iconBg: "bg-blue-500/10 dark:bg-blue-500/20",
                                     sub: "Average earnings per job",
+                                    loading: jobsLoading
                                 },
                             ].map(card => (
                                 <div key={card.label} className="group relative overflow-hidden rounded-[2.5rem] bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl p-10 border border-slate-100 dark:border-slate-800/50 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all duration-500 hover:shadow-2xl hover:-translate-y-2">
@@ -189,7 +202,11 @@ const ProfessionalEarnings: React.FC = () => {
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500 mb-3">{card.label}</p>
-                                            <h3 className="text-4xl font-black text-slate-900 dark:text-white leading-none tracking-tight">{card.value}</h3>
+                                            {card.loading ? (
+                                                <div className="h-10 w-40 bg-slate-100 dark:bg-slate-800 rounded-xl animate-pulse"></div>
+                                            ) : (
+                                                <h3 className="text-4xl font-black text-slate-900 dark:text-white leading-none tracking-tight">{card.value}</h3>
+                                            )}
                                             <div className="flex items-center gap-2 mt-4">
                                                 <div className={`size-1.5 rounded-full ${card.accent.replace('text-', 'bg-')} animate-pulse`}></div>
                                                 <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
@@ -220,9 +237,13 @@ const ProfessionalEarnings: React.FC = () => {
                                             <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.8)]"></span>
                                             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-400">Withdrawable Balance</p>
                                         </div>
-                                        <h2 className="text-7xl lg:text-8xl font-black text-white tracking-tighter leading-none">
-                                            {availableToWithdraw.toLocaleString()} <span className="text-3xl font-bold opacity-30 tracking-normal ml-3">ETB</span>
-                                        </h2>
+                                        {jobsLoading ? (
+                                            <div className="h-20 w-64 bg-white/10 rounded-3xl animate-pulse"></div>
+                                        ) : (
+                                            <h2 className="text-7xl lg:text-8xl font-black text-white tracking-tighter leading-none">
+                                                {availableToWithdraw.toLocaleString()} <span className="text-3xl font-bold opacity-30 tracking-normal ml-3">ETB</span>
+                                            </h2>
+                                        )}
                                         <p className="text-sm font-medium text-slate-400 max-w-sm leading-relaxed mx-auto lg:mx-0">
                                             Your revenue is authenticated and cleared for immediate dispatch to <span className="text-white font-black tracking-wide uppercase text-xs">Telebirr</span> or <span className="text-white font-black tracking-wide uppercase text-xs">CBE</span>.
                                         </p>

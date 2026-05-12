@@ -162,20 +162,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
                 // Update base user
                 if (Object.keys(userDataToUpdate).length > 0) {
-                    updatedUser = await updateUserProfile(user.id, userDataToUpdate);
+                    const userId = (user as any).user?.id || user.id;
+                    updatedUser = await updateUserProfile(userId, userDataToUpdate);
                     newUserData = { ...newUserData, ...updatedUser };
                 }
 
                 // Update professional profile
                 if (Object.keys(proData).length > 0) {
                     const updatedPro = await updateProfessionalDetails(proData);
-                    newUserData = { ...newUserData, ...updatedPro };
+                    // CRITICAL: Professional response has an integer 'id'. 
+                    // Do NOT let it overwrite the user's UUID 'id'.
+                    const { id: proId, ...proFields } = updatedPro;
+                    newUserData = { 
+                        ...newUserData, 
+                        ...proFields,
+                        professional_id: proId // Keep it as a separate property
+                    };
+                    
+                    // If the response has a nested user object, merge its fields
+                    if (updatedPro.user) {
+                        newUserData = { ...newUserData, ...updatedPro.user };
+                    }
                 }
             } else {
-                updatedUser = await updateUserProfile(user.id, userData);
+                const userId = (user as any).user?.id || user.id;
+                updatedUser = await updateUserProfile(userId, userData);
                 newUserData = { ...newUserData, ...updatedUser };
             }
 
+            console.log("AuthContext: Profile update success, syncing local state", newUserData.id);
             setUser(newUserData);
             localStorage.setItem("user", JSON.stringify(newUserData));
             return newUserData;

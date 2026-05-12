@@ -376,7 +376,9 @@ export const updateUserProfile = async (id: string, data: Partial<User> | FormDa
       headers = { "Content-Type": "multipart/form-data" };
     }
 
-    const response = await api.patch(`/users/${id}/`, payload, { headers });
+    // The ID might be nested if the user object is actually a professional profile
+    const userId = (id as any)?.user?.id || id;
+    const response = await api.patch(`/users/${userId}/`, payload, { headers });
     userDetailsCache.delete(id);
     return response.data;
   } catch (error: any) {

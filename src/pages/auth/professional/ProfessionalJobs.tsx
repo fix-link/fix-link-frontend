@@ -59,13 +59,23 @@ const ProfessionalJobs: React.FC = () => {
     const [disputeModalOpen, setDisputeModalOpen] = useState(false);
     const [selectedJobForDispute, setSelectedJobForDispute] = useState<any>(null);
 
-    // Filter only this professional's jobs
-    const myJobs = useMemo(() =>
-        jobs.filter((j: any) =>
-            j.professional === user?.id ||
-            j.assigned_to === user?.id ||
-            (j.professional_detail?.id === user?.id)
-        ), [jobs, user?.id]);
+    // Filter only this professional's jobs - handle both UUID and integer IDs
+    const myJobs = useMemo(() => {
+        const userId = (user as any)?.user?.id || user?.id;
+        const proId = (user as any)?.id; // Usually integer for pros
+        
+        return jobs.filter((j: any) => {
+            const jPro = j.professional;
+            const jAssigned = j.assigned_to;
+            const jProDetailId = j.professional_detail?.id;
+            
+            return (
+                jPro === userId || jPro === proId ||
+                jAssigned === userId || jAssigned === proId ||
+                jProDetailId === userId || jProDetailId === proId
+            );
+        });
+    }, [jobs, user?.id]);
 
     const filtered = useMemo(() => {
         let result = myJobs;
@@ -159,7 +169,11 @@ const ProfessionalJobs: React.FC = () => {
                                         <div className={`size-14 rounded-2xl ${s.bg} flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 shadow-inner border ${s.border}`}>
                                             <s.icon className={`${s.color} transition-all duration-500 group-hover:scale-110 group-hover:rotate-6`} size={28} strokeWidth={2.5} />
                                         </div>
-                                        <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{s.count}</span>
+                                        {jobsLoading ? (
+                                            <div className="h-10 w-10 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse"></div>
+                                        ) : (
+                                            <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">{s.count}</span>
+                                        )}
                                     </div>
                                     <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">{s.label}</p>
                                 </div>
@@ -180,7 +194,11 @@ const ProfessionalJobs: React.FC = () => {
                                         }`}
                                     >
                                         <span className="relative z-10">{f}</span>
-                                        {filterCounts[f] > 0 && <span className={`ml-2 px-2 py-0.5 rounded-lg text-[8px] font-black ${activeFilter === f ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-700'}`}>({filterCounts[f]})</span>}
+                                        {jobsLoading ? (
+                                            <span className="ml-2 h-3 w-6 bg-slate-100 dark:bg-slate-800 rounded animate-pulse inline-block align-middle"></span>
+                                        ) : filterCounts[f] > 0 ? (
+                                            <span className={`ml-2 px-2 py-0.5 rounded-lg text-[8px] font-black ${activeFilter === f ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-700'}`}>({filterCounts[f]})</span>
+                                        ) : null}
                                         {activeFilter === f && <div className="absolute inset-0 bg-white/10 group-hover:translate-x-full transition-transform duration-500"></div>}
                                     </button>
                                 ))}

@@ -8,9 +8,10 @@ interface StatsCardProps {
     bgGradient?: string; // no longer used for the whole card, but kept for compatibility
     isCurrency?: boolean;
     isRating?: boolean;
+    loading?: boolean;
 }
 
-const StatsCard: React.FC<StatsCardProps> = ({ title, count, icon, color = "bg-primary", isCurrency, isRating }) => {
+const StatsCard: React.FC<StatsCardProps> = ({ title, count, icon, color = "bg-primary", isCurrency, isRating, loading }) => {
     const formattedCount = isCurrency 
         ? `${Number(count).toLocaleString()} ETB` 
         : isRating 
@@ -40,9 +41,13 @@ const StatsCard: React.FC<StatsCardProps> = ({ title, count, icon, color = "bg-p
                 
                 <div className="space-y-2">
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">{title}</p>
-                    <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
-                        {formattedCount}
-                    </h3>
+                    {loading ? (
+                        <div className="h-8 w-24 bg-slate-100 dark:bg-slate-800 rounded-lg animate-pulse"></div>
+                    ) : (
+                        <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                            {formattedCount}
+                        </h3>
+                    )}
                 </div>
             </div>
             
