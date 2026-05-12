@@ -185,19 +185,11 @@ const ProfessionalProfile = () => {
   ];
 
   const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  const isGeneric = (str: string) => !str || isUUID(str) || str === "Professional Specialist" || str === "Service Professional" || str === "Member";
 
   const applyData = (userData: any, catList: any[]) => {
-    // Name resolution
-    const first = userData.first_name || "";
-    const last = userData.last_name || "";
-    const rawName = (first || last) ? `${first} ${last}`.trim() : (isUUID(userData.name || "") ? "" : userData.name || "");
-    const finalName = rawName || userData.username || "Service Professional";
-    setProfileName(finalName);
-
-    // Role resolution
+    // 1. Role resolution (Resolved first to be used as name fallback if needed)
     let resolvedRole = userData.profession_name || "";
-    const isGeneric = (str: string) => !str || isUUID(str) || str === "Professional Specialist" || str === "Service Professional" || str === "Member";
-
     if (isGeneric(resolvedRole)) {
       const candidate = userData.profession;
       const sc = userData.service_categories;
@@ -207,10 +199,32 @@ const ProfessionalProfile = () => {
         resolvedRole = primaryId;
       } else if (primaryId && isUUID(primaryId)) {
         const matched = catList.find((c: any) => c.id === primaryId);
-        if (matched) resolvedRole = matched.name;
+        if (matched) {
+            resolvedRole = matched.name;
+        } else {
+            resolvedRole = ""; // DO NOT set it to the UUID
+        }
       }
     }
-    setProfileRole(resolvedRole || "Service Professional");
+    const finalRole = resolvedRole || "Service Professional";
+    setProfileRole(finalRole);
+
+    // 2. Name resolution - strictly filter out UUIDs from ALL possible name fields
+    const rawFirst = userData.first_name || "";
+    const rawLast = userData.last_name || "";
+    const rawDisplayName = userData.name || "";
+    const rawUsername = userData.username || "";
+
+    const first = isUUID(rawFirst) ? "" : rawFirst;
+    const last = isUUID(rawLast) ? "" : rawLast;
+    const nameField = isUUID(rawDisplayName) ? "" : rawDisplayName;
+    const usernameField = isUUID(rawUsername) ? "" : rawUsername;
+    
+    const rawName = (first || last) ? `${first} ${last}`.trim() : nameField;
+    
+    // Fallback logic: Use Name -> Username -> Role/Category -> Generic
+    const finalName = rawName || usernameField || (!isGeneric(finalRole) ? finalRole : "Service Professional");
+    setProfileName(finalName);
 
     setProfileAbout(userData.bio || "");
     setProfileSkills(userData.skills || "");
@@ -778,9 +792,15 @@ const ProfessionalProfile = () => {
                               className="text-4xl font-black tracking-tight bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-xl border-2 border-primary rounded-2xl px-6 py-3 outline-none text-slate-900 dark:text-white shadow-inner w-full max-w-md"
                             />
                           ) : (
-                            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-                              {profileName || "Service Professional"}
-                            </h1>
+                            <div className="relative">
+                                {(isLoading || (isSyncing && !profileName)) ? (
+                                    <div className="h-10 w-64 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
+                                ) : (
+                                    <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white animate-fade-in">
+                                      {isUUID(profileName) ? "Service Professional" : (profileName || "Service Professional")}
+                                    </h1>
+                                )}
+                            </div>
                           )}
                           {professional.verified && !isEditing && (
                             <div className="size-10 bg-primary/10 dark:bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/20 shadow-sm" title="Verified Professional">
