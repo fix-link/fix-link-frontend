@@ -21,10 +21,24 @@ const ProfessionalReviews: React.FC = () => {
 
     useEffect(() => {
         const fetchReviews = async () => {
-            if (!user?.id) return;
+            const proId = (user as any)?.professional_id || (user as any)?.professional_detail?.id || user?.id;
+            if (!proId) return;
+            setRealReviews([]); // Clear previous reviews to prevent "ghosting"
+            setLoadingReviews(true);
             try {
-                const data = await getReviews(user.id);
-                setRealReviews(Array.isArray(data) ? data : (data.results || []));
+                const data = await getReviews(String(proId));
+                const rawList = Array.isArray(data) ? data : (data.results || []);
+                
+                // Frontend Safety Filter
+                const filteredList = rawList.filter((r: any) => {
+                    const rPro = String(r.professional || r.professional_id || "");
+                    const currentProId = String(proId || "");
+                    const currentUserId = String(user?.id || "");
+                    
+                    return rPro === currentProId || rPro === currentUserId;
+                });
+
+                setRealReviews(filteredList);
             } catch (err) {
                 console.error("Failed to fetch reviews", err);
             } finally {

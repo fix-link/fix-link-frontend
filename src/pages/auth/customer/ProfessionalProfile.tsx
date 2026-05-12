@@ -143,6 +143,7 @@ const ProfessionalProfile = () => {
   const [profileServiceId, setProfileServiceId] = useState<string | undefined>(
     undefined,
   );
+  const [proDetailId, setProDetailId] = useState<string | number | null>(null);
   const isProfessionalUser = user?.role === "professional" || (user as any)?.user_type === "professional" || !!user?.profession;
   const isOwnProfile = id === user?.id || (isProView && !id);
   const [isFavorited, setIsFavorited] = useState(() => {
@@ -230,6 +231,10 @@ const ProfessionalProfile = () => {
     if (userData.available_days) {
       setAvailableDays(userData.available_days);
     }
+
+    // Capture the Professional Detail ID (Integer) for reviews/calendar
+    const resolvedProId = userData.professional_detail?.id || userData.professional_id || (typeof userData.id === 'number' ? userData.id : null);
+    setProDetailId(resolvedProId);
   };
 
   // Use effect to initialize or update data
@@ -371,17 +376,31 @@ const ProfessionalProfile = () => {
 
   // Fetch real reviews for this professional
   useEffect(() => {
-    const targetId = isProView ? user?.id : id;
+    const targetId = proDetailId || (isProView ? user?.id : id);
     if (!targetId) return;
+    
+    setRealReviews([]); // Clear previous reviews to prevent "mixing"
     setLoadingReviews(true);
-    getReviews(targetId)
+    
+    getReviews(String(targetId))
       .then((data) => {
-        const list = Array.isArray(data) ? data : (data?.results || []);
-        setRealReviews(list);
+        const rawList = Array.isArray(data) ? data : (data?.results || []);
+        
+        // Frontend Safety Filter: Ensure reviews actually belong to this professional
+        // This prevents the "mixed up" glitch where the backend might return all reviews
+        const filteredList = rawList.filter((r: any) => {
+            const rPro = String(r.professional || r.professional_id || "");
+            const currentId = String(id || "");
+            const currentProDetailId = String(proDetailId || "");
+            
+            return rPro === currentId || rPro === currentProDetailId;
+        });
+
+        setRealReviews(filteredList);
       })
       .catch((err) => console.warn('ProfessionalProfile: Reviews fetch failed', err))
       .finally(() => setLoadingReviews(false));
-  }, [id, isProView, user?.id]);
+  }, [id, isProView, user?.id, proDetailId]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1203,15 +1222,6 @@ const ProfessionalProfile = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
-                          {!isProView && !isOwnProfile && !isProfessionalUser && (
-                            <button
-                              onClick={() => setIsReviewModalOpen(true)}
-                              className="bg-amber-500 text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amber-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-                            >
-                              <Plus size={16} strokeWidth={3} />
-                              Write a Review
-                            </button>
-                          )}
                           <div className="hidden sm:flex items-center gap-3 px-6 py-3 bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-3xl rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-inner">
                             <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">{profileRating.toFixed(1)}</span>
                             <div className="flex text-amber-500">
