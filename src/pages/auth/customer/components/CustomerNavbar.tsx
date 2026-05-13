@@ -6,6 +6,8 @@ import { markNotificationAsRead, markAllAsRead, type Notification } from "../../
 import { useData } from "../../../../context/DataContext";
 import { getImageUrl } from "../../../../api/auth.api";
 import { useTheme } from "../../../../context/ThemeContext";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "../../../../components/LanguageSwitcher";
 import {
   ChevronDown, MapPin, Navigation, ArrowRight, SearchX, Search,
   LayoutDashboard, MessageSquare, Calendar, Bell, BellOff, Clock, Settings, LogOut, Sparkles
@@ -28,6 +30,7 @@ const CustomerNavbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
+  const { t } = useTranslation();
 
   // Search State
   const [location, setLocation] = useState("Addis Ababa");
@@ -76,14 +79,14 @@ const CustomerNavbar = () => {
     switch (n.type?.toLowerCase()) {
         case 'job_accepted':
         case 'request_accepted':
-            return "Professional accepted your request";
+            return t('common.pro_accepted_req');
         case 'job_completed':
-            return "A professional marked your job as done";
+            return t('common.pro_marked_done');
         case 'message':
         case 'new_message':
-            return "New message from professional";
+            return t('common.new_msg_from_pro');
         default:
-            return "New update on your project";
+            return t('common.new_update_project');
     }
   };
 
@@ -113,7 +116,7 @@ const CustomerNavbar = () => {
       <div className="flex items-center gap-4 text-slate-900 dark:text-white">
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0 cursor-pointer group" onClick={() => navigate('/')}>
-          <span className="text-xl font-display font-black tracking-tight hidden xl:block text-slate-900 dark:text-white group-hover:text-primary transition-colors">Fix-Link</span>
+          <span className="text-xl font-display font-black tracking-tight hidden xl:block text-slate-900 dark:text-white group-hover:text-primary transition-colors">{t('common.logo')}</span>
         </div>
       </div>
 
@@ -126,7 +129,7 @@ const CustomerNavbar = () => {
               onChange={(e) => setService(e.target.value)}
               className="w-full h-full bg-transparent border-none focus:ring-0 text-[14px] font-black pl-4 pr-10 text-slate-800 dark:text-slate-100 cursor-pointer appearance-none outline-none group-hover:text-primary transition-colors [appearance:none] [&::-ms-expand]:hidden"
             >
-              <option className="bg-white dark:bg-slate-900">All Services</option>
+              <option className="bg-white dark:bg-slate-900">{t('common.all_services')}</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.name} className="bg-white dark:bg-slate-900">{cat.name}</option>
               ))}
@@ -144,7 +147,7 @@ const CustomerNavbar = () => {
               <input
                 id="navbar-location-input"
                 className="w-full h-full bg-transparent border-none focus:ring-0 text-[14px] font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 outline-none"
-                placeholder="Where do you need the service?"
+                placeholder={t('common.where_need_service')}
                 type="text"
                 value={location}
                 onChange={(e) => {
@@ -161,7 +164,7 @@ const CustomerNavbar = () => {
                   
                   <div className="px-8 py-5 border-b border-slate-100/50 dark:border-slate-700/50 flex items-center justify-between relative z-10">
                     <span className="text-[11px] font-black text-primary dark:text-primary tracking-[0.2em] uppercase flex items-center gap-2">
-                       <Sparkles size={14} className="animate-pulse" /> Popular Recommendations
+                       <Sparkles size={14} className="animate-pulse" /> {t('common.popular_recommendations')}
                     </span>
                   </div>
                   <div className="max-h-[350px] overflow-y-auto custom-scrollbar py-3 relative z-10">
@@ -182,7 +185,7 @@ const CustomerNavbar = () => {
                              </div>
                              <div>
                                  <span className="text-[14px] font-black text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors block">{loc}</span>
-                                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{idx < 3 ? 'Trending' : 'Matches Query'}</span>
+                                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{idx < 3 ? t('common.trending') : t('common.matches_query')}</span>
                              </div>
                           </div>
                           <ArrowRight size={16} strokeWidth={3} className="text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-300" />
@@ -193,7 +196,7 @@ const CustomerNavbar = () => {
                         <div className="size-16 rounded-[24px] bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
                            <SearchX size={28} className="text-slate-300" />
                         </div>
-                        <p className="text-sm text-slate-500 font-black tracking-tight">No locations found</p>
+                        <p className="text-sm text-slate-500 font-black tracking-tight">{t('common.no_locations_found')}</p>
                       </div>
                     )}
                   </div>
@@ -209,7 +212,7 @@ const CustomerNavbar = () => {
             <div className="absolute inset-0 flex h-full w-full justify-center [transform:skew(-12deg)_translateX(-100%)] group-hover/searchbtn:duration-1000 group-hover/searchbtn:[transform:skew(-12deg)_translateX(100%)]">
                <div className="relative h-full w-4 bg-white/30"></div>
             </div>
-            <span>Search</span>
+            <span>{t('common.search')}</span>
             <Search size={14} strokeWidth={3} />
           </button>
         </div>
@@ -219,16 +222,17 @@ const CustomerNavbar = () => {
       <div className="flex flex-1 justify-end gap-1 sm:gap-3 items-center">
         <Link to="/customer/home" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-4 py-2 rounded-xl">
           <LayoutDashboard size={18} />
-          <span>Dashboard</span>
+          <span>{t('common.dashboard')}</span>
         </Link>
-        <Link to="/customer/messages/1" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-4 py-2 rounded-xl">
+        <Link to="/customer/messages" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-4 py-2 rounded-xl">
           <MessageSquare size={18} />
-          <span>Messages</span>
+          <span>{t('common.messages')}</span>
         </Link>
         <Link to="/customer/bookings" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-4 py-2 rounded-xl">
           <Calendar size={18} />
-          <span>Bookings</span>
+          <span>{t('common.bookings')}</span>
         </Link>
+        <LanguageSwitcher />
 
         {/* Notifications */}
         <div className="relative ml-2" ref={notificationRef}>
@@ -247,9 +251,9 @@ const CustomerNavbar = () => {
           {showNotifications && (
             <div className="absolute right-0 top-[calc(100%+12px)] w-80 sm:w-96 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-white/40 dark:border-slate-700/50 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="px-6 py-4 border-b border-slate-100/50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-800/50 flex justify-between items-center">
-                <span className="font-black text-sm text-slate-900 dark:text-white tracking-tight">Notifications</span>
+                <span className="font-black text-sm text-slate-900 dark:text-white tracking-tight">{t('common.notifications')}</span>
                 <div className="flex items-center gap-2">
-                  {unreadNotifications.length > 0 && <span className="text-[9px] bg-primary/10 text-primary px-2 py-1 rounded-full font-black uppercase tracking-widest">{unreadNotifications.length} New</span>}
+                  {unreadNotifications.length > 0 && <span className="text-[9px] bg-primary/10 text-primary px-2 py-1 rounded-full font-black uppercase tracking-widest">{unreadNotifications.length} {t('common.new')}</span>}
                   {unreadNotifications.length > 0 && (
                     <button
                       onClick={() => {
@@ -269,7 +273,7 @@ const CustomerNavbar = () => {
                     <div className="size-16 rounded-3xl bg-slate-50 dark:bg-slate-800/50 flex items-center justify-center mx-auto mb-4">
                        <BellOff size={28} className="text-slate-300" />
                     </div>
-                    <p className="text-slate-400 text-sm font-bold tracking-tight">All caught up!</p>
+                    <p className="text-slate-400 text-sm font-bold tracking-tight">{t('common.all_caught_up')}</p>
                   </div>
                 ) : (
                   notifications.map(n => (
@@ -350,7 +354,7 @@ const CustomerNavbar = () => {
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-lg">{theme === 'dark' ? '☀️' : '🌙'}</span>
-                    <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
+                    <span>{theme === 'dark' ? t('common.light_mode') : t('common.dark_mode')}</span>
                   </div>
                   <div className={`relative w-10 h-5 rounded-full transition-colors duration-300 ${theme === 'dark' ? 'bg-primary' : 'bg-slate-200'}`}>
                     <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-300 ${theme === 'dark' ? 'translate-x-5' : 'translate-x-0.5'}`} />
@@ -364,7 +368,7 @@ const CustomerNavbar = () => {
                   className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors group"
                 >
                   <Settings size={16} strokeWidth={2.5} className="text-slate-400 group-hover:text-primary transition-colors" />
-                  Account Settings
+                  {t('common.settings')}
                 </Link>
 
                 <div className="h-px bg-slate-100 dark:bg-slate-800/50 my-2 mx-2"></div>
@@ -374,7 +378,7 @@ const CustomerNavbar = () => {
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-colors group"
                 >
                   <LogOut size={16} strokeWidth={2.5} className="group-hover:-translate-x-1 transition-transform" />
-                  Sign Out
+                  {t('common.logout')}
                 </button>
               </div>
             </div>

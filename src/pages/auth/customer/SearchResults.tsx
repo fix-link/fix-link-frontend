@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import CustomerNavbar from "./components/CustomerNavbar";
 import ProfessionalCard from "./components/ProfessionalCard";
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 
 const SearchResults = () => {
+    const { t } = useTranslation();
     const location = useLocation();
 
     // Parse query params to show in header title
@@ -58,7 +60,7 @@ const SearchResults = () => {
                     .filter((u: any) => u.role === 'professional' || u.is_professional || u.user?.role === 'professional')
                     .map((prof: any) => {
                         const ud = prof.user || {};
-                        const roleName = categoryMap[prof.profession || ud.profession] || 'Professional';
+                        const roleName = categoryMap[prof.profession || ud.profession] || t('common.professional');
                         
                         // Map location dynamically
                         const city = prof.city || ud.city || '';
@@ -67,7 +69,7 @@ const SearchResults = () => {
 
                         return {
                             id: prof.id || prof.user_id || ud.id,
-                            name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || "Anonymous Professional",
+                            name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || t('common.anonymous_pro'),
                             role: roleName,
                             rating: prof.average_rating || prof.rating || 0,
                             reviews: prof.total_jobs_completed || prof.reviews_count || 0,
@@ -75,9 +77,9 @@ const SearchResults = () => {
                             verified: prof.is_verified_professional || false,
                             image: getImageUrl(prof.profile_picture || ud.profile_picture),
                             location: locationString,
-                            experience: prof.years_of_experience > 5 ? "Senior" : prof.years_of_experience > 2 ? "Mid-level" : "Junior",
-                            availability: "Today",
-                            languages: ["Amharic", "English"]
+                            experience: prof.years_of_experience > 5 ? t('common.senior') : prof.years_of_experience > 2 ? t('common.mid_level') : t('common.junior'),
+                            availability: t('common.today'),
+                            languages: [t('common.amharic'), t('common.english')]
                         };
                     });
 
@@ -142,12 +144,12 @@ const SearchResults = () => {
     const [isSortOpen, setIsSortOpen] = useState(false);
 
     const sortOptions = [
-        { value: "recommended", label: "Recommended", icon: Search },
-        { value: "rating", label: "Top Rated", icon: Star },
-        { value: "reviews", label: "Most Jobs", icon: Briefcase },
-        { value: "experience", label: "Experience", icon: ArrowUpDown },
-        { value: "price-low", label: "Lowest Price", icon: ArrowUpDown },
-        { value: "price-high", label: "Highest Price", icon: ArrowUpDown },
+        { value: "recommended", label: t('common.recommended'), icon: Search },
+        { value: "rating", label: t('common.top_rated'), icon: Star },
+        { value: "reviews", label: t('common.most_jobs'), icon: Briefcase },
+        { value: "experience", label: t('common.expertise_depth'), icon: ArrowUpDown },
+        { value: "price-low", label: t('common.lowest_price'), icon: ArrowUpDown },
+        { value: "price-high", label: t('common.highest_price'), icon: ArrowUpDown },
     ];
 
     if (loading) {
@@ -155,7 +157,7 @@ const SearchResults = () => {
             <div className="flex h-screen w-screen items-center justify-center bg-background-light dark:bg-background-dark">
                 <div className="flex flex-col items-center gap-6 animate-pulse">
                     <Loader2 size={48} className="text-primary animate-spin" />
-                    <p className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Discovering Experts...</p>
+                    <p className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">{t('common.discovering_experts')}</p>
                 </div>
             </div>
         );
@@ -174,14 +176,14 @@ const SearchResults = () => {
                 <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6 animate-fade-in-up relative z-[60]">
                     <div className="space-y-2">
                         <h1 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
-                            Search results for <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan capitalize">
-                                {serviceQuery || 'Every Task'}
-                            </span> {locationQuery && <span>in <span className="capitalize">{locationQuery}</span></span>}
+                            {t('common.search_results_for')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan capitalize">
+                                {serviceQuery || t('common.every_task')}
+                            </span> {locationQuery && <span>{t('common.in')} <span className="capitalize">{locationQuery}</span></span>}
                         </h1>
                         <div className="flex items-center gap-3">
                             <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
                             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
-                                Discovery Engine Active
+                                {t('common.discovery_engine_active')}
                             </p>
                         </div>
                     </div>
@@ -189,13 +191,13 @@ const SearchResults = () => {
                     <div className="flex flex-col sm:flex-row items-center gap-3 relative z-[60]">
                         <div className="px-6 py-2.5 rounded-2xl bg-white/50 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm hidden md:flex items-center gap-3 mr-2 shadow-sm">
                             <span className="text-primary font-black text-xl">{filteredProfessionals.length}</span>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Experts Found</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.experts_found')}</span>
                         </div>
                         <button
                             onClick={() => setShowFilters(!showFilters)}
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 shadow-sm ${showFilters ? 'bg-primary text-white shadow-primary/20 hover:bg-primary-dark' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-primary/50'}`}
                         >
-                            <ArrowUpDown size={18} /> Filters
+                            <ArrowUpDown size={18} /> {t('common.filters')}
                         </button>
                         
                         <div className="relative group z-[60]">
@@ -205,7 +207,7 @@ const SearchResults = () => {
                             >
                                 <ArrowUpDown size={18} className="text-slate-400" />
                                 <span>
-                                    {sortOptions.find(o => o.value === sortBy)?.label || "Sort Results"}
+                                    {sortOptions.find(o => o.value === sortBy)?.label || t('common.sort_results')}
                                 </span>
                                 <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${isSortOpen ? 'rotate-180 text-primary' : ''}`} />
                             </button>
@@ -217,7 +219,7 @@ const SearchResults = () => {
                                         <div className="absolute top-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
                                         <div className="px-5 py-4 border-b border-slate-100/50 dark:border-slate-800/50 relative z-10 flex items-center justify-between">
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Sort Results By</p>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('common.sort_results_by')}</p>
                                         </div>
                                         <div className="p-2 relative z-10 space-y-1">
                                             {sortOptions.map((option) => (
@@ -281,15 +283,15 @@ const SearchResults = () => {
                                 <div className="size-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6 text-slate-400">
                                     <SearchX size={32} />
                                 </div>
-                                <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2 tracking-tight">No Results Found</h3>
+                                <h3 className="text-xl font-black text-slate-800 dark:text-white mb-2 tracking-tight">{t('common.no_results_found')}</h3>
                                 <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 max-w-xs mx-auto">
-                                    We couldn't find any experts matching your specific criteria. Try broadening your filter parameters.
+                                    {t('common.could_not_find_experts')}
                                 </p>
                                 <button 
                                     onClick={handleClearAll} 
                                     className="px-8 py-3 bg-primary text-white font-black rounded-2xl text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/20 flex items-center gap-2"
                                 >
-                                    Clear Filters
+                                    {t('common.clear_filters')}
                                 </button>
                             </div>
                         )}

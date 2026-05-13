@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { updateUserProfile } from "../../api/auth.api";
@@ -7,6 +8,7 @@ import LoadingSpinner from "../../components/LoadingSpinner";
 import ErrorMessage from "../../components/ErrorMessage";
 
 const Onboarding: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -45,7 +47,7 @@ const Onboarding: React.FC = () => {
         navigate(user.role === 'professional' ? '/professional/home' : '/customer/home');
       }, 2000);
     } catch (err: any) {
-      setError(err.message || "Failed to update profile");
+      setError(err.message || t('common.failed_update_profile'));
     } finally {
       setLoading(false);
     }
@@ -58,8 +60,8 @@ const Onboarding: React.FC = () => {
           <div className="size-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-8">
             <CheckCircle2 size={48} className="text-green-500" />
           </div>
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">You're all set!</h1>
-          <p className="text-slate-500 dark:text-slate-400 text-lg">Your profile is now complete. Redirecting you to your dashboard...</p>
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{t('common.you_are_all_set')}</h1>
+          <p className="text-slate-500 dark:text-slate-400 text-lg">{t('common.profile_complete_redirect')}</p>
           <div className="flex justify-center pt-4">
             <LoadingSpinner />
           </div>
@@ -82,13 +84,13 @@ const Onboarding: React.FC = () => {
           
           <div className="mb-10">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary font-bold text-xs uppercase tracking-widest mb-4">
-              Step 2: Final Details
+              {t('common.final_details')}
             </div>
             <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-4">
-              Welcome, {user?.first_name || 'there'}!
+              {t('common.welcome_name', { name: user?.first_name || '' })}
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-relaxed">
-              We've got your basics from Google. Just a few more things to make your experience perfect.
+              {t('common.onboarding_subtitle')}
             </p>
           </div>
 
@@ -99,7 +101,7 @@ const Onboarding: React.FC = () => {
             <div className="space-y-3">
               <label className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                 <Phone size={16} className="text-primary" />
-                Phone Number
+                {t('common.phone_number')}
               </label>
               <div className="relative group">
                 <div className="absolute left-6 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
@@ -122,7 +124,7 @@ const Onboarding: React.FC = () => {
               <div className="space-y-3">
                 <label className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                   <Calendar size={16} className="text-primary" />
-                  Date of Birth
+                  {t('common.date_of_birth')}
                 </label>
                 <div className="relative group">
                   <input
@@ -139,7 +141,7 @@ const Onboarding: React.FC = () => {
               <div className="space-y-3">
                 <label className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                   <MapPin size={16} className="text-primary" />
-                  City / Area
+                  {t('common.city_area')}
                 </label>
                 <div className="relative group">
                   <input
@@ -161,7 +163,7 @@ const Onboarding: React.FC = () => {
             >
               {loading ? <LoadingSpinner /> : (
                 <>
-                  <span>Complete My Profile</span>
+                  <span>{t('common.complete_my_profile')}</span>
                   <ArrowRight size={22} className="group-hover:translate-x-2 transition-transform" />
                 </>
               )}

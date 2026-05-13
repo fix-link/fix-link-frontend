@@ -5,8 +5,10 @@ import CustomerFooter from "./components/CustomerFooter";
 import FiltersSidebar from "./components/FiltersSidebar";
 import { getProfessionals, getServiceCategories } from "../../../api/jobs.api";
 import { Sparkles, Star, Briefcase, TrendingUp, ArrowUp, ArrowDown, Settings2, ArrowUpDown, ChevronDown, Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const CustomerHome = () => {
+  const { t } = useTranslation();
   // Professionals state
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,12 +180,12 @@ const CustomerHome = () => {
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-in-up relative z-[60]">
           <div className="space-y-2">
             <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">Professional</span> Services
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">{t('common.professional')}</span> {t('common.services')}
             </h1>
             <div className="flex items-center gap-2">
               <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
               <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                {loading ? 'Finding top experts...' : `${filteredProfessionals.length} Experts Available`}
+                {loading ? t('common.finding_experts') : `${filteredProfessionals.length} ${t('common.experts_available')}`}
               </p>
             </div>
           </div>
@@ -192,7 +194,7 @@ const CustomerHome = () => {
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-300 shadow-sm ${showFilters ? 'bg-primary text-white shadow-primary/20 hover:bg-primary-dark' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-primary/50'}`}
             >
-              <Settings2 size={18} /> Filters
+              <Settings2 size={18} /> {t('common.filters')}
             </button>
             <div className="relative group z-[60]">
               <button
@@ -213,7 +215,7 @@ const CustomerHome = () => {
                     <div className="absolute top-0 left-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
 
                     <div className="px-5 py-4 border-b border-slate-100/50 dark:border-slate-800/50 relative z-10 flex items-center justify-between">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Sort Results By</p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('common.sort_results_by')}</p>
                     </div>
                     <div className="p-2 relative z-10 space-y-1">
                       {sortOptions.map((option) => (
@@ -273,7 +275,7 @@ const CustomerHome = () => {
                      <span className="absolute inset-0 border-4 border-slate-200 dark:border-slate-800 rounded-full"></span>
                      <span className="absolute inset-0 border-4 border-primary rounded-full border-t-transparent animate-spin"></span>
                   </div>
-                  <p className="text-sm font-bold text-slate-400 uppercase tracking-widest animate-pulse">Loading professionals...</p>
+                   <p className="text-sm font-bold text-slate-400 uppercase tracking-widest animate-pulse">{t('common.finding_experts')}</p>
                 </div>
               </div>
             ) : professionals.length === 0 ? (
@@ -282,8 +284,8 @@ const CustomerHome = () => {
                   <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                      <Briefcase size={24} />
                   </div>
-                  <p className="text-xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">No professionals found</p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Try adjusting your filters or search criteria.</p>
+                   <p className="text-xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">{t('common.no_results_found')}</p>
+                   <p className="text-sm text-slate-500 dark:text-slate-400">{t('common.could_not_find_experts')}</p>
                 </div>
               </div>
             ) : (

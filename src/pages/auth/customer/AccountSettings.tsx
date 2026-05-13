@@ -8,6 +8,7 @@ import Header from "../professional/components/Header";
 import { getImageUrl, changePassword, deleteUserProfile, getUserDetails } from "../../../api/auth.api";
 import LocationInput from "../../../components/LocationInput";
 import PhoneInput from "../../../components/PhoneInput";
+import { useTranslation } from "react-i18next";
 import { 
   User, Shield, Mail, MapPin, Camera, 
   Save, Lock, Trash2, AlertTriangle, CheckCircle2, 
@@ -15,7 +16,9 @@ import {
 } from "lucide-react";
 
 const AccountSettings = () => {
-    const { user, updateUser } = useAuth();
+    const { user, updateUser, logout } = useAuth();
+    const { t } = useTranslation();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<"personal" | "security">("personal");
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -95,7 +98,7 @@ const AccountSettings = () => {
         if (!file || !user) return;
 
         if (!file.type.startsWith('image/')) {
-            alert("Please upload an image file");
+            alert(t('common.upload_image_file_err'));
             return;
         }
 
@@ -116,7 +119,7 @@ const AccountSettings = () => {
             setTimeout(() => setUpdateSuccess(false), 3000);
         } catch (error: any) {
             console.error("Image upload failed:", error);
-            alert("Failed to upload image: " + error.message);
+            alert(t('common.failed_upload_image', { error: error.message }));
             setProfilePreview(null);
         } finally {
             setIsUploading(false);
@@ -127,11 +130,11 @@ const AccountSettings = () => {
         e.preventDefault();
         setPasswordError("");
         if (newPassword !== confirmPassword) {
-            setPasswordError("New passwords do not match");
+            setPasswordError(t('common.passwords_dont_match'));
             return;
         }
         if (newPassword.length < 6) {
-            setPasswordError("Password must be at least 6 characters");
+            setPasswordError(t('common.password_min_6'));
             return;
         }
         
@@ -143,12 +146,10 @@ const AccountSettings = () => {
             setConfirmPassword("");
             setTimeout(() => setUpdateSuccess(false), 3000);
         } catch (error: any) {
-            setPasswordError(error.message || "Failed to update password");
+            setPasswordError(error.message || t('common.failed_update_password'));
         }
     };
 
-    const { logout } = useAuth();
-    const navigate = useNavigate();
 
     const handleDeleteAccount = async () => {
         if (!user) return;
@@ -158,7 +159,7 @@ const AccountSettings = () => {
             logout();
             navigate("/");
         } catch (error: any) {
-            alert("Failed to delete account: " + error.message);
+            alert(t('common.failed_delete_account', { error: error.message }));
         } finally {
             setIsDeleting(false);
             setIsDeleteModalOpen(false);
@@ -180,10 +181,10 @@ const AccountSettings = () => {
                     <div className="max-w-4xl mx-auto">
                         <div className="mb-10 text-center md:text-left space-y-2">
                             <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-                                Account <span className="text-gradient">Settings</span>
+                                {t('common.account_settings').split(' ')[0]} <span className="text-gradient">{t('common.account_settings').split(' ').slice(1).join(' ')}</span>
                             </h1>
                             <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-relaxed">
-                                Control your profile visibility and security preferences.
+                                {t('common.control_visibility_security')}
                             </p>
                         </div>
 
@@ -195,14 +196,14 @@ const AccountSettings = () => {
                                     className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-[28px] font-black text-sm transition-all duration-300 ${activeTab === 'personal' ? 'bg-primary text-white shadow-lg shadow-primary/20 translate-y-[-2px]' : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50'}`}
                                 >
                                     <User size={18} />
-                                    <span>Personal Profile</span>
+                                    <span>{t('common.personal_profile')}</span>
                                 </button>
                                 <button
                                     onClick={() => setActiveTab("security")}
                                     className={`flex-1 flex items-center justify-center gap-3 px-6 py-4 rounded-[28px] font-black text-sm transition-all duration-300 ${activeTab === 'security' ? 'bg-primary text-white shadow-lg shadow-primary/20 translate-y-[-2px]' : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-slate-800/50'}`}
                                 >
                                     <Shield size={18} />
-                                    <span>Security & Privacy</span>
+                                    <span>{t('common.security_privacy')}</span>
                                 </button>
                             </div>
 
@@ -212,7 +213,7 @@ const AccountSettings = () => {
                                         <div className="size-10 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
                                             <CheckCircle2 size={20} />
                                         </div>
-                                        <span className="font-black text-sm">Updated successfully.</span>
+                                        <span className="font-black text-sm">{t('common.updated_successfully')}</span>
                                     </div>
                                 )}
 
@@ -247,14 +248,14 @@ const AccountSettings = () => {
                                                 />
                                             </div>
                                             <div className="text-center md:text-left space-y-1">
-                                                <h3 className="font-black text-3xl text-slate-900 dark:text-white">Profile Details</h3>
-                                                <p className="text-slate-500 dark:text-slate-400 font-medium">Update your photo and persona details here.</p>
+                                                <h3 className="font-black text-3xl text-slate-900 dark:text-white">{t('common.profile_details')}</h3>
+                                                <p className="text-slate-500 dark:text-slate-400 font-medium">{t('common.update_photo_persona')}</p>
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">First Name</label>
+                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('common.first_name')}</label>
                                                 <input
                                                     type="text"
                                                     value={firstName}
@@ -265,7 +266,7 @@ const AccountSettings = () => {
                                                 />
                                             </div>
                                             <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Last Name</label>
+                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('common.last_name')}</label>
                                                 <input
                                                     type="text"
                                                     value={lastName}
@@ -277,7 +278,7 @@ const AccountSettings = () => {
                                             </div>
 
                                             <div className="space-y-3 md:col-span-2">
-                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Official Email</label>
+                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('common.official_email')}</label>
                                                 <div className="relative group">
                                                     <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={20} />
                                                     <input
@@ -291,7 +292,7 @@ const AccountSettings = () => {
                                             </div>
 
                                             <div className="space-y-3 md:col-span-2">
-                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Contact Number</label>
+                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('common.contact_number')}</label>
                                                 <PhoneInput
                                                     value={phone}
                                                     onChange={(val) => setPhone(val)}
@@ -299,7 +300,7 @@ const AccountSettings = () => {
                                             </div>
 
                                             <div className="space-y-3 md:col-span-2">
-                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Primary Location</label>
+                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('common.primary_location')}</label>
                                                 <div className="relative group">
                                                     <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors z-[5]" size={20} />
                                                     <LocationInput
@@ -312,9 +313,9 @@ const AccountSettings = () => {
 
                                             {isPro && (
                                                 <div className="space-y-3 md:col-span-2">
-                                                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Starting Price (ETB)</label>
+                                                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('common.starting_price_etb')}</label>
                                                     <div className="relative group">
-                                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors font-black">ETB</div>
+                                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors font-black">{t('common.etb')}</div>
                                                         <input
                                                             type="number"
                                                             value={basePrice}
@@ -323,7 +324,7 @@ const AccountSettings = () => {
                                                             className="w-full px-6 py-4 pl-16 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-all font-bold text-slate-800 dark:text-white outline-none"
                                                         />
                                                     </div>
-                                                    <p className="text-[10px] text-slate-400 font-medium ml-1">This price will be shown as "Starting from" on your profile card.</p>
+                                                    <p className="text-[10px] text-slate-400 font-medium ml-1">{t('common.price_shown_starting')}</p>
                                                 </div>
                                             )}
                                         </div>
@@ -335,15 +336,15 @@ const AccountSettings = () => {
                                             >
                                                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                                                 <Save size={22} className="group-hover/btn:rotate-12 transition-transform" />
-                                                Sync Profile Changes
+                                                {t('common.sync_profile_changes')}
                                             </button>
                                         </div>
                                     </form>
                                 ) : (
                                     <form onSubmit={handleUpdatePassword} className="space-y-12">
                                         <div className="space-y-2 pb-8 border-b border-slate-100 dark:border-slate-800/50">
-                                            <h3 className="font-black text-3xl text-slate-900 dark:text-white">Access & Security</h3>
-                                            <p className="text-slate-500 dark:text-slate-400 font-medium">Protect your workspace with high-entropy credentials.</p>
+                                            <h3 className="font-black text-3xl text-slate-900 dark:text-white">{t('common.access_security')}</h3>
+                                            <p className="text-slate-500 dark:text-slate-400 font-medium">{t('common.protect_workspace_credentials')}</p>
                                         </div>
 
                                         {passwordError && (
@@ -357,7 +358,7 @@ const AccountSettings = () => {
 
                                         <div className="space-y-8">
                                             <div className="space-y-3">
-                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Current Password</label>
+                                                <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('common.current_password')}</label>
                                                 <div className="relative group">
                                                     <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors" size={20} />
                                                     <input
@@ -372,7 +373,7 @@ const AccountSettings = () => {
 
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
                                                 <div className="space-y-3">
-                                                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">New Password</label>
+                                                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('common.new_password')}</label>
                                                     <input
                                                         type="password"
                                                         value={newPassword}
@@ -382,7 +383,7 @@ const AccountSettings = () => {
                                                     />
                                                 </div>
                                                 <div className="space-y-3">
-                                                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Confirm Changes</label>
+                                                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">{t('common.confirm_changes')}</label>
                                                     <input
                                                         type="password"
                                                         value={confirmPassword}
@@ -400,7 +401,7 @@ const AccountSettings = () => {
                                                 className="w-full py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-3xl shadow-2xl hover:scale-[1.02] active:scale-[0.98] transition-all text-lg flex items-center justify-center gap-3 group/lock"
                                             >
                                                 <Lock size={22} className="group-hover/lock:translate-y-[-2px] transition-transform" />
-                                                Authorize Update
+                                                {t('common.authorize_update')}
                                             </button>
                                         </div>
                                     </form>
@@ -412,16 +413,16 @@ const AccountSettings = () => {
                                         <div className="space-y-1">
                                             <h4 className="text-red-500 font-black text-sm uppercase tracking-widest flex items-center gap-2">
                                                 <AlertTriangle size={16} />
-                                                Close Account
+                                                {t('common.close_account')}
                                             </h4>
-                                            <p className="text-slate-500 dark:text-slate-500 text-xs font-medium">Permanently dissolve your account and purge all data.</p>
+                                            <p className="text-slate-500 dark:text-slate-500 text-xs font-medium">{t('common.permanently_dissolve_purge')}</p>
                                         </div>
                                         <button
                                             onClick={() => setIsDeleteModalOpen(true)}
                                             className="px-8 py-4 text-red-500 font-black hover:bg-red-500/10 rounded-2xl transition-all border-2 border-red-500/20 hover:border-red-500/40 flex items-center gap-3 whitespace-nowrap group/del"
                                         >
                                             <Trash2 size={18} className="group-hover/del:scale-110 transition-transform" />
-                                            Terminate Account
+                                            {t('common.terminate_account')}
                                         </button>
                                     </div>
                                 </div>
@@ -444,9 +445,9 @@ const AccountSettings = () => {
                                 <AlertTriangle size={40} className="text-red-500" />
                             </div>
                             
-                            <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">Final Warning</h3>
+                            <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">{t('common.final_warning')}</h3>
                             <p className="text-slate-500 dark:text-slate-400 font-medium mb-10 leading-relaxed text-lg">
-                                You are about to permanently delete your profile and all associated projects. This <span className="text-red-500 font-bold">cannot be reversed</span>.
+                                {t('common.delete_irreversible')}
                             </p>
                             
                             <div className="flex flex-col gap-4">
@@ -460,7 +461,7 @@ const AccountSettings = () => {
                                     ) : (
                                         <>
                                             <Trash2 size={20} />
-                                            Confirm Termination
+                                            {t('common.confirm_termination')}
                                         </>
                                     )}
                                 </button>
@@ -468,7 +469,7 @@ const AccountSettings = () => {
                                     onClick={() => setIsDeleteModalOpen(false)}
                                     className="w-full py-5 bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-white font-black rounded-3xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all order-1 md:order-2"
                                 >
-                                    Abort Process
+                                    {t('common.abort_process')}
                                 </button>
                             </div>
                         </div>

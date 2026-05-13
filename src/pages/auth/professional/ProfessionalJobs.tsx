@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
@@ -50,6 +51,7 @@ const STATUS_ICONS: Record<string, any> = {
 const FILTERS = ["All", "Pending", "Active", "Completed", "Cancelled"];
 
 const ProfessionalJobs: React.FC = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const { jobs, jobsLoading, refreshJobs } = useData();
     const [activeFilter, setActiveFilter] = useState("All");
@@ -113,7 +115,7 @@ const ProfessionalJobs: React.FC = () => {
     const getCustomerName = (job: any) => {
         const d = job.customer_detail;
         if (d?.first_name) return `${d.first_name} ${d.last_name || ""}`.trim();
-        return "Customer";
+        return t('common.customer');
     };
 
     return (
@@ -135,15 +137,15 @@ const ProfessionalJobs: React.FC = () => {
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 animate-fade-in-up">
                             <div className="space-y-3">
                                 <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                                    Job <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-accent-cyan">List</span>
+                                    {t('common.jobs')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-accent-cyan">{t('common.logo')}</span>
                                 </h1>
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-1.5 px-3 py-1 bg-primary/10 rounded-full">
                                         <span className="size-2 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(13,147,242,0.6)]"></span>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">All Systems Green</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">{t('common.all_systems_green')}</span>
                                     </div>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                        Managing {myJobs.length} active job details
+                                        {t('common.managing_active_jobs', { count: myJobs.length })}
                                     </p>
                                 </div>
                             </div>
@@ -152,17 +154,17 @@ const ProfessionalJobs: React.FC = () => {
                                 className="flex items-center gap-3 px-8 py-3.5 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-primary hover:text-white hover:border-primary transition-all shadow-xl active:scale-95 group"
                             >
                                 <RefreshCw size={20} className="group-hover:rotate-180 transition-transform duration-700" />
-                                Refresh Roster
+                                {t('common.refresh_roster')}
                             </button>
                         </div>
 
                         {/* Stats Row */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 animate-fade-in-up [animation-delay:100ms]">
                             {[
-                                { label: "Pending", count: counts.pending, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/5", border: "border-amber-500/10" },
-                                { label: "Active", count: counts.active, icon: Rocket, color: "text-blue-500", bg: "bg-blue-500/5", border: "border-blue-500/10" },
-                                { label: "Completed", count: counts.completed, icon: BadgeCheck, color: "text-emerald-500", bg: "bg-emerald-500/5", border: "border-emerald-500/10" },
-                                { label: "Cancelled", count: counts.cancelled, icon: XCircle, color: "text-rose-500", bg: "bg-rose-500/5", border: "border-rose-500/10" },
+                                { label: t('common.pending'), count: counts.pending, icon: Clock, color: "text-amber-500", bg: "bg-amber-500/5", border: "border-amber-500/10" },
+                                { label: t('common.active'), count: counts.active, icon: Rocket, color: "text-blue-500", bg: "bg-blue-500/5", border: "border-blue-500/10" },
+                                { label: t('common.completed'), count: counts.completed, icon: BadgeCheck, color: "text-emerald-500", bg: "bg-emerald-500/5", border: "border-emerald-500/10" },
+                                { label: t('common.cancelled'), count: counts.cancelled, icon: XCircle, color: "text-rose-500", bg: "bg-rose-500/5", border: "border-rose-500/10" },
                             ].map(s => (
                                 <div key={s.label} className={`bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[2.5rem] p-8 border border-slate-100 dark:border-slate-800/50 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 group`}>
                                     <div className="flex items-center justify-between mb-5">
@@ -193,7 +195,7 @@ const ProfessionalJobs: React.FC = () => {
                                                 : "bg-slate-50/50 dark:bg-slate-800/30 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700/50 hover:bg-white dark:hover:bg-slate-800 hover:border-primary/30"
                                         }`}
                                     >
-                                        <span className="relative z-10">{f}</span>
+                                        <span className="relative z-10">{t(`common.${f.toLowerCase()}`)}</span>
                                         {jobsLoading ? (
                                             <span className="ml-2 h-3 w-6 bg-slate-100 dark:bg-slate-800 rounded animate-pulse inline-block align-middle"></span>
                                         ) : filterCounts[f] > 0 ? (
@@ -207,7 +209,7 @@ const ProfessionalJobs: React.FC = () => {
                                 <Search className="text-slate-400 group-focus-within:text-primary transition-colors" size={24} />
                                 <input
                                     type="text"
-                                    placeholder="Filter by customer name..."
+                                    placeholder={t('common.filter_by_customer')}
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                     className="bg-transparent outline-none text-[13px] font-black text-slate-700 dark:text-white placeholder-slate-400/60 w-full tracking-tight"
@@ -222,7 +224,7 @@ const ProfessionalJobs: React.FC = () => {
                                     <div className="size-20 bg-primary/5 rounded-full flex items-center justify-center">
                                         <RefreshCw size={48} className="animate-spin text-primary" />
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Syncing encrypted data-stream...</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">{t('common.syncing_data_stream')}</p>
                                 </div>
                             ) : filtered.length === 0 ? (
                                 <div className="py-32 flex flex-col items-center gap-8 text-slate-400">
@@ -230,9 +232,9 @@ const ProfessionalJobs: React.FC = () => {
                                         <Briefcase size={48} className="text-slate-300" />
                                     </div>
                                     <div className="text-center space-y-3">
-                                        <p className="text-xl font-black text-slate-900 dark:text-white tracking-tight">No matching leads detected</p>
+                                        <p className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{t('common.no_matching_leads')}</p>
                                         <p className="text-xs font-bold text-slate-400 max-w-[280px] mx-auto uppercase tracking-widest leading-relaxed">
-                                            {activeFilter !== "All" ? `No jobs found in the "${activeFilter.toLowerCase()}" category.` : "New job requests will appear here."}
+                                            {activeFilter !== "All" ? t('common.no_jobs_found_category', { category: t(`common.${activeFilter.toLowerCase()}`) }) : t('common.new_job_requests_appear')}
                                         </p>
                                     </div>
                                 </div>
@@ -241,9 +243,11 @@ const ProfessionalJobs: React.FC = () => {
                                     <table className="w-full">
                                         <thead>
                                             <tr className="border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/30 dark:bg-slate-900/40">
-                                                {["Job Details", "Customer", "Status", "Date", "Action"].map(h => (
-                                                    <th key={h} className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400/80">{h}</th>
-                                                ))}
+                                                <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400/80">{t('common.job_details')}</th>
+                                                <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400/80">{t('common.customer')}</th>
+                                                <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400/80">{t('common.status')}</th>
+                                                <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400/80">{t('common.date')}</th>
+                                                <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400/80">{t('common.action')}</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100/50 dark:divide-slate-800/30">
@@ -259,8 +263,8 @@ const ProfessionalJobs: React.FC = () => {
                                                                 })()}
                                                             </div>
                                                             <div className="min-w-0 space-y-1">
-                                                                <p className="text-[14px] font-black text-slate-900 dark:text-white tracking-tight truncate group-hover:text-primary transition-colors">{job.title || "Job Details Hidden"}</p>
-                                                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold truncate max-w-[200px] uppercase tracking-widest opacity-60">{job.description || "Project details and status."}</p>
+                                                                <p className="text-[14px] font-black text-slate-900 dark:text-white tracking-tight truncate group-hover:text-primary transition-colors">{job.title || t('common.job_details_hidden')}</p>
+                                                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold truncate max-w-[200px] uppercase tracking-widest opacity-60">{job.description || t('common.project_details_status')}</p>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -275,7 +279,7 @@ const ProfessionalJobs: React.FC = () => {
                                                             </div>
                                                             <div className="space-y-0.5">
                                                                 <p className="text-[13px] font-black text-slate-800 dark:text-white tracking-tight group-hover/name:text-primary transition-colors">{getCustomerName(job)}</p>
-                                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Verified Customer</p>
+                                                                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{t('common.verified_customer')}</p>
                                                             </div>
                                                         </div>
                                                     </td>
@@ -311,7 +315,7 @@ const ProfessionalJobs: React.FC = () => {
                                                             to={`/professional/messages?requestId=${job.id}`}
                                                             className="inline-flex items-center gap-2 px-5 py-2.5 text-[9px] font-black uppercase tracking-[0.15em] text-primary bg-primary/5 hover:bg-primary hover:text-white rounded-[1rem] border border-primary/10 transition-all duration-300 active:scale-95 group/btn shadow-xl shadow-transparent hover:shadow-primary/20"
                                                         >
-                                                            Open Details
+                                                            {t('common.open_details')}
                                                             <Terminal size={18} className="transition-transform duration-500 group-hover/btn:translate-x-1 group-hover/btn:-rotate-12" />
                                                         </Link>
                                                     </td>
@@ -345,7 +349,7 @@ const ProfessionalJobs: React.FC = () => {
                                     <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{getCustomerName(selectedJob)}</h3>
                                     <div className="flex items-center gap-2">
                                         <div className="size-1.5 rounded-full bg-emerald-500 shadow-sm animate-pulse"></div>
-                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Verified Identity</p>
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{t('common.verified_identity')}</p>
                                     </div>
                                 </div>
                             </div>
@@ -362,11 +366,11 @@ const ProfessionalJobs: React.FC = () => {
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
                                     <Briefcase size={20} className="text-primary" />
-                                    <h4 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">Project Details</h4>
+                                    <h4 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">{t('common.project_details')}</h4>
                                 </div>
                                 <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-700/50">
-                                    <h5 className="text-lg font-black text-slate-900 dark:text-white mb-3 tracking-tight">{selectedJob.title || "Job Details Hidden"}</h5>
-                                    <p className="text-slate-600 dark:text-slate-400 font-bold leading-relaxed">{selectedJob.description || "No project description provided."}</p>
+                                    <h5 className="text-lg font-black text-slate-900 dark:text-white mb-3 tracking-tight">{selectedJob.title || t('common.job_details_hidden')}</h5>
+                                    <p className="text-slate-600 dark:text-slate-400 font-bold leading-relaxed">{selectedJob.description || t('common.no_project_description')}</p>
                                 </div>
                             </div>
 
@@ -374,38 +378,38 @@ const ProfessionalJobs: React.FC = () => {
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3">
                                         <Phone size={18} className="text-primary" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Contact Number</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.phone_number')}</p>
                                     </div>
                                     <div className="pl-8 space-y-1">
                                         <p className="text-sm font-black text-slate-800 dark:text-white">
-                                            {selectedJob.customer_detail?.phonenumber || selectedJob.customer_detail?.phone || "Private Information"}
+                                            {selectedJob.customer_detail?.phonenumber || selectedJob.customer_detail?.phone || t('common.private_information')}
                                         </p>
-                                        <p className="text-xs font-bold text-slate-400">{selectedJob.customer_detail?.email || "Email pending"}</p>
+                                        <p className="text-xs font-bold text-slate-400">{selectedJob.customer_detail?.email || t('common.email_pending')}</p>
                                     </div>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3">
                                         <MapPin size={18} className="text-primary" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Location Area</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.location_area')}</p>
                                     </div>
-                                    <p className="text-sm font-black text-slate-800 dark:text-white pl-8">{selectedJob.address || selectedJob.city || "Addis Ababa, ET"}</p>
+                                    <p className="text-sm font-black text-slate-800 dark:text-white pl-8">{selectedJob.address || selectedJob.city || t('common.addis_ababa_et')}</p>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3">
                                         <CreditCard size={18} className="text-emerald-500" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Budget Estimate</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.budget_estimate')}</p>
                                     </div>
                                     <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 pl-8">
-                                        {selectedJob.budget ? `ETB ${selectedJob.budget}` : "To be negotiated"}
+                                        {selectedJob.budget ? `${t('common.etb')} ${selectedJob.budget}` : t('common.to_be_negotiated')}
                                     </p>
                                 </div>
                                 <div className="space-y-4">
                                     <div className="flex items-center gap-3">
                                         <Calendar size={18} className="text-primary" />
-                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Date</p>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.target_date')}</p>
                                     </div>
                                     <p className="text-sm font-black text-slate-800 dark:text-white pl-8">
-                                        {selectedJob.scheduled_at ? new Date(selectedJob.scheduled_at).toLocaleDateString([], { day: 'numeric', month: 'short' }) : "Not scheduled yet"}
+                                        {selectedJob.scheduled_at ? new Date(selectedJob.scheduled_at).toLocaleDateString([], { day: 'numeric', month: 'short' }) : t('common.not_scheduled_yet')}
                                     </p>
                                 </div>
                             </div>
@@ -418,7 +422,7 @@ const ProfessionalJobs: React.FC = () => {
                                 className="flex-1 min-w-[200px] py-5 bg-primary text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl flex items-center justify-center gap-3 shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all"
                             >
                                 <Terminal size={18} />
-                                Open Message Center
+                                {t('common.open_message_center')}
                             </Link>
                             {['in_progress', 'done', 'completed'].includes(selectedJob.status) && (
                                 <button 
@@ -430,14 +434,14 @@ const ProfessionalJobs: React.FC = () => {
                                     className="px-8 py-5 bg-red-50 dark:bg-red-500/10 text-red-500 text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl border border-red-200 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20 flex items-center gap-2 transition-all active:scale-95"
                                 >
                                     <AlertTriangle size={18} />
-                                    Raise Dispute
+                                    {t('common.raise_dispute')}
                                 </button>
                             )}
                             <button 
                                 onClick={() => setSelectedJob(null)}
                                 className="px-10 py-5 bg-white dark:bg-slate-800 text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl border border-slate-100 dark:border-slate-700 hover:bg-slate-100 transition-all active:scale-95"
                             >
-                                Close
+                                {t('common.close')}
                             </button>
                         </div>
                     </div>
@@ -451,7 +455,7 @@ const ProfessionalJobs: React.FC = () => {
                 jobTitle={selectedJobForDispute?.title || ''}
                 againstUserId={selectedJobForDispute?.customer || ''}
                 onSuccess={() => {
-                    alert("Dispute raised successfully. Our team will review it shortly.");
+                    alert(t('common.dispute_success_msg'));
                     refreshJobs();
                 }}
             />

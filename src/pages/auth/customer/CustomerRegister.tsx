@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { 
   registerUser 
@@ -16,6 +17,7 @@ import { validatePassword } from "../../../utils/validation";
 import PhoneInput from "../../../components/PhoneInput";
 
 const CustomerRegister = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -53,7 +55,7 @@ const CustomerRegister = () => {
       const file = files[0];
       const validImageTypes = ["image/jpeg", "image/png", "image/jpg"];
       if (!validImageTypes.includes(file.type)) {
-        setError("Please upload a valid image (PNG or JPG)");
+        setError(t('common.valid_image_err'));
         return;
       }
       setProfilePhoto(file);
@@ -71,13 +73,13 @@ const CustomerRegister = () => {
     const requiredFields = ["firstName", "lastName", "phone", "dateOfBirth", "password", "confirmPassword"];
     for (const field of requiredFields) {
       if (!form[field as keyof typeof form]) {
-        setError("Please fill all required fields");
+        setError(t('common.fill_all_fields_err', { field }));
         return;
       }
     }
 
     if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
+      setError(t('common.passwords_mismatch_err'));
       return;
     }
 
@@ -93,7 +95,7 @@ const CustomerRegister = () => {
     }
 
     if (!form.agree) {
-      setError("You must agree to the Terms & Privacy Policy");
+      setError(t('common.agree_terms_err'));
       return;
     }
 
@@ -110,12 +112,12 @@ const CustomerRegister = () => {
         profilePhoto: profilePhoto,
       });
 
-      setSuccess("Account created! Directing to email verification...");
+      setSuccess(t('common.account_created_verify'));
       setTimeout(() => {
         navigate("/signup/verify", { state: { email } });
       }, 1500);
     } catch (err: any) {
-      setError(err.message || "Something went wrong");
+      setError(err.message || t('common.failed_update_profile'));
     } finally {
       setLoading(false);
     }
@@ -135,7 +137,7 @@ const CustomerRegister = () => {
           <Link to="/" className="inline-block group">
             <h1 className="text-5xl font-black text-slate-900 dark:text-white mb-2 tracking-tighter group-hover:text-primary transition-colors">Fix-Link</h1>
           </Link>
-          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Onboarding Portal v2.0</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">{t('common.onboarding_portal')}</p>
         </div>
 
         {/* Card */}
@@ -168,13 +170,13 @@ const CustomerRegister = () => {
                 onChange={handleChange}
               />
             </div>
-            <p className="text-[10px] font-black text-slate-400 mt-6 uppercase tracking-[0.2em] border-b border-primary/20 pb-1">Identification Artifact</p>
+            <p className="text-[10px] font-black text-slate-400 mt-6 uppercase tracking-[0.2em] border-b border-primary/20 pb-1">{t('common.id_artifact')}</p>
           </div>
 
           <div className="space-y-6">
             {/* Read-only Email */}
             <div className="space-y-2">
-              <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">Verified Email</label>
+              <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.verified_email')}</label>
               <div className="relative">
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -188,7 +190,7 @@ const CustomerRegister = () => {
             {/* Names */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">First Name</label>
+                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.first_name_req')}</label>
                 <div className="relative group">
                   <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
                   <input
@@ -200,7 +202,7 @@ const CustomerRegister = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">Last Name</label>
+                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.last_name_req')}</label>
                 <input
                   name="lastName"
                   value={form.lastName}
@@ -213,7 +215,7 @@ const CustomerRegister = () => {
             {/* DOB & Phone */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">Date of Birth</label>
+                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.dob_req')}</label>
                 <div className="relative group">
                   <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors text-transparent" />
                   <input
@@ -226,7 +228,7 @@ const CustomerRegister = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">Phone Number</label>
+                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.phone_number_req')}</label>
                 <PhoneInput
                   value={form.phone}
                   onChange={(val) => setForm({ ...form, phone: val })}
@@ -236,7 +238,7 @@ const CustomerRegister = () => {
 
             {/* Location */}
             <div className="space-y-2">
-              <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">Current Location</label>
+              <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.current_location')}</label>
               <div className="relative group">
                 <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
                 <LocationInput
@@ -250,13 +252,13 @@ const CustomerRegister = () => {
             {/* Passwords */}
             <div className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">Security Password</label>
+                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.security_password_req')}</label>
                 <div className="relative group">
                   <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
                   <input
                     type={showPassword ? "text" : "password"}
                     name="password"
-                    placeholder="Create a strong password"
+                    placeholder={t('common.create_strong_password')}
                     value={form.password}
                     onChange={handleChange}
                     className="w-full h-12 pl-11 pr-12 rounded-full bg-white/50 dark:bg-gray-800/50 border border-border-light dark:border-border-dark focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-text-light dark:text-white"
@@ -280,13 +282,13 @@ const CustomerRegister = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">Confirm Password</label>
+                <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.confirm_password_req')}</label>
                 <div className="relative group">
                   <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
                   <input
                     type={showConfirmPassword ? "text" : "password"}
                     name="confirmPassword"
-                    placeholder="Verify your password"
+                    placeholder={t('common.verify_your_password')}
                     value={form.confirmPassword}
                     onChange={handleChange}
                     className="w-full h-12 pl-11 pr-12 rounded-full bg-white/50 dark:bg-gray-800/50 border border-border-light dark:border-border-dark focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-text-light dark:text-white"
@@ -311,7 +313,7 @@ const CustomerRegister = () => {
                 {form.agree ? <CheckSquare size={20} /> : <Square size={20} />}
               </div>
               <p className="text-sm text-subtext-light dark:text-subtext-dark">
-                I agree to the <span className="text-primary font-bold hover:underline cursor-pointer">Terms & Privacy Policy</span>
+                {t('common.agree_to_terms').split(' Terms')[0]} <span className="text-primary font-bold hover:underline cursor-pointer">{t('common.terms_privacy')}</span>
               </p>
             </div>
 
@@ -326,7 +328,7 @@ const CustomerRegister = () => {
               {loading ? (
                 <div className="flex items-center gap-3">
                     <LoadingSpinner />
-                    <span className="animate-pulse">Setting up your account...</span>
+                    <span className="animate-pulse">{t('common.setting_up_account')}</span>
                 </div>
               ) : (
                 <>
@@ -339,9 +341,9 @@ const CustomerRegister = () => {
         </div>
 
         <p className="mt-10 text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-           Need to reconsider?{" "}
+           {t('common.need_to_reconsider')}{" "}
           <Link to="/signup/role" className="text-primary hover:underline transition-colors ml-2">
-            Change User Role
+            {t('common.change_user_role')}
           </Link>
         </p>
       </div>

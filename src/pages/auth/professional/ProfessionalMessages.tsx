@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -34,6 +35,7 @@ import {
 import DisputeModal from '../../../components/DisputeModal';
 
 const ProfessionalMessages = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [professionalRequests, setProfessionalRequests] = useState<any[]>([]);
@@ -244,7 +246,7 @@ const ProfessionalMessages = () => {
             setMessages(prev => [...prev, newMsg]);
         } catch (error) {
             console.error("ProfessionalMessages: Send failed", error);
-            alert("Failed to send message.");
+            alert(t('common.failed_send_message'));
         } finally {
             setIsSending(false);
         }
@@ -275,7 +277,7 @@ const ProfessionalMessages = () => {
             console.log("ProfessionalMessages: State updated to 'accepted'");
         } catch (error: any) {
             console.error("ProfessionalMessages: ACCEPT FAILURE:", error);
-            alert("Failed to accept: " + error.message);
+            alert(t('common.failed_accept', { error: error.message }));
         }
     };
 
@@ -297,32 +299,32 @@ const ProfessionalMessages = () => {
 
     const jobSteps = [
         {
-            title: "Request Received",
+            title: t('common.request_received'),
             status: getStepStatus(0, activeRequest?.status || 'pending'),
             date: activeRequest?.created_at ? new Date(activeRequest.created_at).toLocaleDateString([], { month: 'short', day: 'numeric'}) : null
         },
         {
-            title: "Accept Assignment",
+            title: t('common.accept_assignment'),
             status: getStepStatus(1, activeRequest?.status || 'pending'),
             actionRequired: activeRequest?.status === 'pending'
         },
         {
-            title: "Customer Booking",
+            title: t('common.customer_booking'),
             status: getStepStatus(2, activeRequest?.status || 'pending'),
             date: activeRequest?.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric'}) : null
         },
         {
-            title: "Start Working",
+            title: t('common.start_working'),
             status: getStepStatus(3, activeRequest?.status || 'pending'),
             actionRequired: activeRequest?.status === 'booked'
         },
         {
-            title: "Mark Finished",
+            title: t('common.mark_finished'),
             status: getStepStatus(4, activeRequest?.status || 'pending'),
             actionRequired: activeRequest?.status === 'in_progress'
         },
         {
-            title: "Final Approval",
+            title: t('common.final_approval'),
             status: getStepStatus(5, activeRequest?.status || 'pending')
         }
     ];
@@ -337,7 +339,7 @@ const ProfessionalMessages = () => {
             setProfessionalRequests(updated);
             setHydratedRequests(updated);
         } catch (error: any) {
-            alert("Failed to start job: " + error.message);
+            alert(t('common.failed_start_job', { error: error.message }));
         }
     };
 
@@ -352,7 +354,7 @@ const ProfessionalMessages = () => {
                 r.id === activeRequestId ? { ...r, status: 'done' } : r
             ));
         } catch (error: any) {
-            alert("Failed to mark as done: " + error.message);
+            alert(t('common.failed_mark_done', { error: error.message }));
         }
     };
 
@@ -367,7 +369,7 @@ const ProfessionalMessages = () => {
                 r.id === activeRequestId ? { ...r, status: 'cancelled' } : r
             ));
         } catch (error: any) {
-            alert("Failed to decline: " + error.message);
+            alert(t('common.failed_decline', { error: error.message }));
         }
     };
 
@@ -420,7 +422,7 @@ const ProfessionalMessages = () => {
                                 <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center shadow-inner border border-primary/5">
                                     <Inbox size={20} className="text-primary" />
                                 </div>
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">Jobs</span>
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">{t('common.jobs')}</span>
                             </h3>
                             {professionalRequests.length > 0 && (
                                 <div className="flex gap-2">
@@ -436,7 +438,7 @@ const ProfessionalMessages = () => {
                                     <div className="size-16 bg-primary/5 rounded-full flex items-center justify-center mb-4">
                                         <RefreshCw size={32} className="animate-spin text-primary" />
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Syncing data...</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">{t('common.syncing_data')}</p>
                                 </div>
                             ) : hydratedRequests.length === 0 ? (
                                 <div className="py-20 text-center space-y-4 opacity-40">
@@ -444,8 +446,8 @@ const ProfessionalMessages = () => {
                                         <Clock size={40} className="text-slate-300 dark:text-slate-600" />
                                     </div>
                                     <div className="space-y-1">
-                                        <p className="text-[11px] font-black uppercase tracking-widest">No active leads</p>
-                                        <p className="text-[9px] font-bold max-w-[200px] mx-auto opacity-60">New project requests will appear here in real-time.</p>
+                                        <p className="text-[11px] font-black uppercase tracking-widest">{t('common.no_active_leads')}</p>
+                                        <p className="text-[9px] font-bold max-w-[200px] mx-auto opacity-60">{t('common.new_requests_appear_here')}</p>
                                     </div>
                                 </div>
                             ) : (
@@ -503,7 +505,7 @@ const ProfessionalMessages = () => {
                                                         </span>
                                                     </div>
                                                     <p className={`text-[11px] truncate leading-tight transition-colors ${isActive ? 'text-slate-500 dark:text-slate-400 font-bold' : 'text-slate-400 dark:text-slate-500 group-hover:text-slate-500'}`}>
-                                                        {req.description || "Job details hidden."}
+                                                        {req.description || t('common.job_details_hidden')}
                                                     </p>
                                                     <div className="flex items-center gap-2 pt-1">
                                                         <span className={`text-[8px] font-black px-2 py-0.5 rounded-lg uppercase tracking-widest border shadow-sm ${req.status === 'pending' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'}`}>
@@ -536,9 +538,9 @@ const ProfessionalMessages = () => {
                                     </div>
                                 </div>
                                 <div className="max-w-md space-y-4">
-                                    <h3 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white leading-tight">Professional <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">Command Center</span></h3>
+                                    <h3 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white leading-tight">{t('common.professional')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">{t('common.command_center')}</span></h3>
                                     <p className="text-xs font-bold leading-relaxed text-slate-500 dark:text-slate-400 uppercase tracking-[0.2em] opacity-60">
-                                        Select a conversation from the list to start chatting and manage job details.
+                                        {t('common.select_conversation')}
                                     </p>
                                 </div>
                             </div>
@@ -567,17 +569,17 @@ const ProfessionalMessages = () => {
                                             <h3 className="text-slate-900 dark:text-white text-xl font-black tracking-tight leading-none group-hover:text-primary transition-colors">
                                                 {(() => {
                                                     const detail = activeUserDetails || activeRequest.customer_detail;
-                                                    if (!detail) return "Customer";
+                                                    if (!detail) return t('common.customer');
                                                     const first = detail.first_name || detail.user?.first_name || detail.user_detail?.first_name;
                                                     const last = detail.last_name || detail.user?.last_name || detail.user_detail?.last_name || "";
-                                                    return first ? `${first} ${last}`.trim() : "Verified Customer";
+                                                    return first ? `${first} ${last}`.trim() : t('common.verified_customer');
                                                 })()}
                                             </h3>
                                             <div className="flex items-center gap-2.5">
                                                 <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-500/10 rounded-full border border-emerald-500/10">
                                                     <span className="size-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
                                                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-400">
-                                                        Active Terminal
+                                                        {t('common.active_terminal')}
                                                     </span>
                                                 </div>
                                             </div>
@@ -608,17 +610,17 @@ const ProfessionalMessages = () => {
                                                             className="flex items-center gap-3 w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all group"
                                                         >
                                                             <AlertTriangle size={16} className="text-slate-400 group-hover:text-red-500 transition-colors" />
-                                                            Raise Dispute
+                                                            {t('common.raise_dispute')}
                                                         </button>
                                                         <button 
                                                             onClick={() => {
                                                                 setShowMoreMenu(false);
-                                                                alert("Conversation flagged for review.");
+                                                                alert(t('common.conversation_flagged_review'));
                                                             }}
                                                             className="flex items-center gap-3 w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-amber-500/5 hover:text-amber-500 rounded-xl transition-all group"
                                                         >
                                                             <AlertTriangle size={16} className="text-slate-400 group-hover:text-amber-500 transition-colors" />
-                                                            Flag Chat
+                                                            {t('common.flag_chat')}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -634,7 +636,7 @@ const ProfessionalMessages = () => {
                                             <div className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-xl">
                                                 <ShieldCheck size={20} className="text-emerald-500" />
                                                 <span className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-500 dark:text-slate-400">
-                                                    Secure Chat History • {formatTime(activeRequest.created_at || activeRequest.createdAt)}
+                                                    {t('common.secure_chat_history')} • {formatTime(activeRequest.created_at || activeRequest.createdAt)}
                                                 </span>
                                             </div>
                                         </div>
@@ -652,7 +654,7 @@ const ProfessionalMessages = () => {
                                                 <div className="flex flex-col gap-2">
                                                     <div className="relative text-[14px] font-bold leading-relaxed rounded-[1.5rem] rounded-tl-none px-6 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 shadow-xl border border-slate-100 dark:border-slate-700/50 transition-all hover:shadow-2xl">
                                                         <div className="pb-6 text-pretty whitespace-pre-wrap">
-                                                            {activeRequest.description || "Job details sent by customer."}
+                                                            {activeRequest.description || t('common.new_job_requests_appear')}
                                                         </div>
                                                         <div className="absolute left-6 bottom-3 opacity-40 text-[9px] font-black tracking-widest uppercase select-none">
                                                             {formatTime(activeRequest)}
@@ -709,7 +711,7 @@ const ProfessionalMessages = () => {
                                         <div className="flex-1 flex items-center bg-white dark:bg-slate-800 rounded-[1.5rem] px-6 py-2.5 ring-1 ring-slate-200/50 dark:ring-slate-700/50 shadow-2xl focus-within:ring-primary/40 focus-within:shadow-primary/5 transition-all group">
                                             <input
                                                 className="flex-1 bg-transparent border-none focus:ring-0 text-[14px] font-bold text-slate-700 dark:text-white placeholder-slate-400/60 outline-none"
-                                                placeholder="Type your message..."
+                                                placeholder={t('common.type_message')}
                                                 type="text"
                                                 value={messageInput}
                                                 onChange={(e) => setMessageInput(e.target.value)}
@@ -753,7 +755,7 @@ const ProfessionalMessages = () => {
                                             <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
                                                 <Zap size={20} className="text-primary" />
                                             </div>
-                                            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Project Journey</h3>
+                                            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">{t('common.project_journey')}</h3>
                                         </div>
 
                                         <div className="space-y-8 relative">
@@ -781,23 +783,23 @@ const ProfessionalMessages = () => {
                                                         {step.actionRequired && step.status === 'current' && (
                                                             <div className="bg-primary/5 rounded-[1.2rem] border border-primary/10 p-5 space-y-4 animate-in zoom-in slide-in-from-top-4 duration-500">
                                                                 <p className="text-[10px] font-black uppercase tracking-[0.15em] text-primary/80 leading-relaxed">
-                                                                    {activeRequest.status === 'pending' ? "Accept the job to start working." :
-                                                                     activeRequest.status === 'booked' ? "Customer has confirmed. You can start the job now." :
-                                                                     activeRequest.status === 'in_progress' ? "You are currently working on this job. Mark it as done when finished." :
-                                                                     "Finalizing the job."}
+                                                                    {activeRequest.status === 'pending' ? t('common.accept_job_start_working') :
+                                                                     activeRequest.status === 'booked' ? t('common.customer_confirmed_start') :
+                                                                     activeRequest.status === 'in_progress' ? t('common.working_on_job_mark_done') :
+                                                                     t('common.finalizing_job')}
                                                                 </p>
                                                                 <div className="flex flex-col gap-2">
                                                                     {activeRequest.status === 'pending' && (
                                                                         <div className="flex gap-2">
-                                                                            <button onClick={handleAccept} className="flex-1 py-3 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">Accept</button>
-                                                                            <button onClick={handleDecline} className="flex-1 py-3 bg-white dark:bg-slate-800 text-slate-500 text-[10px] font-black rounded-xl uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:text-rose-500 transition-all">Decline</button>
+                                                                            <button onClick={handleAccept} className="flex-1 py-3 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">{t('common.accept')}</button>
+                                                                            <button onClick={handleDecline} className="flex-1 py-3 bg-white dark:bg-slate-800 text-slate-500 text-[10px] font-black rounded-xl uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:text-rose-500 transition-all">{t('common.decline')}</button>
                                                                         </div>
                                                                     )}
                                                                     {activeRequest.status === 'booked' && (
-                                                                        <button onClick={handleStartJob} className="w-full py-3.5 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all">Start Job</button>
+                                                                        <button onClick={handleStartJob} className="w-full py-3.5 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all">{t('common.start_job')}</button>
                                                                     )}
                                                                     {activeRequest.status === 'in_progress' && (
-                                                                        <button onClick={handleMarkDone} className="w-full py-3.5 bg-emerald-500 text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all">Finish Job</button>
+                                                                        <button onClick={handleMarkDone} className="w-full py-3.5 bg-emerald-500 text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all">{t('common.finish_job')}</button>
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -814,13 +816,13 @@ const ProfessionalMessages = () => {
                                             <div className="size-10 rounded-xl bg-accent-purple/10 flex items-center justify-center">
                                                 <Zap size={20} className="text-accent-purple" />
                                             </div>
-                                            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">Project Snapshot</h3>
+                                            <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400 dark:text-slate-500">{t('common.project_snapshot')}</h3>
                                         </div>
 
                                         <div className="space-y-4">
                                             <div className="p-5 bg-slate-50/50 dark:bg-slate-800/30 rounded-[1.5rem] border border-slate-100 dark:border-slate-800 shadow-inner">
                                                 <p className="text-xs font-bold text-slate-600 dark:text-slate-400 leading-relaxed italic opacity-80">
-                                                    "{activeRequest.description || "Job details pending."}"
+                                                    "{activeRequest.description || t('common.job_details_pending')}"
                                                 </p>
                                             </div>
 
@@ -830,8 +832,8 @@ const ProfessionalMessages = () => {
                                                         <MapPin size={20} className="text-primary" />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Location</p>
-                                                        <p className="text-[13px] font-black text-slate-800 dark:text-white truncate">{activeRequest.address || activeRequest.city || "Addis Ababa"}</p>
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">{t('common.location')}</p>
+                                                        <p className="text-[13px] font-black text-slate-800 dark:text-white truncate">{activeRequest.address || activeRequest.city || t('common.addis_ababa_et')}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-4 p-4 bg-white/50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 transition-all hover:border-emerald-500/20 group">
@@ -839,8 +841,8 @@ const ProfessionalMessages = () => {
                                                         <CreditCard size={20} className="text-emerald-500" />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Project Budget</p>
-                                                        <p className="text-[13px] font-black text-emerald-600 dark:text-emerald-400">{activeRequest.budget ? `ETB ${activeRequest.budget}` : "To be negotiated"}</p>
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-0.5">{t('common.project_budget')}</p>
+                                                        <p className="text-[13px] font-black text-emerald-600 dark:text-emerald-400">{activeRequest.budget ? `${t('common.etb')} ${activeRequest.budget}` : t('common.to_be_negotiated')}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -851,7 +853,7 @@ const ProfessionalMessages = () => {
                                                         <Calendar size={20} className="text-white" />
                                                     </div>
                                                     <div>
-                                                        <p className="text-[9px] font-black uppercase tracking-widest text-primary opacity-60 mb-0.5">Scheduled Date</p>
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-primary opacity-60 mb-0.5">{t('common.scheduled_date')}</p>
                                                         <p className="text-[13px] font-black text-primary">
                                                             {new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })}
                                                         </p>
@@ -867,8 +869,8 @@ const ProfessionalMessages = () => {
                                         <span className="material-symbols-outlined text-5xl font-light">monitoring</span>
                                     </div>
                                     <div className="space-y-2">
-                                        <p className="text-[11px] font-black uppercase tracking-[0.3em]">Details Offline</p>
-                                        <p className="text-[9px] font-bold max-w-[180px] mx-auto leading-relaxed">Select a job to see project details and progress.</p>
+                                        <p className="text-[11px] font-black uppercase tracking-[0.3em]">{t('common.details_offline')}</p>
+                                        <p className="text-[9px] font-bold max-w-[180px] mx-auto leading-relaxed">{t('common.select_job_see_details')}</p>
                                     </div>
                                 </div>
                             )}
@@ -897,15 +899,15 @@ const ProfessionalMessages = () => {
                             <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-2">
                                 {(() => {
                                     const detail = activeUserDetails || activeRequest.customer_detail;
-                                    if (!detail) return "Valued Client";
+                                    if (!detail) return t('common.valued_client');
                                     const first = detail.first_name || detail.user?.first_name || detail.user_detail?.first_name;
                                     const last = detail.last_name || detail.user?.last_name || detail.user_detail?.last_name || "";
-                                    return first ? `${first} ${last}`.trim() : "Verified Customer";
+                                    return first ? `${first} ${last}`.trim() : t('common.verified_customer');
                                 })()}
                             </h2>
                             <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-full border border-slate-100 dark:border-slate-800">
                                 <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Verified Identity</p>
+                                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.verified_identity')}</p>
                             </div>
                         </div>
 
@@ -913,28 +915,28 @@ const ProfessionalMessages = () => {
                             {/* Contact & Logistics Grid */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Communication</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.communication')}</p>
                                     <div className="space-y-1">
                                         <p className="text-sm font-black text-slate-800 dark:text-white">
-                                            {(activeUserDetails || activeRequest.customer_detail)?.phonenumber || (activeUserDetails || activeRequest.customer_detail)?.phone || "Private Information"}
+                                            {(activeUserDetails || activeRequest.customer_detail)?.phonenumber || (activeUserDetails || activeRequest.customer_detail)?.phone || t('common.private_information')}
                                         </p>
-                                        <p className="text-xs font-bold text-slate-400">{(activeUserDetails || activeRequest.customer_detail)?.email || "Email pending"}</p>
+                                        <p className="text-xs font-bold text-slate-400">{(activeUserDetails || activeRequest.customer_detail)?.email || t('common.email_pending')}</p>
                                     </div>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Project Location</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.project_location')}</p>
                                     <p className="text-sm font-black text-slate-800 dark:text-white">{activeRequest.address || activeRequest.city || "Addis Ababa, ET"}</p>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Budget Estimate</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.budget_estimate')}</p>
                                     <p className="text-sm font-black text-emerald-600 dark:text-emerald-400">
-                                        {activeRequest.budget ? `ETB ${activeRequest.budget}` : "To be negotiated"}
+                                        {activeRequest.budget ? `${t('common.etb')} ${activeRequest.budget}` : t('common.to_be_negotiated')}
                                     </p>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Date</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{t('common.target_date')}</p>
                                     <p className="text-sm font-black text-slate-800 dark:text-white">
-                                        {activeRequest.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { day: 'numeric', month: 'short' }) : "Not scheduled yet"}
+                                        {activeRequest.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { day: 'numeric', month: 'short' }) : t('common.not_scheduled_yet')}
                                     </p>
                                 </div>
                             </div>
@@ -943,7 +945,7 @@ const ProfessionalMessages = () => {
                                 onClick={() => setShowCustomerProfile(false)}
                                 className="w-full py-5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
                             >
-                                Close Detail
+                                {t('common.close_detail')}
                             </button>
                         </div>
                     </div>

@@ -5,9 +5,11 @@ import QuickActions from "./components/QuickActions";
 import ScheduleList from "./components/ScheduleList";
 import { useAuth } from "../../../context/AuthContext";
 import { useData } from "../../../context/DataContext";
+import { useTranslation } from "react-i18next";
 
 const ProfessionalHome: React.FC = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   // ✅ Use shared DataContext — no duplicate polling, no lag
   const { jobs: allJobs, jobsLoading } = useData();
 
@@ -70,21 +72,21 @@ const ProfessionalHome: React.FC = () => {
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 animate-fade-in-up">
                             <div className="space-y-2">
                                 <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                                    Welcome back, <br/>
+                                    {t('common.welcome_back')} <br/>
                                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-primary-light to-accent-cyan animate-gradient-x">
-                                        {user?.first_name || "Valued Member"}
+                                        {user?.first_name || t('common.valued_member')}
                                     </span>
                                 </h1>
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 rounded-full">
                                         <span className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">System Live</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{t('common.system_live')}</span>
                                     </div>
                                     {jobsLoading ? (
                                         <div className="h-4 w-24 bg-slate-100 dark:bg-slate-800 rounded animate-pulse"></div>
                                     ) : (
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                            {activeJobsCount > 0 ? `Active Jobs: ${activeJobsCount}` : "Awaiting New Jobs"}
+                                            {activeJobsCount > 0 ? `${t('common.active_jobs')}: ${activeJobsCount}` : t('common.awaiting_jobs')}
                                         </p>
                                     )}
                                 </div>
@@ -92,7 +94,7 @@ const ProfessionalHome: React.FC = () => {
 
                             <div className="flex items-center gap-4 bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl p-2 rounded-[2rem] border border-white/20 dark:border-slate-800/50 shadow-xl">
                                 <div className="px-6 py-3">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Avg Rating</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">{t('common.avg_rating')}</p>
                                     <div className="flex items-center gap-2 justify-center">
                                         {jobsLoading ? (
                                             <div className="h-6 w-10 bg-slate-100 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -104,7 +106,7 @@ const ProfessionalHome: React.FC = () => {
                                 </div>
                                 <div className="w-px h-10 bg-slate-200 dark:bg-slate-800"></div>
                                 <div className="px-6 py-3">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Success Rate</p>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 text-center">{t('common.success_rate')}</p>
                                     <div className="flex items-center gap-2 justify-center">
                                         <span className="text-2xl font-black text-slate-900 dark:text-white leading-none">98%</span>
                                         <span className="material-symbols-outlined text-emerald-500 text-xl">verified</span>
@@ -116,21 +118,21 @@ const ProfessionalHome: React.FC = () => {
                         {/* STATS SECTION - Glass cards */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 animate-fade-in-up [animation-delay:100ms]">
                             <StatsCard
-                                title="Jobs Completed"
+                                title={t('professional.jobs_completed')}
                                 count={completedJobsCount}
                                 icon="task_alt"
                                 color="bg-emerald-500"
                                 loading={jobsLoading}
                             />
                             <StatsCard
-                                title="Active Engagements"
+                                title={t('professional.active_engagements')}
                                 count={activeJobsCount}
                                 icon="rocket_launch"
                                 color="bg-blue-500"
                                 loading={jobsLoading}
                             />
                             <StatsCard
-                                title="Net Revenue"
+                                title={t('professional.net_revenue')}
                                 count={totalEarnings}
                                 icon="payments"
                                 color="bg-purple-500"
@@ -138,7 +140,7 @@ const ProfessionalHome: React.FC = () => {
                                 loading={jobsLoading}
                             />
                             <StatsCard
-                                title="Experience Score"
+                                title={t('professional.experience_score')}
                                 count={rating}
                                 icon="verified_user"
                                 color="bg-orange-500"
@@ -162,10 +164,10 @@ const ProfessionalHome: React.FC = () => {
                                         <div className="size-12 bg-amber-500/10 text-amber-500 rounded-2xl flex items-center justify-center">
                                             <span className="material-symbols-outlined font-black">lightbulb</span>
                                         </div>
-                                        <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Growth Pro-Tip</h3>
+                                        <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">{t('professional.growth_pro_tip')}</h3>
                                     </div>
                                     <p className="relative z-10 text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed italic">
-                                        "Professionals with a complete portfolio receive 4x more job requests. Update your profile today."
+                                        "{t('common.growth_tip_content')}"
                                     </p>
                                 </div>
                             </div>

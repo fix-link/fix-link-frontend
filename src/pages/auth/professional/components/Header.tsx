@@ -5,6 +5,8 @@ import { markNotificationAsRead, markAllAsRead, type Notification } from "../../
 import { useData } from "../../../../context/DataContext";
 import { getImageUrl } from "../../../../api/auth.api";
 import { useTheme } from "../../../../context/ThemeContext";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "../../../../components/LanguageSwitcher";
 import { 
     Bell, 
     BellOff, 
@@ -22,6 +24,7 @@ const Header: React.FC = () => {
     const navigate = useNavigate();
     const { notifications, refreshNotifications } = useData();
     const { theme, toggleTheme } = useTheme();
+    const { t } = useTranslation();
     const [showNotifications, setShowNotifications] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const unreadNotifications = notifications.filter(n => !n.is_read);
@@ -88,11 +91,12 @@ const Header: React.FC = () => {
                 <button className="lg:hidden">
                     <Menu size={24} />
                 </button>
-                <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight hidden sm:block">Dashboard</h2>
+                <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight hidden sm:block">{t('common.dashboard')}</h2>
             </div>
 
             {/* RIGHT */}
             <div className="flex items-center gap-4">
+                <LanguageSwitcher />
 
                 {/* Notifications */}
                 <div className="relative" ref={notificationRef}>
@@ -111,7 +115,7 @@ const Header: React.FC = () => {
                     {showNotifications && (
                         <div className="absolute right-0 top-full mt-3 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
                              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-slate-50/50 dark:bg-slate-900/50 flex justify-between items-center">
-                                <span className="font-black text-sm text-gray-900 dark:text-white">Recent Alerts</span>
+                                <span className="font-black text-sm text-gray-900 dark:text-white">{t('common.recent_alerts')}</span>
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">{unreadNotifications.length} New</span>
                                     {unreadNotifications.length > 0 && (
@@ -131,7 +135,7 @@ const Header: React.FC = () => {
                                 {notifications.length === 0 ? (
                                     <div className="px-8 py-12 text-center">
                                         <BellOff size={40} className="text-slate-300 mb-3" />
-                                        <p className="text-slate-400 text-sm font-medium">No alerts yet</p>
+                                        <p className="text-slate-400 text-sm font-medium">{t('common.no_alerts_yet')}</p>
                                     </div>
                                 ) : (
                                     notifications.map(n => (
@@ -231,7 +235,7 @@ const Header: React.FC = () => {
                                     return isUUID(name) ? "Member" : name;
                                 })()}
                             </span>
-                            <span className="text-[10px] uppercase tracking-widest font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded italic">Professional</span>
+                            <span className="text-[10px] uppercase tracking-widest font-black text-primary bg-primary/5 px-1.5 py-0.5 rounded italic">{t('common.professional')}</span>
                         </div>
                         <ChevronDown 
                             size={18} 
@@ -274,7 +278,7 @@ const Header: React.FC = () => {
                                     className="flex items-center gap-3 px-5 py-3 text-sm font-bold text-text-primary dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                                 >
                                     <Settings size={18} className="text-slate-400" />
-                                    Account Setting
+                                    {t('common.settings')}
                                 </Link>
                             </div>
 
@@ -284,7 +288,7 @@ const Header: React.FC = () => {
                                     className="w-full text-left px-5 py-3 text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-3 transition-colors text-red-500"
                                 >
                                     <LogOut size={18} />
-                                    Signout
+                                    {t('common.logout')}
                                 </button>
                             </div>
                         </div>

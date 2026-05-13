@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import CustomerNavbar from './components/CustomerNavbar';
 import { useAuth } from '../../../context/AuthContext';
@@ -17,6 +18,7 @@ import DisputeModal from '../../../components/DisputeModal';
 import ReviewModal from '../../../components/ReviewModal';
 
 const CustomerMessages = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [userRequests, setUserRequests] = useState<any[]>([]);
@@ -289,26 +291,26 @@ const CustomerMessages = () => {
 
     const jobSteps = [
         {
-            title: "Request Sent",
+            title: t('common.request_sent'),
             status: getStepStatus(0, activeRequest?.status || 'pending'),
             date: activeRequest?.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric'}) : "--"
         },
         {
-            title: "Pro Accepted",
+            title: t('common.pro_accepted'),
             status: getStepStatus(1, activeRequest?.status || 'pending')
         },
         {
-            title: "Booking & Payment",
+            title: t('common.booking_payment'),
             status: getStepStatus(2, activeRequest?.status || 'pending'),
             actionRequired: activeRequest?.status === 'accepted' || activeRequest?.status === 'assigned',
             date: activeRequest?.scheduled_at ? new Date(activeRequest.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric'}) : null
         },
         {
-            title: "Work In Progress",
+            title: t('common.work_in_progress'),
             status: getStepStatus(3, activeRequest?.status || 'pending')
         },
         {
-            title: "Final Approval",
+            title: t('common.final_approval'),
             status: getStepStatus(4, activeRequest?.status || 'pending'),
             actionRequired: activeRequest?.status === 'done'
         }
@@ -361,7 +363,7 @@ const CustomerMessages = () => {
                             <div className="size-11 rounded-[1.2rem] bg-primary/10 flex items-center justify-center shadow-inner">
                                 <MessageSquare className="text-primary" size={24} />
                             </div>
-                            <span className="text-gradient">Messages</span>
+                            <span className="text-gradient">{t('common.messages')}</span>
                         </h3>
                         {userRequests.length > 0 && (
                             <div className="flex gap-2">
@@ -370,7 +372,7 @@ const CustomerMessages = () => {
                                 </span>
                                 {notifications.filter(n => !n.is_read).length > 0 && (
                                     <span className="bg-primary text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest shadow-lg shadow-primary/30 animate-pulse">
-                                        New
+                                        {t('common.new')}
                                     </span>
                                 )}
                             </div>
@@ -380,13 +382,13 @@ const CustomerMessages = () => {
                         {isLoading || isHydrating ? (
                             <div className="flex flex-col items-center justify-center h-full opacity-60">
                                 <Loader2 size={36} className="animate-spin text-primary" />
-                                <p className="text-xs font-bold mt-3">Loading conversations...</p>
+                                <p className="text-xs font-bold mt-3">{t('common.loading_conversations')}</p>
                             </div>
                         ) : hydratedRequests.length === 0 ? (
                             <div className="p-10 text-center space-y-3 opacity-40">
                                 <MessageSquare size={36} className="mx-auto" />
-                                <p className="text-xs font-black uppercase tracking-widest mt-2">No conversation yet</p>
-                                <p className="text-[10px] font-bold leading-relaxed">Request services from professionals to start chatting.</p>
+                                <p className="text-xs font-black uppercase tracking-widest mt-2">{t('common.no_conversation_yet')}</p>
+                                <p className="text-[10px] font-bold leading-relaxed">{t('common.request_services_to_chat')}</p>
                             </div>
                         ) : (
                             [...hydratedRequests].sort((a, b) => {
@@ -467,9 +469,9 @@ const CustomerMessages = () => {
                         <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-60 p-10">
                             <Loader2 size={36} className="animate-spin text-primary" />
                             <div className="space-y-2">
-                                <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">Connecting to chat...</h3>
+                                <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">{t('common.connecting_to_chat')}</h3>
                                 <p className="text-sm font-medium text-text-secondary dark:text-gray-400 max-w-xs">
-                                    Fetching your conversations securely.
+                                    {t('common.fetching_securely')}
                                 </p>
                             </div>
                         </div>
@@ -481,8 +483,8 @@ const CustomerMessages = () => {
                                     <div className="flex flex-col items-center justify-center h-full text-center space-y-6 opacity-60 p-10 animate-in fade-in">
                                         <RefreshCw size={36} className="animate-spin text-primary" />
                                         <div className="space-y-2">
-                                            <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">Opening conversation...</h3>
-                                            <p className="text-sm font-medium text-text-secondary dark:text-gray-400 max-w-xs">Connecting you with your professional.</p>
+                                            <h3 className="text-xl font-black tracking-tight text-text-primary dark:text-white">{t('common.opening_conversation')}</h3>
+                                            <p className="text-sm font-medium text-text-secondary dark:text-gray-400 max-w-xs">{t('common.fetching_securely')}</p>
                                         </div>
                                     </div>
                                 );
@@ -498,15 +500,15 @@ const CustomerMessages = () => {
                                         </div>
                                     </div>
                                     <div className="max-w-sm space-y-3">
-                                        <h3 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">Select a Conversation</h3>
+                                        <h3 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">{t('common.select_conversation')}</h3>
                                         <p className="text-sm font-medium leading-relaxed text-slate-500 dark:text-slate-400">
-                                            Select a professional from your request list to view the project timeline and start a conversation.
+                                            {t('common.request_services_to_chat')}
                                         </p>
                                     </div>
                                     <div className="grid grid-cols-3 gap-4 w-full max-w-xs opacity-30 capitalize text-[10px] font-black tracking-widest text-slate-400">
-                                        <div className="flex flex-col items-center gap-2"><Shield size={18} />Secure</div>
-                                        <div className="flex flex-col items-center gap-2"><Zap size={18} />Fast</div>
-                                        <div className="flex flex-col items-center gap-2"><ShieldCheck size={18} />Verified</div>
+                                        <div className="flex flex-col items-center gap-2"><Shield size={18} />{t('common.secure')}</div>
+                                        <div className="flex flex-col items-center gap-2"><Zap size={18} />{t('common.fast')}</div>
+                                        <div className="flex flex-col items-center gap-2"><ShieldCheck size={18} />{t('common.verified')}</div>
                                     </div>
                                 </div>
                             );
@@ -551,7 +553,7 @@ const CustomerMessages = () => {
                                         <div className="flex items-center gap-2">
                                             <span className="size-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
                                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                                Active Now
+                                                {t('common.active_now')}
                                             </span>
                                         </div>
                                     </div>
@@ -581,7 +583,7 @@ const CustomerMessages = () => {
                                                         className="flex items-center gap-3 w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-red-500/10 hover:text-red-500 rounded-xl transition-all group"
                                                     >
                                                         <AlertTriangle size={16} className="text-slate-400 group-hover:text-red-500 transition-colors" />
-                                                        Raise Dispute
+                                                        {t('common.raise_dispute')}
                                                     </button>
                                                 </div>
                                             </div>
@@ -601,7 +603,7 @@ const CustomerMessages = () => {
                                     <div className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200/50 dark:border-slate-700/50 shadow-sm">
                                         <Shield size={14} className="text-emerald-500" />
                                         <span className="text-[11px] font-black uppercase tracking-[0.15em] text-slate-500 dark:text-slate-400">
-                                            End-to-end Encrypted • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "Just Now"}
+                                            {t('common.end_to_end_encrypted')} • {(activeRequest.created_at || activeRequest.createdAt) ? new Date(activeRequest.created_at || activeRequest.createdAt).toLocaleDateString() : "Just Now"}
                                         </span>
                                     </div>
                                 </div>
@@ -706,7 +708,7 @@ const CustomerMessages = () => {
                                          <div className="flex items-center bg-white dark:bg-slate-800 rounded-[24px] px-5 py-2 ring-1 ring-slate-200/50 dark:ring-slate-700/50 shadow-sm focus-within:ring-primary/30 focus-within:shadow-lg focus-within:shadow-primary/5 transition-all">
                                              <input
                                                  className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2.5"
-                                                 placeholder="Type your message here..."
+                                                 placeholder={t('common.type_message')}
                                                  type="text"
                                                  value={messageInput}
                                                  onChange={(e) => setMessageInput(e.target.value)}
@@ -714,7 +716,7 @@ const CustomerMessages = () => {
                                              />
                                              <div className="flex items-center gap-2">
                                                  <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest hidden sm:block">
-                                                     Press Enter to send
+                                                     {t('common.press_enter_to_send')}
                                                  </span>
                                              </div>
                                          </div>
@@ -759,7 +761,7 @@ const CustomerMessages = () => {
                                 <div className="flex items-center justify-between mb-10 relative z-10">
                                     <div className="w-12 h-px bg-slate-100 dark:bg-slate-800" />
                                     <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] text-center flex items-center justify-center gap-3">
-                                        <span className="text-gradient">Project Journey</span>
+                                        <span className="text-gradient">{t('common.project_journey')}</span>
                                     </h3>
                                     {activeRequest?.status?.toLowerCase() === 'completed' && (
                                         <button 
@@ -767,7 +769,7 @@ const CustomerMessages = () => {
                                             className="flex items-center gap-1.5 text-[9px] font-black text-amber-500 hover:text-amber-600 transition-colors uppercase tracking-widest"
                                         >
                                             <Star size={12} fill="currentColor" />
-                                            Rate
+                                            {t('common.rate')}
                                         </button>
                                     )}
                                     <div className="w-12 h-px bg-slate-100 dark:bg-slate-800" />

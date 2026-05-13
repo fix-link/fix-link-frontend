@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { useAuth } from "../../../context/AuthContext";
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 
 const ProfessionalReviews: React.FC = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const [realReviews, setRealReviews] = useState<any[]>([]);
     const [loadingReviews, setLoadingReviews] = useState(true);
@@ -82,19 +84,19 @@ const ProfessionalReviews: React.FC = () => {
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12 animate-fade-in-up">
                             <div className="space-y-3">
                                 <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-primary">Reviews</span> & Ratings
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-primary">{t('common.reviews')}</span> {t('common.and_ratings')}
                                 </h1>
                                 <div className="flex items-center gap-2">
                                     <span className="size-2 rounded-full bg-amber-500 animate-pulse"></span>
                                     <p className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                        Verified customer feedback and professional performance
+                                        {t('common.verified_work_records')}
                                     </p>
                                 </div>
                             </div>
                             
                             <div className="flex items-center gap-10 bg-white/60 dark:bg-slate-900/40 backdrop-blur-2xl p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm group">
                                 <div className="text-center">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 group-hover:text-amber-500 transition-colors">Total Rating</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 group-hover:text-amber-500 transition-colors">{t('common.total_rating')}</p>
                                     <div className="flex items-center gap-4">
                                         {loadingReviews ? (
                                             <div className="h-10 w-12 bg-slate-100 dark:bg-slate-800 rounded animate-pulse"></div>
@@ -105,21 +107,21 @@ const ProfessionalReviews: React.FC = () => {
                                             <Stars count={rating} className="text-amber-400 text-lg" />
                                             <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1">
                                                 <span className="size-1 rounded-full bg-current"></span>
-                                                Exceptional
+                                                {t('common.exceptional')}
                                             </p>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="w-px h-12 bg-slate-100 dark:bg-slate-800/50" />
                                 <div className="text-center">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 group-hover:text-primary transition-colors">Volume</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3 group-hover:text-primary transition-colors">{t('common.volume')}</p>
                                     <div className="flex flex-col items-center">
                                         {loadingReviews ? (
                                             <div className="h-10 w-12 bg-slate-100 dark:bg-slate-800 rounded animate-pulse"></div>
                                         ) : (
                                             <p className="text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tighter">{reviewsCount}</p>
                                         )}
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Total Jobs</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">{t('common.jobs')}</p>
                                     </div>
                                 </div>
                             </div>
@@ -128,10 +130,10 @@ const ProfessionalReviews: React.FC = () => {
                         {/* Performance Metrics */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12 animate-fade-in-up [animation-delay:100ms]">
                             {[
-                                { label: "Rating Quality", value: `${(rating * 20).toFixed(0)}%`, icon: <Award size={24} className="text-amber-500" />, iconBg: "bg-amber-500/10" },
-                                { label: "Completion Rate", value: "98%", icon: <CheckCircle2 size={24} className="text-emerald-500" />, iconBg: "bg-emerald-500/10" },
-                                { label: "Response Speed", value: "< 2h", icon: <Zap size={24} className="text-blue-500" />, iconBg: "bg-blue-500/10" },
-                                { label: "Client Loyalty", value: "12%", icon: <Users size={24} className="text-purple-500" />, iconBg: "bg-purple-500/10" },
+                                { label: t('common.rating_quality'), value: `${(rating * 20).toFixed(0)}%`, icon: <Award size={24} className="text-amber-500" />, iconBg: "bg-amber-500/10" },
+                                { label: t('common.completion_rate'), value: "98%", icon: <CheckCircle2 size={24} className="text-emerald-500" />, iconBg: "bg-emerald-500/10" },
+                                { label: t('common.response_speed'), value: "< 2h", icon: <Zap size={24} className="text-blue-500" />, iconBg: "bg-blue-500/10" },
+                                { label: t('common.client_loyalty'), value: "12%", icon: <Users size={24} className="text-purple-500" />, iconBg: "bg-purple-500/10" },
                             ].map((stat, i) => (
                                 <div key={i} className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-xl p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm group hover:shadow-md transition-all hover:-translate-y-1">
                                     <div className={`w-14 h-14 rounded-2xl ${stat.iconBg} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-inner border border-white dark:border-slate-700`}>
@@ -151,20 +153,20 @@ const ProfessionalReviews: React.FC = () => {
                                         <MessageSquare size={24} className="text-amber-500" />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">Client Feedback</h2>
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Verified work records</p>
+                                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">{t('common.client_feedback')}</h2>
+                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">{t('common.verified_work_records')}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3 px-6 py-3 bg-white dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
                                     <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Feedback Sync Active</span>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">{t('common.feedback_sync_active')}</span>
                                 </div>
                             </div>
 
                             {loadingReviews ? (
                                 <div className="py-32 flex flex-col items-center gap-6 text-slate-400">
                                     <RefreshCw size={48} className="animate-spin text-primary" />
-                                    <p className="text-[11px] font-black uppercase tracking-[0.3em] animate-pulse">Syncing reputation summary...</p>
+                                    <p className="text-[11px] font-black uppercase tracking-[0.3em] animate-pulse">{t('common.syncing_reputation')}</p>
                                 </div>
                             ) : realReviews.length === 0 ? (
                                 <div className="py-40 flex flex-col items-center gap-8">
@@ -173,9 +175,9 @@ const ProfessionalReviews: React.FC = () => {
                                         <ShieldCheck size={72} className="text-slate-200 dark:text-slate-700 relative z-10" />
                                     </div>
                                     <div className="text-center space-y-3">
-                                        <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">No Ratings Yet</p>
+                                        <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t('common.no_ratings_yet')}</p>
                                         <p className="text-sm font-medium text-slate-400 max-w-sm mx-auto leading-relaxed">
-                                            Your client feedback will appear here as you successfully complete projects on the platform.
+                                            {t('common.no_ratings_subtitle')}
                                         </p>
                                     </div>
                                 </div>
@@ -204,7 +206,7 @@ const ProfessionalReviews: React.FC = () => {
                                                                     (review.customer_detail?.first_name ? `${review.customer_detail.first_name} ${review.customer_detail.last_name || ''}`.trim() : null) ||
                                                                     (review.reviewer_detail?.first_name ? `${review.reviewer_detail.first_name} ${review.reviewer_detail.last_name || ''}`.trim() : null) ||
                                                                     (review.user_detail?.first_name ? `${review.user_detail.first_name} ${review.user_detail.last_name || ''}`.trim() : null) ||
-                                                                    'Verified Customer'}
+                                                                    t('common.verified_customer')}
                                                             </h4>
                                                             <div className="flex items-center gap-4">
                                                                 <Stars count={review.rating} className="text-amber-400" />
@@ -219,7 +221,7 @@ const ProfessionalReviews: React.FC = () => {
                                                     <div className="relative">
                                                         <span className="material-symbols-outlined text-7xl text-primary/5 dark:text-white/5 absolute -top-8 -left-6 -z-10 select-none font-black italic">format_quote</span>
                                                         <p className="text-lg text-slate-600 dark:text-slate-300 font-medium leading-relaxed italic relative z-10 tracking-tight">
-                                                            "{review.comment || review.content || "Exceptional service delivery. The professional demonstrated deep expertise and maintained perfect communication throughout the project lifecycle."}"
+                                                            "{review.comment || review.content || t('common.exceptional_service_fallback')}"
                                                         </p>
                                                     </div>
 
@@ -229,7 +231,7 @@ const ProfessionalReviews: React.FC = () => {
                                                                 <span className="material-symbols-outlined text-sm font-black">verified</span>
                                                             </div>
                                                             <span className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-400">
-                                                                Service: <span className="text-slate-900 dark:text-white">{review.job_title}</span>
+                                                                {t('common.service')}: <span className="text-slate-900 dark:text-white">{review.job_title}</span>
                                                             </span>
                                                         </div>
                                                     )}

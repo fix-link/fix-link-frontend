@@ -1,5 +1,7 @@
+import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../context/AuthContext";
+import { useTranslation } from "react-i18next";
 import { 
     LayoutDashboard, 
     Briefcase, 
@@ -13,19 +15,20 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-    { to: "/professional/home",          icon: LayoutDashboard,  label: "Dashboard" },
-    { to: "/professional/jobs",           icon: Briefcase,        label: "Jobs" },
-    { to: "/professional/messages",       icon: MessageSquare,    label: "Messages" },
-    { to: "/professional/earnings",       icon: CreditCard,       label: "Earnings" },
-    { to: "/professional/profile",        icon: User,             label: "Profile" },
-    { to: "/professional/reviews",        icon: Star,             label: "Reviews" },
-    { to: "/professional/promote",        icon: Rocket,           label: "Promote" },
-    { to: "/professional/notifications",  icon: Bell,             label: "Notifications" },
+    { to: "/professional/home",          icon: LayoutDashboard,  label: "dashboard" },
+    { to: "/professional/jobs",           icon: Briefcase,        label: "jobs" },
+    { to: "/professional/messages",       icon: MessageSquare,    label: "messages" },
+    { to: "/professional/earnings",       icon: CreditCard,       label: "earnings" },
+    { to: "/professional/profile",        icon: User,             label: "profile" },
+    { to: "/professional/reviews",        icon: Star,             label: "reviews" },
+    { to: "/professional/promote",        icon: Rocket,           label: "promote" },
+    { to: "/professional/notifications",  icon: Bell,             label: "notifications" },
 ];
 
 const Sidebar: React.FC = () => {
     const { logout } = useAuth();
     const navigate = useNavigate();
+    const { t } = useTranslation();
 
     return (
         <aside className="fixed z-20 h-full w-64 flex-col bg-slate-900 dark:bg-slate-950 border-r border-white/5 hidden lg:flex shadow-2xl">
@@ -34,7 +37,7 @@ const Sidebar: React.FC = () => {
 
             {/* LOGO */}
             <div className="relative flex items-center gap-3 px-6 py-6 border-b border-white/5">
-                <h1 className="text-xl font-black tracking-tighter text-white">Fix-Link</h1>
+                <h1 className="text-xl font-black tracking-tighter text-white">{t('common.logo')}</h1>
             </div>
 
             {/* NAV */}
@@ -55,7 +58,7 @@ const Sidebar: React.FC = () => {
                             <>
                                 {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-primary rounded-full" />}
                                 <item.icon size={20} className={`transition-colors ${isActive ? "text-primary" : "text-slate-500 group-hover:text-white"}`} />
-                                <p className="text-sm font-bold flex-1">{item.label}</p>
+                                <p className="text-sm font-bold flex-1">{t(`common.${item.label}`)}</p>
                             </>
                         )}
                     </NavLink>
@@ -69,7 +72,7 @@ const Sidebar: React.FC = () => {
                     className="flex items-center gap-3 px-4 py-3 rounded-xl w-full text-slate-400 hover:text-red-400 hover:bg-red-500/5 transition-all group"
                 >
                     <LogOut size={20} className="transition-colors group-hover:text-red-400" />
-                    <p className="text-sm font-bold">Logout</p>
+                    <p className="text-sm font-bold">{t('common.logout')}</p>
                 </button>
             </div>
         </aside>

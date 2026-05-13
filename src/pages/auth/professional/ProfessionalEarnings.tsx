@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { useAuth } from "../../../context/AuthContext";
@@ -17,6 +18,7 @@ import {
 import { useNavigate } from "react-router-dom";
 
 const ProfessionalEarnings: React.FC = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const navigate = useNavigate();
     const { jobs, jobsLoading } = useData();
@@ -72,7 +74,7 @@ const ProfessionalEarnings: React.FC = () => {
 
     const handleWithdraw = async () => {
         if (availableToWithdraw <= 0) {
-            alert("No funds available for withdrawal.");
+            alert(t('common.no_funds_available_withdrawal'));
             return;
         }
 
@@ -80,11 +82,11 @@ const ProfessionalEarnings: React.FC = () => {
         const account = user?.payout_account_number || user?.phonenumber;
 
         if (!account) {
-            alert("Please set up your payout account in profile settings first.");
+            alert(t('common.payout_account_setup_err'));
             return;
         }
 
-        if (!confirm(`Request withdrawal of ${availableToWithdraw} ETB to your ${method} account (${account})?`)) return;
+        if (!confirm(t('common.withdrawal_confirm', { amount: availableToWithdraw, method: method, account: account }))) return;
 
         setIsWithdrawing(true);
         try {
@@ -111,12 +113,12 @@ const ProfessionalEarnings: React.FC = () => {
                 account_name: accountName,
                 account_number: account,
             });
-            alert("Withdrawal request sent successfully!");
+            alert(t('common.withdrawal_success'));
             // Refresh summary
             const summary = await getEarningsSummary(userId);
             setEarningsSummary(summary);
         } catch (err: any) {
-            alert(`Withdrawal failed: ${err.message || "Unknown error"}`);
+            alert(t('common.withdrawal_failed', { error: err.message || "Unknown error" }));
         } finally {
             setIsWithdrawing(false);
         }
@@ -125,7 +127,7 @@ const ProfessionalEarnings: React.FC = () => {
     const getCustomerName = (job: any) => {
         const d = job.customer_detail;
         if (d?.first_name) return `${d.first_name} ${d.last_name || ""}`.trim();
-        return "Customer";
+        return t('common.customer');
     };
 
     const getAmount = (job: any) => {
@@ -150,15 +152,15 @@ const ProfessionalEarnings: React.FC = () => {
                         <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 animate-fade-in-up">
                             <div className="space-y-3">
                                 <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                                    Earnings <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-emerald-400 to-accent-cyan">Summary</span>
+                                    {t('common.earnings')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 via-emerald-400 to-accent-cyan">{t('common.summary')}</span>
                                 </h1>
                                 <div className="flex items-center gap-3">
                                     <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 rounded-full">
                                         <span className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Secure Payments</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">{t('common.secure_payments')}</span>
                                     </div>
                                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                        Track your income and withdraw funds easily
+                                        {t('common.track_income_withdraw')}
                                     </p>
                                 </div>
                             </div>
@@ -168,30 +170,30 @@ const ProfessionalEarnings: React.FC = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 animate-fade-in-up [animation-delay:100ms]">
                             {[
                                 {
-                                    label: "Total Income",
+                                    label: t('common.total_income'),
                                     value: `${totalEarned.toLocaleString()} ETB`,
                                     icon: <CreditCard size={28} className="text-emerald-500" />,
                                     accent: "text-emerald-500",
                                     iconBg: "bg-emerald-500/10 dark:bg-emerald-500/20",
-                                    sub: `${myCompletedJobs.length} Completed Jobs`,
+                                    sub: t('common.completed_jobs_count', { count: myCompletedJobs.length }),
                                     loading: jobsLoading
                                 },
                                 {
-                                    label: "Pending Payouts",
+                                    label: t('common.pending_payouts'),
                                     value: `${pendingAmount.toLocaleString()} ETB`,
                                     icon: <Clock size={28} className="text-amber-500" />,
                                     accent: "text-amber-500",
                                     iconBg: "bg-amber-500/10 dark:bg-amber-500/20",
-                                    sub: `${myActiveJobs.length} Active Jobs`,
+                                    sub: t('common.active_jobs_count', { count: myActiveJobs.length }),
                                     loading: jobsLoading
                                 },
                                 {
-                                    label: "Average Income",
+                                    label: t('common.average_income'),
                                     value: `${avgPerJob.toLocaleString()} ETB`,
                                     icon: <TrendingUp size={28} className="text-blue-500" />,
                                     accent: "text-blue-500",
                                     iconBg: "bg-blue-500/10 dark:bg-blue-500/20",
-                                    sub: "Average earnings per job",
+                                    sub: t('common.avg_earnings_per_job'),
                                     loading: jobsLoading
                                 },
                             ].map(card => (
@@ -235,7 +237,7 @@ const ProfessionalEarnings: React.FC = () => {
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-center lg:justify-start gap-3">
                                             <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.8)]"></span>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-400">Withdrawable Balance</p>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-400">{t('common.withdrawable_balance')}</p>
                                         </div>
                                         {jobsLoading ? (
                                             <div className="h-20 w-64 bg-white/10 rounded-3xl animate-pulse"></div>
@@ -245,7 +247,7 @@ const ProfessionalEarnings: React.FC = () => {
                                             </h2>
                                         )}
                                         <p className="text-sm font-medium text-slate-400 max-w-sm leading-relaxed mx-auto lg:mx-0">
-                                            Your revenue is authenticated and cleared for immediate dispatch to <span className="text-white font-black tracking-wide uppercase text-xs">Telebirr</span> or <span className="text-white font-black tracking-wide uppercase text-xs">CBE</span>.
+                                            {t('common.revenue_cleared_for_dispatch')}
                                         </p>
                                     </div>
                                 </div>
@@ -265,7 +267,7 @@ const ProfessionalEarnings: React.FC = () => {
                                         ) : (
                                             <ArrowUpRight size={24} className="group-hover/btn:rotate-12 transition-transform" />
                                         )}
-                                        {isWithdrawing ? "Processing..." : "Withdraw Funds"}
+                                        {isWithdrawing ? t('common.processing') : t('common.withdraw_funds')}
                                     </span>
                                 </button>
                             </div>
@@ -281,8 +283,8 @@ const ProfessionalEarnings: React.FC = () => {
                                             <FileText size={24} className="text-emerald-500" />
                                         </div>
                                         <div>
-                                            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight">Income History</h2>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Confirmed payments</p>
+                                            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight">{t('common.income_history')}</h2>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('common.confirmed_payments')}</p>
                                         </div>
                                     </div>
                                     <span className="px-4 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{myCompletedJobs.length} jobs</span>
@@ -294,7 +296,7 @@ const ProfessionalEarnings: React.FC = () => {
                                             <div className="size-16 bg-primary/5 rounded-full flex items-center justify-center">
                                                 <span className="material-symbols-outlined text-4xl animate-spin text-primary font-light">autorenew</span>
                                             </div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">Syncing encrypted ledger...</p>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">{t('common.syncing_ledger')}</p>
                                         </div>
                                     ) : myCompletedJobs.length === 0 ? (
                                         <div className="py-32 flex flex-col items-center gap-8 text-center">
@@ -302,8 +304,8 @@ const ProfessionalEarnings: React.FC = () => {
                                                 <span className="material-symbols-outlined text-4xl text-slate-300 font-light">payments</span>
                                             </div>
                                             <div className="space-y-2">
-                                                <p className="text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">No transaction data</p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Complete your first job to see history.</p>
+                                                <p className="text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">{t('common.no_transaction_data')}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{t('common.complete_first_job_history')}</p>
                                             </div>
                                         </div>
                                     ) : (
@@ -320,7 +322,7 @@ const ProfessionalEarnings: React.FC = () => {
                                                             <CheckCircle2 size={24} className="text-emerald-500" />
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <p className="text-[15px] font-black text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors tracking-tight">{job.title || "Job Details"}</p>
+                                                            <p className="text-[15px] font-black text-slate-900 dark:text-white truncate group-hover:text-primary transition-colors tracking-tight">{job.title || t('common.job_details_hidden')}</p>
                                                             <div className="flex items-center gap-3 mt-1.5">
                                                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.15em]">{getCustomerName(job)}</p>
                                                                 <span className="size-1 rounded-full bg-slate-300"></span>
@@ -353,8 +355,8 @@ const ProfessionalEarnings: React.FC = () => {
                                             <Lock size={24} className="text-amber-500" />
                                         </div>
                                         <div>
-                                            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight">Pending Payouts</h2>
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Funds held securely</p>
+                                            <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-tight">{t('common.pending_payouts')}</h2>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{t('common.funds_held_securely')}</p>
                                         </div>
                                     </div>
                                     <span className="px-4 py-1.5 bg-amber-500/10 rounded-full text-[10px] font-black text-amber-600 uppercase tracking-[0.2em]">{myActiveJobs.length} active</span>
@@ -367,8 +369,8 @@ const ProfessionalEarnings: React.FC = () => {
                                                 <span className="material-symbols-outlined text-4xl text-slate-300 font-light">lock_open</span>
                                             </div>
                                             <div className="space-y-2">
-                                                <p className="text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">Escrow clear</p>
-                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No funds currently held in transit.</p>
+                                                <p className="text-base font-black text-slate-800 dark:text-white uppercase tracking-widest">{t('common.escrow_clear')}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{t('common.no_funds_held_transit')}</p>
                                             </div>
                                         </div>
                                     ) : (
@@ -383,19 +385,19 @@ const ProfessionalEarnings: React.FC = () => {
                                                         <span className="material-symbols-outlined text-amber-500 text-2xl font-black">lock</span>
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-[15px] font-black text-slate-900 dark:text-white truncate tracking-tight leading-tight">{job.title || "Job details hidden"}</p>
+                                                        <p className="text-[15px] font-black text-slate-900 dark:text-white truncate tracking-tight leading-tight">{job.title || t('common.job_details_hidden')}</p>
                                                         <div className="flex items-center gap-3 mt-1.5">
                                                             <span className="px-2.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded-md text-[9px] font-black text-slate-500 uppercase tracking-widest">
                                                                 {job.status?.replace(/_/g, " ")}
                                                             </span>
-                                                            <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest italic">Verification Pending</span>
+                                                            <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest italic">{t('common.verification_pending')}</span>
                                                         </div>
                                                     </div>
                                                     <div className="text-right shrink-0 space-y-1.5">
                                                         <p className="text-[18px] font-black text-amber-500 tracking-tighter">
                                                             {getAmount(job) > 0 ? `${getAmount(job).toLocaleString()}` : "—"} <span className="text-[11px] font-bold ml-1 opacity-70">ETB</span>
                                                         </p>
-                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Secured</p>
+                                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{t('common.secured')}</p>
                                                     </div>
                                                 </div>
                                             ))}

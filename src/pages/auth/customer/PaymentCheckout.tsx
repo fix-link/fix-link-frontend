@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useData } from '../../../context/DataContext';
 import { useAuth } from '../../../context/AuthContext';
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 
 const PaymentCheckout = () => {
+    const { t } = useTranslation();
     const { jobId } = useParams<{ jobId: string }>();
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -39,7 +41,7 @@ const PaymentCheckout = () => {
             <div className="min-h-screen bg-background-light dark:bg-background-dark flex flex-col items-center justify-center p-6 bg-background-light dark:bg-background-dark">
                 <div className="flex flex-col items-center gap-6 animate-pulse">
                     <Loader2 size={48} className="text-primary animate-spin" />
-                    <p className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">Initalizing Secure Tunnel...</p>
+                    <p className="font-black text-xs uppercase tracking-[0.2em] text-slate-400">{t('common.initializing_secure_tunnel')}</p>
                 </div>
             </div>
         );
@@ -52,14 +54,14 @@ const PaymentCheckout = () => {
                     <AlertCircle size={40} className="text-slate-400" />
                 </div>
                 <div className="text-center space-y-2">
-                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Payment Cancelled</h2>
-                    <p className="text-slate-500 font-medium">We couldn't locate the transaction record in our database.</p>
+                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{t('common.payment_cancelled')}</h2>
+                    <p className="text-slate-500 font-medium">{t('common.transaction_not_found')}</p>
                 </div>
                 <button 
                   onClick={() => navigate(-1)} 
                   className="px-10 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
                 >
-                  Return to Dashboard
+                  {t('common.return_to_dashboard')}
                 </button>
             </div>
         );
@@ -144,7 +146,7 @@ const PaymentCheckout = () => {
                     <div className="size-9 rounded-xl glass-panel flex items-center justify-center border border-slate-200/50 dark:border-slate-800/50 shadow-sm group-hover:-translate-x-1.5 transition-transform">
                         <ArrowLeft size={16} strokeWidth={3} />
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Abort Transaction</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('common.abort_transaction')}</span>
                 </button>
 
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-12 xl:gap-24 items-start">
@@ -153,10 +155,10 @@ const PaymentCheckout = () => {
                     <div className="xl:col-span-5 space-y-12">
                         <div className="space-y-4">
                             <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-[1.1]">
-                                Secure your <span className="text-gradient">Service Payment</span>.
+                                {t('common.secure_service_payment')}
                             </h1>
                             <p className="text-lg font-medium text-slate-500 dark:text-slate-400 leading-relaxed max-w-md">
-                                Protected by secure payment security. Your money is held safely and will only be released once you confirm the job is finished.
+                                {t('common.protected_by_security')}
                             </p>
                         </div>
 
@@ -167,10 +169,10 @@ const PaymentCheckout = () => {
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 w-fit">
                                         <Quote size={12} className="text-primary" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">Project Manifest</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-primary">{t('common.project_manifest')}</span>
                                     </div>
                                     <h3 className="text-2xl font-black text-slate-800 dark:text-white leading-tight">
-                                        {job.description || job.title || "Project specific services"}
+                                        {job.description || job.title || t('common.services')}
                                     </h3>
                                 </div>
 
@@ -186,7 +188,7 @@ const PaymentCheckout = () => {
                                             />
                                         </div>
                                         <div>
-                                            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-0.5">Assigned Expert</p>
+                                            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400 mb-0.5">{t('common.assigned_expert')}</p>
                                             <p className="text-base font-black text-slate-800 dark:text-white">
                                                 {professionalDetails.first_name || professionalDetails.user?.first_name} {professionalDetails.last_name || professionalDetails.user?.last_name || ""}
                                             </p>
@@ -196,17 +198,17 @@ const PaymentCheckout = () => {
 
                                 <div className="pt-8 border-t border-dashed border-slate-200 dark:border-slate-800 space-y-4">
                                     <div className="flex justify-between items-center text-sm font-bold">
-                                        <span className="text-slate-500 uppercase tracking-widest text-[9px]">Service Price</span>
+                                        <span className="text-slate-500 uppercase tracking-widest text-[9px]">{t('common.service_price')}</span>
                                         <span className="text-slate-900 dark:text-white">{job.budget} ETB</span>
                                     </div>
                                     <div className="flex justify-between items-center text-sm font-bold">
-                                        <span className="text-slate-500 uppercase tracking-widest text-[9px]">Transaction Fee (5%)</span>
+                                        <span className="text-slate-500 uppercase tracking-widest text-[9px]">{t('common.transaction_fee')} (5%)</span>
                                         <span className="text-primary">{(Number(job.budget) * 0.05).toFixed(2)} ETB</span>
                                     </div>
                                     
                                     <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-between items-end">
                                         <div>
-                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Total Investment</p>
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">{t('common.total_investment')}</p>
                                             <div className="flex items-baseline gap-2">
                                                 <span className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tighter">
                                                     {(Number(job.budget) * 1.05).toFixed(2)}
@@ -225,9 +227,9 @@ const PaymentCheckout = () => {
                                 <ShieldCheck size={24} />
                             </div>
                             <div className="space-y-1">
-                                <h4 className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">Fix-Link Safe-Lock</h4>
+                                <h4 className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">{t('common.safe_lock')}</h4>
                                 <p className="text-xs text-emerald-800/60 dark:text-emerald-400/60 font-medium leading-relaxed">
-                                    Your funds live in a cryptographic escrow. Release is contingent on your satisfaction.
+                                    {t('common.escrow_description')}
                                 </p>
                             </div>
                         </div>
@@ -242,11 +244,11 @@ const PaymentCheckout = () => {
                                 <div className="flex items-center justify-between">
                                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-3">
                                         <Lock size={12} className="text-primary" />
-                                        Secure Channel Selection
+                                        {t('common.secure_channel_selection')}
                                     </h3>
                                     <div className="hidden sm:flex items-center gap-2 text-slate-300 dark:text-slate-600">
                                         <Globe size={14} />
-                                        <span className="text-[10px] font-black uppercase">Encrypted Point-to-Point</span>
+                                        <span className="text-[10px] font-black uppercase">{t('common.encrypted_p2p')}</span>
                                     </div>
                                 </div>
                                 
@@ -285,10 +287,10 @@ const PaymentCheckout = () => {
                             </div>
 
                             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                {selectedProvider !== 'chapa' ? (
+                            {selectedProvider !== 'chapa' ? (
                                     <div className="space-y-3 bg-slate-50/50 dark:bg-slate-900/40 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 relative group">
                                         <label className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 ml-1">
-                                            Handset Authentication Address
+                                            {t('common.handset_auth_address')}
                                         </label>
                                         <div className="relative">
                                             <div className="absolute left-5 top-1/2 -translate-y-1/2 size-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center text-primary shadow-sm">
@@ -298,14 +300,14 @@ const PaymentCheckout = () => {
                                                 type="tel"
                                                 value={accountNumber}
                                                 onChange={(e) => setAccountNumber(e.target.value)}
-                                                placeholder={selectedProvider === 'telebirr' ? '0911 ...' : 'Enter account ID'}
+                                                placeholder={selectedProvider === 'telebirr' ? '0911 ...' : t('common.type_message')}
                                                 className="w-full pl-20 pr-6 py-5 bg-white dark:bg-slate-800 border-none rounded-[1.5rem] focus:ring-4 focus:ring-primary/10 transition-all text-lg font-black text-slate-800 dark:text-white placeholder-slate-300 shadow-xl"
                                             />
                                         </div>
                                         <div className="flex gap-3 px-2 pt-2">
                                             <Info size={14} className="text-primary shrink-0" />
                                             <p className="text-[10px] text-slate-500 dark:text-slate-500 font-medium leading-relaxed">
-                                                System will initialize a secure connection with your {selectedProvider === 'telebirr' ? 'TeleBirr' : 'CBE'} terminal.
+                                                {t('common.secure_connection_terminal', { provider: selectedProvider === 'telebirr' ? 'TeleBirr' : 'CBE' })}
                                             </p>
                                         </div>
                                     </div>
@@ -315,9 +317,9 @@ const PaymentCheckout = () => {
                                             <Globe size={32} />
                                         </div>
                                         <div className="space-y-1">
-                                            <h5 className="text-sm font-black text-slate-900 dark:text-white tracking-wide uppercase">Gateway Synchronization</h5>
+                                            <h5 className="text-sm font-black text-slate-900 dark:text-white tracking-wide uppercase">{t('common.gateway_synchronization')}</h5>
                                             <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
-                                                Redirecting to Chapa's encrypted financial cloud. External debit/bank authentication required.
+                                                {t('common.chapa_redirect_info')}
                                             </p>
                                         </div>
                                     </div>
@@ -336,16 +338,16 @@ const PaymentCheckout = () => {
                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-[100%] group-hover/btn:translate-x-[100%] transition-transform duration-1000"></div>
                                         <span className="flex items-center justify-center gap-4 relative z-10">
                                             {isProcessing ? (
-                                                <><Loader2 size={24} className="animate-spin" /> Synchronizing...</>
+                                                <><Loader2 size={24} className="animate-spin" /> {t('common.synchronizing')}</>
                                             ) : (
-                                                <>Authorize ETB {(Number(job.budget) * 1.05).toFixed(2)} Payment <ChevronRight size={20} strokeWidth={3} /></>
+                                                <>{t('common.authorize_payment')} ETB {(Number(job.budget) * 1.05).toFixed(2)} {t('common.payment')} <ChevronRight size={20} strokeWidth={3} /></>
                                             )}
                                         </span>
                                     </button>
                                     
                                     <div className="flex items-center justify-center gap-3 opacity-30 group">
                                         <ShieldCheck size={14} className="group-hover:scale-110 transition-transform" />
-                                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">Secure Payment Active</span>
+                                        <span className="text-[10px] font-black uppercase tracking-[0.3em]">{t('common.secure_payment_active')}</span>
                                     </div>
                                 </div>
                             </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import CustomerNavbar from "./components/CustomerNavbar";
 import CustomerFooter from "./components/CustomerFooter";
 import { useAuth } from "../../../context/AuthContext";
@@ -26,6 +27,7 @@ interface Job {
 }
 
 const Bookings = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [bookings, setBookings] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,7 +100,7 @@ const Bookings = () => {
       // Fetch bookings in the background
       fetchBookings();
     } catch (error: any) {
-      alert("Failed to approve: " + error.message);
+      alert(t('common.failed_update_profile') + ": " + error.message);
     } finally {
       setApprovingJobId(null);
     }
@@ -114,58 +116,58 @@ const Bookings = () => {
     switch (s) {
       case "pending":
         return {
-          label: "Request Sent",
-          desc: "Awaiting response",
+          label: t('common.request_sent'),
+          desc: t('common.awaiting_response'),
           color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
           icon: Hourglass
         };
       case "accepted":
         return {
-          label: "Accepted",
-          desc: "Pay to book now",
+          label: t('common.accept'),
+          desc: t('common.pay_to_book_now'),
           color: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
           icon: AlertCircle
         };
       case "assigned":
       case "booked":
         return {
-          label: "Booked",
-          desc: "Confirmed project",
+          label: t('common.booked'),
+          desc: t('common.confirmed_project'),
           color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
           icon: ShieldCheck
         };
       case "in_progress":
         return {
-          label: "In Progress",
-          desc: "Pro is working",
+          label: t('common.work_in_progress'),
+          desc: t('common.pro_is_working'),
           color: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
           icon: Loader2
         };
       case "done":
         return {
-          label: "Completed",
-          desc: "Awaiting approval",
+          label: t('common.completed'),
+          desc: t('common.awaiting_approval'),
           color: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
           icon: CheckCircle2
         };
       case "completed":
         return {
-          label: "Published",
-          desc: "Finished & Paid",
+          label: t('common.published'),
+          desc: t('common.finished_paid'),
           color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
           icon: CheckCircle2
         };
       case "cancelled":
         return {
-          label: "Cancelled",
-          desc: "Project stopped",
+          label: t('common.cancelled'),
+          desc: t('common.project_stopped'),
           color: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
           icon: XCircle
         };
       default:
         return {
           label: status,
-          desc: "Update pending",
+          desc: t('common.update_pending'),
           color: "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20",
           icon: AlertCircle
         };
@@ -184,10 +186,10 @@ const Bookings = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div className="space-y-2">
             <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-              My <span className="text-gradient">Bookings</span>
+              {t('common.my_bookings').split(' ')[0]} <span className="text-gradient">{t('common.my_bookings').split(' ').slice(1).join(' ')}</span>
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium text-lg">
-              Manage your project timeline and professional assignments.
+              {t('common.manage_project_timeline')}
             </p>
           </div>
           <Link
@@ -195,29 +197,29 @@ const Bookings = () => {
             className="group flex items-center justify-center gap-3 px-8 py-4 bg-primary text-white font-black rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-primary/20"
           >
             <Plus size={20} className="group-hover:rotate-90 transition-transform duration-300" />
-            Book New Service
+            {t('common.book_new_service')}
           </Link>
         </div>
 
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-4">
             <Loader2 size={48} className="text-primary animate-spin" />
-            <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Syncing your schedule...</p>
+            <p className="text-slate-400 font-black uppercase tracking-widest text-xs">{t('common.syncing_schedule')}</p>
           </div>
         ) : bookings.length === 0 ? (
           <div className="glass-panel rounded-[2.5rem] p-16 text-center border border-slate-200/50 dark:border-slate-800/50 max-w-3xl mx-auto">
             <div className="w-24 h-24 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-inner ring-1 ring-primary/20">
               <Calendar size={40} className="text-primary" />
             </div>
-            <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-4">No Active Bookings</h2>
+            <h2 className="text-3xl font-black text-slate-800 dark:text-white mb-4">{t('common.no_active_bookings')}</h2>
             <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-10 font-medium text-lg leading-relaxed">
-              Experience the best service in town. Find expert professionals and get your project started today!
+              {t('common.experience_best_service')}
             </p>
             <Link
               to="/customer/search"
               className="px-12 py-5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-2xl"
             >
-              Discover Services
+              {t('common.discover_services')}
             </Link>
           </div>
         ) : (
@@ -235,7 +237,7 @@ const Bookings = () => {
                   <div className="p-8 flex-1">
                     <div className="flex justify-between items-start mb-8">
                       <div className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border flex items-center gap-2 ${status.color}`}>
-                        <BookingIcon size={12} className={status.label === "In Progress" ? "animate-spin" : ""} />
+                        <BookingIcon size={12} className={status.label === t('common.work_in_progress') ? "animate-spin" : ""} />
                         {status.label}
                       </div>
                       <div className="flex items-center gap-2">
@@ -252,7 +254,7 @@ const Bookings = () => {
                                 setReviewModalOpen(true);
                             }}
                             className="p-1.5 bg-amber-500 text-white rounded-lg hover:scale-110 transition-transform shadow-lg shadow-amber-500/20"
-                            title="Rate Experience"
+                            title={t('common.rate_experience')}
                           >
                             <Star size={12} fill="currentColor" />
                           </button>
@@ -264,7 +266,7 @@ const Bookings = () => {
                       {booking.title}
                     </h3>
                     <p className="text-[13px] text-slate-500 dark:text-slate-400 line-clamp-2 mb-8 font-medium italic leading-relaxed h-[3rem]">
-                      "{booking.description || "Project initiated with high precision."}"
+                      "{booking.description || t('common.project_initiated_precision')}"
                     </p>
 
                     <div className="bg-slate-50/50 dark:bg-slate-900/50 rounded-2xl p-5 border border-slate-100 dark:border-slate-800/50 mb-8 transform transition-transform group-hover:translate-x-1">
@@ -273,16 +275,16 @@ const Bookings = () => {
                           {booking.assigned_to ? <User size={22} /> : <AlertCircle size={22} />}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[9px] uppercase font-black tracking-widest text-slate-400 mb-0.5">Professional</p>
+                          <p className="text-[9px] uppercase font-black tracking-widest text-slate-400 mb-0.5">{t('common.professional')}</p>
                           <p className="text-sm font-black text-slate-800 dark:text-white truncate">
-                            {booking.assigned_to ? "Request Accepted" : "Matching Professional..."}
+                            {booking.assigned_to ? t('common.pro_accepted') : t('common.matching_pro')}
                           </p>
                         </div>
                         {booking.assigned_to && (
                           <Link
                             to={`/customer/messages?requestId=${booking.id}`}
                             className="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200/50 dark:border-slate-700/50 hover:text-primary hover:border-primary/30 transition-all shadow-sm group/msg"
-                            title="Message Professional"
+                            title={t('common.message_pro')}
                           >
                             <MessageCircle size={18} className="group-hover/msg:scale-110 transition-transform" />
                           </Link>
@@ -312,14 +314,14 @@ const Bookings = () => {
                           ) : (
                             <CreditCard size={18} />
                           )}
-                          {approvingJobId === booking.id ? 'Processing...' : 'Release Payment'}
+                          {approvingJobId === booking.id ? t('common.processing') : t('common.release_payment')}
                         </button>
                         <button
                           onClick={() => handleRaiseDispute(booking)}
                           className="w-full py-3 bg-transparent hover:bg-red-50 dark:hover:bg-red-500/10 text-red-500 font-bold rounded-xl transition-all flex items-center justify-center gap-2 border border-transparent hover:border-red-200 dark:hover:border-red-500/20"
                         >
                           <AlertTriangle size={16} />
-                          Raise Dispute
+                          {t('common.raise_dispute')}
                         </button>
                       </div>
                     ) : (
@@ -329,7 +331,7 @@ const Bookings = () => {
                             <CreditCard size={16} />
                           </div>
                           <span className="text-[15px] font-black text-slate-900 dark:text-white">
-                            {booking.budget ? `${parseFloat(String(booking.budget)).toFixed(2)} ETB` : 'Flex Rates'}
+                            {booking.budget ? `${parseFloat(String(booking.budget)).toFixed(2)} ETB` : t('common.flex_rates')}
                           </span>
                         </div>
                         <div className="flex items-center gap-4">
@@ -339,14 +341,14 @@ const Bookings = () => {
                               className="text-red-500 hover:text-red-600 text-[11px] font-black uppercase tracking-widest flex items-center gap-1 transition-colors"
                             >
                               <AlertTriangle size={12} />
-                              Dispute
+                              {t('common.raise_dispute')}
                             </button>
                           )}
                           <Link
                             to={`/customer/messages?requestId=${booking.id}`}
                             className="flex items-center gap-1.5 text-primary text-[11px] font-black uppercase tracking-widest hover:translate-x-1 transition-transform"
                           >
-                            Details
+                            {t('common.open_details')}
                             <ChevronRight size={14} />
                           </Link>
                         </div>
@@ -366,7 +368,7 @@ const Bookings = () => {
           jobTitle={selectedJobForDispute?.title || ''}
           againstUserId={selectedJobForDispute?.assigned_to || ''}
           onSuccess={() => {
-            alert("Dispute raised successfully. Our team will review it shortly.");
+            alert(t('common.dispute_success_msg'));
             fetchBookings();
           }}
         />
@@ -377,7 +379,7 @@ const Bookings = () => {
           jobId={selectedJobForReview?.id || ''}
           professionalId={selectedJobForReview?.assigned_to || ''}
           onSuccess={() => {
-            alert("Thank you for your review!");
+            alert(t('common.review_thanks'));
           }}
         />
       </main>

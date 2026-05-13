@@ -1,5 +1,7 @@
+import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Star, MapPin, BadgeCheck, ArrowRight } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export type Professional = {
   id?: number | string;
@@ -19,6 +21,7 @@ interface ProfessionalCardProps {
 }
 
 const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const handleViewProfile = () => {
@@ -69,10 +72,10 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
 
       <div className="mt-auto w-full pt-6 border-t border-slate-100 dark:border-slate-800/50 flex items-center justify-between relative z-10 transition-all">
         <div className="text-left space-y-0.5">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60 transition-opacity group-hover:opacity-100">Starting from</p>
+          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest opacity-60 transition-opacity group-hover:opacity-100">{t('common.starting_from')}</p>
           <div className="flex items-baseline gap-1">
             <span className="text-lg font-black text-slate-900 dark:text-white transition-colors group-hover:text-primary">{pro.price}</span>
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">ETB</span>
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase">{t('common.etb')}</span>
           </div>
         </div>
         

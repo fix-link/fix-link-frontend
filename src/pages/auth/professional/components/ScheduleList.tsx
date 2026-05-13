@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
 
 
@@ -8,6 +9,8 @@ interface ScheduleListProps {
 }
 
 const ScheduleList: React.FC<ScheduleListProps> = ({ jobs, loading }) => {
+    const { t } = useTranslation();
+
     if (loading) {
         return (
             <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl rounded-[2.5rem] border border-slate-100 dark:border-slate-800/50 p-10 shadow-xl">
@@ -29,12 +32,12 @@ const ScheduleList: React.FC<ScheduleListProps> = ({ jobs, loading }) => {
                         <span className="material-symbols-outlined text-primary text-2xl font-black">calendar_today</span>
                     </div>
                     <div>
-                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">Work Schedule</h2>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1">Confirmed & Active Jobs</p>
+                        <h2 className="text-xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">{t('professional.work_schedule')}</h2>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em] mt-1">{t('professional.confirmed_active')}</p>
                     </div>
                 </div>
                 <Link to="/professional/jobs" className="text-[10px] font-black text-primary hover:bg-primary transition-all hover:text-white uppercase tracking-[0.15em] px-6 py-2.5 bg-primary/5 rounded-xl border border-primary/10">
-                    Full Roster
+                    {t('professional.full_roster')}
                 </Link>
             </div>
 
@@ -45,8 +48,8 @@ const ScheduleList: React.FC<ScheduleListProps> = ({ jobs, loading }) => {
                             <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-5xl font-light">event_busy</span>
                         </div>
                         <div className="space-y-2">
-                            <h3 className="text-lg font-black text-slate-800 dark:text-white">Clear Horizon</h3>
-                            <p className="text-slate-500 dark:text-slate-400 text-xs max-w-[240px] mx-auto font-medium leading-relaxed uppercase tracking-widest">Awaiting upcoming jobs.</p>
+                            <h3 className="text-lg font-black text-slate-800 dark:text-white">{t('common.clear_horizon')}</h3>
+                            <p className="text-slate-500 dark:text-slate-400 text-xs max-w-[240px] mx-auto font-medium leading-relaxed uppercase tracking-widest">{t('common.awaiting_upcoming_jobs')}</p>
                         </div>
                     </div>
                 ) : (
@@ -73,7 +76,7 @@ const ScheduleList: React.FC<ScheduleListProps> = ({ jobs, loading }) => {
                                     </span>
                                 </div>
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold truncate max-w-[300px]">
-                                    {job.description || "Job details hidden"}
+                                    {job.description || t('common.job_details_pending')}
                                 </p>
                                 <div className="flex items-center gap-3 pt-1">
                                     <span className={`text-[8px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full ${

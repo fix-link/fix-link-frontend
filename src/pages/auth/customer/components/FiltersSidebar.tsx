@@ -1,5 +1,6 @@
 import React from "react";
 import { FilterX, Check, Star } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface FiltersSidebarProps {
     priceMin: number;
@@ -32,6 +33,7 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
     setSelectedLanguages,
     onClearAll,
 }) => {
+    const { t } = useTranslation();
     const toggleFilter = (
         state: string[],
         setState: React.Dispatch<React.SetStateAction<string[]>>,
@@ -48,12 +50,12 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
         <div className="space-y-10">
             <div className="flex justify-between items-center mb-4">
                 <h3 className="text-slate-900 dark:text-white text-xl font-black tracking-tight">
-                    Discovery <span className="text-primary tracking-tighter">Filters</span>
+                    {t('common.discovery_filters').split(' ')[0]} <span className="text-primary tracking-tighter">{t('common.discovery_filters').split(' ')[1]}</span>
                 </h3>
                 <button
                     onClick={onClearAll}
                     className="p-2 rounded-xl bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-all group"
-                    title="Reset all filters"
+                    title={t('common.reset_filters')}
                 >
                     <FilterX size={18} className="group-hover:rotate-12 transition-transform" />
                 </button>
@@ -62,7 +64,7 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
             {/* Price Range */}
             <div className="space-y-6">
                 <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
-                    Budget Constraint
+                    {t('common.budget_constraint')}
                 </h4>
 
                 <div className="space-y-6">
@@ -102,7 +104,7 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
 
                     <div className="flex items-center gap-3">
                         <div className="relative flex-1">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">Min</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">{t('common.min')}</span>
                             <input
                                 type="number"
                                 value={priceMin}
@@ -111,7 +113,7 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
                             />
                         </div>
                         <div className="relative flex-1">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">Max</span>
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase">{t('common.max')}</span>
                             {priceMax === 10000 ? (
                                 <input
                                     type="text"
@@ -135,13 +137,13 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
             {/* Rating */}
             <div className="space-y-4">
                 <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
-                    Quality Rating
+                    {t('common.quality_rating')}
                 </h4>
                 <div className="space-y-2">
                     {[
-                        { val: 4, label: "4.0+ Stars" },
-                        { val: 3, label: "3.0+ Stars" },
-                        { val: 0, label: "Default Any" }
+                        { val: 4, label: `4.0+ ${t('common.stars')}` },
+                        { val: 3, label: `3.0+ ${t('common.stars')}` },
+                        { val: 0, label: `${t('common.any')}` }
                     ].map((opt) => (
                         <label key={opt.val} className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer group ${selectedRating === opt.val ? 'border-primary/20 bg-primary/5' : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
                             <div className="flex items-center gap-3">
@@ -166,30 +168,37 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
             {/* Experience */}
             <div className="space-y-4">
                 <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
-                    Expertise Depth
+                    {t('common.expertise_depth')}
                 </h4>
                 <div className="flex flex-col gap-2">
-                    {["Junior (1-2 yrs)", "Mid-level (3-5 yrs)", "Senior (5+ yrs)"].map(
-                        (exp) => (
-                            <label key={exp} className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer group ${selectedExperience.includes(exp) ? 'border-primary/20 bg-primary/5' : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
-                                <span className={`text-sm font-black tracking-tight transition-colors ${selectedExperience.includes(exp) ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>
-                                    {exp}
-                                </span>
-                                <div className="relative flex items-center justify-center">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedExperience.includes(exp)}
-                                        onChange={() =>
-                                            toggleFilter(selectedExperience, setSelectedExperience, exp)
-                                        }
-                                        className="sr-only"
-                                    />
-                                    <div className={`size-5 rounded-lg border-2 transition-all flex items-center justify-center ${selectedExperience.includes(exp) ? 'bg-primary border-primary' : 'border-slate-200 dark:border-slate-700'}`}>
-                                        {selectedExperience.includes(exp) && <Check size={14} className="text-white" />}
+                    {[
+                        { key: 'junior', range: '1-2' },
+                        { key: 'mid_level', range: '3-5' },
+                        { key: 'senior', range: '5+' }
+                    ].map(
+                        ({ key, range }) => {
+                            const label = `${t(`common.${key}`)} (${range} ${t('common.years')})`;
+                            return (
+                                <label key={key} className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all cursor-pointer group ${selectedExperience.includes(label) ? 'border-primary/20 bg-primary/5' : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
+                                    <span className={`text-sm font-black tracking-tight transition-colors ${selectedExperience.includes(label) ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>
+                                        {label}
+                                    </span>
+                                    <div className="relative flex items-center justify-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedExperience.includes(label)}
+                                            onChange={() =>
+                                                toggleFilter(selectedExperience, setSelectedExperience, label)
+                                            }
+                                            className="sr-only"
+                                        />
+                                        <div className={`size-5 rounded-lg border-2 transition-all flex items-center justify-center ${selectedExperience.includes(label) ? 'bg-primary border-primary' : 'border-slate-200 dark:border-slate-700'}`}>
+                                            {selectedExperience.includes(label) && <Check size={14} className="text-white" />}
+                                        </div>
                                     </div>
-                                </div>
-                            </label>
-                        )
+                                </label>
+                            );
+                        }
                     )}
                 </div>
             </div>
@@ -198,7 +207,7 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
             <div className="pt-2">
                 <label className="flex cursor-pointer items-center justify-between p-5 rounded-[2rem] bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xl transition-transform hover:scale-[1.02] active:scale-95 group">
                     <span className="text-xs font-black uppercase tracking-[0.15em] ml-2">
-                        Trusted Only
+                        {t('common.trusted_only')}
                     </span>
                     <div className="relative">
                         <input
@@ -216,7 +225,7 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
             {/* Languages */}
             <div className="space-y-4">
                 <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">
-                    Native Proficiency
+                    {t('common.native_proficiency')}
                 </h4>
                 <div className="flex flex-wrap gap-2">
                     {["English", "Amharic", "Oromiffa", "Tigrinya"].map((lang) => (
@@ -229,7 +238,8 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
                                 : 'bg-transparent border-slate-100 dark:border-slate-800/50 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700'
                             }`}
                         >
-                            {lang}
+                            {lang === "English" ? t('common.english') || "English" : 
+                             lang === "Amharic" ? t('common.amharic') || "Amharic" : lang}
                         </button>
                     ))}
                 </div>

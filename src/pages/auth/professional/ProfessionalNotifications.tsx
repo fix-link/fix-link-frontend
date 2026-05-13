@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
@@ -39,38 +40,43 @@ const getTypeMeta = (type: string) => {
     return key ? TYPE_META[key] : TYPE_META.info;
 };
 
-const getDescriptiveMessage = (n: Notification) => {
+const getDescriptiveMessage = (n: Notification, t: any) => {
     const who = n.sender_name?.trim() || null;
     const type = (n.type || "").toLowerCase();
     if (type.includes("job_request") || type.includes("new_job") || type.includes("new_request"))
-        return who ? `New job request from ${who}` : "You received a new job request";
+        return who ? t('common.new_job_request_from', { name: who }) : t('common.new_job_request_received');
     if (type.includes("accepted"))
-        return who ? `${who} accepted your services` : "Your services were accepted";
+        return who ? t('common.accepted_your_services', { name: who }) : t('common.services_were_accepted');
     if (type.includes("completed") || type.includes("done"))
-        return who ? `${who} confirmed job completion` : "A job was marked as complete";
+        return who ? t('common.confirmed_job_completion', { name: who }) : t('common.job_marked_complete');
     if (type.includes("message") || type.includes("msg") || type.includes("chat"))
-        return who ? `New message from ${who}` : "You have a new message";
+        return who ? t('common.new_message_from', { name: who }) : t('common.have_new_message');
     if (type.includes("cancelled") || type.includes("declined"))
-        return who ? `${who} declined the request` : "A request was declined";
+        return who ? t('common.declined_the_request', { name: who }) : t('common.request_was_declined');
     const raw = (n.message || n.body || "").trim();
     const isGeneric = !raw || raw === "New Notification" || raw === "you have update" || raw.length < 5;
-    return isGeneric ? "You have a new update" : raw;
+    return isGeneric ? t('common.have_new_update') : raw;
 };
 
-const groupByDate = (notifications: Notification[]) => {
+const groupByDate = (notifications: Notification[], t: any) => {
     const today = new Date(); today.setHours(0,0,0,0);
     const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-    const groups: Record<string, Notification[]> = { Today: [], Yesterday: [], Earlier: [] };
+    const groups: Record<string, Notification[]> = {};
+    groups[t('common.today')] = [];
+    groups[t('common.yesterday')] = [];
+    groups[t('common.earlier')] = [];
+    
     notifications.forEach(n => {
         const d = new Date(n.created_at); d.setHours(0,0,0,0);
-        if (d.getTime() === today.getTime()) groups.Today.push(n);
-        else if (d.getTime() === yesterday.getTime()) groups.Yesterday.push(n);
-        else groups.Earlier.push(n);
+        if (d.getTime() === today.getTime()) groups[t('common.today')].push(n);
+        else if (d.getTime() === yesterday.getTime()) groups[t('common.yesterday')].push(n);
+        else groups[t('common.earlier')].push(n);
     });
     return groups;
 };
 
 const ProfessionalNotifications: React.FC = () => {
+    const { t } = useTranslation();
     const navigate = useNavigate();
     const { notifications, refreshNotifications } = useData();
     const [markingAll, setMarkingAll] = useState(false);
@@ -78,7 +84,7 @@ const ProfessionalNotifications: React.FC = () => {
     const unreadCount = notifications.filter(n => !n.is_read).length;
     const grouped = groupByDate([...notifications].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    ));
+    ), t);
 
     const handleMarkAll = useCallback(async () => {
         if (markingAll || unreadCount === 0) return;
@@ -104,7 +110,7 @@ const ProfessionalNotifications: React.FC = () => {
         const meta = getTypeMeta(n.type);
         const timeStr = n.created_at
             ? new Date(n.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-            : "Just now";
+            : t('common.just_now');
         const dateStr = n.created_at
             ? new Date(n.created_at).toLocaleDateString([], { day: "numeric", month: "short" })
             : "";
@@ -126,7 +132,7 @@ const ProfessionalNotifications: React.FC = () => {
                 {/* Content */}
                 <div className="flex-1 min-w-0">
                     <p className={`text-sm leading-snug ${!n.is_read ? "font-black text-slate-900 dark:text-white" : "font-medium text-slate-500 dark:text-gray-400"}`}>
-                        {getDescriptiveMessage(n)}
+                        {getDescriptiveMessage(n, t)}
                     </p>
                     {n.sender_name && (
                         <p className="text-[11px] text-primary font-bold mt-0.5">{n.sender_name}</p>
@@ -161,12 +167,14 @@ const ProfessionalNotifications: React.FC = () => {
                         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10 animate-fade-in-up">
                             <div className="space-y-3">
                                 <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">Activity</span> Stream
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">{t('common.activity_stream').split(' ')[0]}</span> {t('common.activity_stream').split(' ')[1] || ""}
                                 </h1>
                                 <div className="flex items-center gap-3">
                                     <span className={`size-2.5 rounded-full ${unreadCount > 0 ? "bg-primary animate-pulse" : "bg-emerald-500 shadow-lg shadow-emerald-500/20"}`} />
                                     <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
-                                        {unreadCount > 0 ? `${unreadCount} unread update${unreadCount > 1 ? "s" : ""}` : "All activities logged"}
+                                        {unreadCount > 0 
+                                            ? (unreadCount === 1 ? t('common.unread_updates_count', { count: unreadCount }) : t('common.unread_updates_count_plural', { count: unreadCount }))
+                                            : t('common.all_activities_logged')}
                                     </p>
                                 </div>
                             </div>
@@ -177,7 +185,7 @@ const ProfessionalNotifications: React.FC = () => {
                                     className="flex items-center gap-2.5 px-7 py-3.5 bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-100 dark:border-slate-700 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm active:scale-95 group"
                                 >
                                     <CheckCheck size={16} className="group-hover:rotate-12 transition-transform" />
-                                    Clear Stream
+                                    {t('common.clear_stream')}
                                 </button>
                             )}
                         </div>
@@ -189,8 +197,8 @@ const ProfessionalNotifications: React.FC = () => {
                                         <BellOff size={48} className="text-slate-200 dark:text-slate-700 group-hover:rotate-12 transition-transform" />
                                     </div>
                                     <div className="space-y-3">
-                                        <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Stream Silent</p>
-                                        <p className="text-sm font-medium text-slate-400 max-w-xs mx-auto leading-relaxed">No new updates or jobs at this moment.</p>
+                                        <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t('common.stream_silent')}</p>
+                                        <p className="text-sm font-medium text-slate-400 max-w-xs mx-auto leading-relaxed">{t('common.no_new_updates_moment')}</p>
                                     </div>
                                 </div>
                             ) : (
