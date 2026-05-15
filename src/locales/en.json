@@ -68,6 +68,8 @@
     "finish_job": "Finish Job",
     "english": "English",
     "amharic": "Amharic",
+    "oromiffa": "Oromiffa",
+    "tigrinya": "Tigrinya",
     "reset_filters": "Reset all filters",
     "opening_conversation": "Opening conversation...",
     "connecting_to_chat": "Connecting to chat...",
@@ -99,6 +101,9 @@
     "most_jobs": "Most Jobs",
     "lowest_price": "Lowest Price",
     "highest_price": "Highest Price",
+    "price_low_high": "Price: Low to High",
+    "price_high_low": "Price: High to Low",
+    "experienced": "Experienced",
     "no_results_found": "No Results Found",
     "could_not_find_experts": "We couldn't find any experts matching your specific criteria. Try broadening your filter parameters.",
     "clear_filters": "Clear Filters",
@@ -394,7 +399,9 @@
     "no_alerts_yet": "No alerts yet",
     "secure_connection_terminal": "System will initialize a secure connection with your {{provider}} terminal.",
     "gateway_synchronization": "Gateway Synchronization",
-    "chapa_redirect_info": "Redirecting to Chapa's encrypted financial cloud. External debit/bank authentication required."
+    "chapa_redirect_info": "Redirecting to Chapa's encrypted financial cloud. External debit/bank authentication required.",
+    "searching_pros": "Searching for Professionals",
+    "finding_experts_location": "Finding the best experts in your location..."
   },
   "professional": {
     "jobs_completed": "Jobs Completed",
@@ -405,5 +412,28 @@
     "confirmed_active": "Confirmed & Active Jobs",
     "full_roster": "Full Roster",
     "growth_pro_tip": "Growth Pro-Tip"
+  },
+  "categories": {
+    "Plumber": "Plumber",
+    "Electrician": "Electrician",
+    "Carpenter": "Carpenter",
+    "Cleaner": "Cleaner",
+    "Painter": "Painter",
+    "Mason": "Mason",
+    "Gardener": "Gardener",
+    "Mechanic": "Mechanic",
+    "All Services": "All Services"
+  },
+  "locations": {
+    "Addis Ababa": "Addis Ababa",
+    "Adama": "Adama",
+    "Bahir Dar": "Bahir Dar",
+    "Hawassa": "Hawassa",
+    "Gondar": "Gondar",
+    "Mekelle": "Mekelle",
+    "Dire Dawa": "Dire Dawa",
+    "Jimma": "Jimma",
+    "Bishoftu": "Bishoftu",
+    "Dessie": "Dessie"
   }
 }

@@ -68,6 +68,8 @@
     "finish_job": "ስራውን ጨርስ",
     "english": "English",
     "amharic": "አማርኛ",
+    "oromiffa": "ኦሮምኛ",
+    "tigrinya": "ትግርኛ",
     "reset_filters": "ሁሉንም ማጣሪያዎች አጽዳ",
     "opening_conversation": "ውይይት በመክፈት ላይ...",
     "connecting_to_chat": "ከውይይቱ ጋር በመገናኘት ላይ...",
@@ -99,6 +101,9 @@
     "most_jobs": "ብዙ ስራዎች የሰሩ",
     "lowest_price": "ዝቅተኛ ዋጋ",
     "highest_price": "ከፍተኛ ዋጋ",
+    "price_low_high": "ዋጋ፡ ከዝቅተኛ ወደ ከፍተኛ",
+    "price_high_low": "ዋጋ፡ ከከፍተኛ ወደ ዝቅተኛ",
+    "experienced": "ልምድ ያላቸው",
     "no_results_found": "ምንም ውጤት አልተገኘም",
     "could_not_find_experts": "ከእርስዎ መስፈርት ጋር የሚዛመድ ባለሙያ ማግኘት አልቻልንም። እባክዎ የማጣሪያ መስፈርቱን ያላሉት።",
     "clear_filters": "ማጣሪያዎችን አጽዳ",
@@ -394,7 +399,9 @@
     "no_alerts_yet": "እስካሁን ምንም ማስጠንቀቂያ የለም",
     "secure_connection_terminal": "ሲስተሙ ከ{{provider}} ተርሚናልዎ ጋር ደህንነቱ የተጠበቀ ግንኙነት ያስጀምራል።",
     "gateway_synchronization": "ጌትዌይ ማመሳሰያ",
-    "chapa_redirect_info": "ወደ Chapa የተመሰጠረ የፋይናንስ ክላውድ እየተላኩ ነው። ውጫዊ የደቢት/ባንክ ማረጋገጫ ያስፈልጋል።"
+    "chapa_redirect_info": "ወደ Chapa የተመሰጠረ የፋይናንስ ክላውድ እየተላኩ ነው። ውጫዊ የደቢት/ባንክ ማረጋገጫ ያስፈልጋል።",
+    "searching_pros": "ባለሙያዎችን በመፈለግ ላይ",
+    "finding_experts_location": "በአካባቢዎ ያሉ ምርጥ ባለሙያዎችን በመፈለግ ላይ..."
   },
   "professional": {
     "jobs_completed": "የተጠናቀቁ ስራዎች",
@@ -405,5 +412,28 @@
     "confirmed_active": "የተረጋገጡ እና ንቁ ስራዎች",
     "full_roster": "ሙሉ ዝርዝር",
     "growth_pro_tip": "የእድገት ምክር"
+  },
+  "categories": {
+    "Plumber": "የቧንቧ ሰራተኛ",
+    "Electrician": "ኤሌክትሪሺያን",
+    "Carpenter": "አናጺ",
+    "Cleaner": "የጽዳት ሰራተኛ",
+    "Painter": "ቀለም ቀቢ",
+    "Mason": "ግንበኛ",
+    "Gardener": "አትክልተኛ",
+    "Mechanic": "ሜካኒክ",
+    "All Services": "ሁሉም አገልግሎቶች"
+  },
+  "locations": {
+    "Addis Ababa": "አዲስ አበባ",
+    "Adama": "አዳማ",
+    "Bahir Dar": "ባህር ዳር",
+    "Hawassa": "ሀዋሳ",
+    "Gondar": "ጎንደር",
+    "Mekelle": "መቀሌ",
+    "Dire Dawa": "ድሬ ዳዋ",
+    "Jimma": "ጅማ",
+    "Bishoftu": "ቢሾፍቱ",
+    "Dessie": "ደሴ"
   }
 }

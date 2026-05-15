@@ -28,7 +28,15 @@ const CustomerMessages = () => {
     const [conversationId, setConversationId] = useState<string | null>(null);
     const [isSending, setIsSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const { jobs, notifications, jobsLoading, notificationsLoading } = useData();
+    const { 
+        jobs, 
+        refreshJobs, 
+        notifications, 
+        notificationsLoading,
+        jobsLoading,
+        reviews,
+        refreshReviews
+    } = useData();
     const navigate = useNavigate();
 
     // Prevent blocking UI flash during background context polling
@@ -763,7 +771,7 @@ const CustomerMessages = () => {
                                     <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em] text-center flex items-center justify-center gap-3">
                                         <span className="text-gradient">{t('common.project_journey')}</span>
                                     </h3>
-                                    {activeRequest?.status?.toLowerCase() === 'completed' && (
+                                    {activeRequest?.status?.toLowerCase() === 'completed' && !reviews.some(r => String(r.job) === String(activeRequest.id)) && (
                                         <button 
                                             onClick={() => setIsReviewModalOpen(true)}
                                             className="flex items-center gap-1.5 text-[9px] font-black text-amber-500 hover:text-amber-600 transition-colors uppercase tracking-widest"
@@ -975,6 +983,8 @@ const CustomerMessages = () => {
                 jobId={activeRequestId || ''}
                 professionalId={activeRequest?.professional || activeRequest?.assigned_to || ''}
                 onSuccess={() => {
+                    refreshJobs();
+                    refreshReviews();
                     alert("Thank you for your review!");
                 }}
             />

@@ -238,8 +238,10 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
                                 : 'bg-transparent border-slate-100 dark:border-slate-800/50 text-slate-500 dark:text-slate-400 hover:border-slate-200 dark:hover:border-slate-700'
                             }`}
                         >
-                            {lang === "English" ? t('common.english') || "English" : 
-                             lang === "Amharic" ? t('common.amharic') || "Amharic" : lang}
+                            {lang === "English" ? t('common.english') : 
+                             lang === "Amharic" ? t('common.amharic') : 
+                             lang === "Oromiffa" ? t('common.oromiffa') : 
+                             lang === "Tigrinya" ? t('common.tigrinya') : lang}
                         </button>
                     ))}
                 </div>

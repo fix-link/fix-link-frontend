@@ -20,11 +20,11 @@ const SearchResults = () => {
     const queryParams = new URLSearchParams(location.search);
     const serviceQuery = (queryParams.get("service") || "").toLowerCase();
     const locationQuery = (queryParams.get("location") || "").toLowerCase();
-
+    
     const [professionals, setProfessionals] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [lastLoadedSearch, setLastLoadedSearch] = useState("");
 
-    // Filter State
     const [priceMin, setPriceMin] = useState<number>(0);
     const [priceMax, setPriceMax] = useState<number>(10000);
     const [selectedRating, setSelectedRating] = useState<number>(0);
@@ -70,13 +70,20 @@ const SearchResults = () => {
                         return {
                             id: prof.id || prof.user_id || ud.id,
                             name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || t('common.anonymous_pro'),
-                            role: roleName,
+                            role: t(`categories.${categoryMap[prof.profession || ud.profession] || prof.profession || ud.profession}`, { defaultValue: categoryMap[prof.profession || ud.profession] || t('common.professional') }),
                             rating: prof.average_rating || prof.rating || 0,
                             reviews: prof.total_jobs_completed || prof.reviews_count || 0,
                             price: prof.hourly_rate || 0,
                             verified: prof.is_verified_professional || false,
+                            city: prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || ud.professional_detail?.city || '',
+                            subcity: prof.subcity || ud.subcity || prof.professional_detail?.subcity || prof.professional_profile?.subcity || ud.professional_detail?.subcity || '',
+                            location: (prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || prof.address || ud.address) 
+                                ? `${prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || prof.address || ud.address}${prof.subcity || ud.subcity || prof.professional_detail?.subcity || prof.professional_profile?.subcity || prof.neighborhood || ud.neighborhood ? ', ' + (prof.subcity || ud.subcity || prof.professional_detail?.subcity || prof.professional_profile?.subcity || prof.neighborhood || ud.neighborhood) : ''}`
+                                : 'Addis Ababa',
+                            searchLocation: (prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || prof.address || ud.address) 
+                                ? `${prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || prof.address || ud.address} ${prof.subcity || ud.subcity || prof.professional_detail?.subcity || prof.professional_profile?.subcity || prof.neighborhood || ud.neighborhood || ''} ${t(`locations.${prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || prof.address || ud.address}`, { defaultValue: '' })}`.toLowerCase()
+                                : 'addis ababa አዲስ አበባ',
                             image: getImageUrl(prof.profile_picture || ud.profile_picture),
-                            location: locationString,
                             experience: prof.years_of_experience > 5 ? t('common.senior') : prof.years_of_experience > 2 ? t('common.mid_level') : t('common.junior'),
                             availability: t('common.today'),
                             languages: [t('common.amharic'), t('common.english')]
@@ -85,17 +92,26 @@ const SearchResults = () => {
 
                 // Filter by service query if present
                 const filteredByService = serviceQuery 
-                    ? mapped.filter((p: any) => p.role.toLowerCase().includes(serviceQuery) || p.name.toLowerCase().includes(serviceQuery))
+                    ? mapped.filter((p: any) => {
+                        const localizedQuery = t(`categories.${serviceQuery}`, { defaultValue: serviceQuery }).toLowerCase();
+                        return p.role.toLowerCase().includes(serviceQuery.toLowerCase()) || 
+                               p.role.toLowerCase().includes(localizedQuery) ||
+                               p.name.toLowerCase().includes(serviceQuery.toLowerCase());
+                    })
                     : mapped;
 
                 setProfessionals(filteredByService);
+                setLastLoadedSearch(location.search);
                 setLoading(false);
             })
             .catch(err => {
                 console.error("Search fetch error:", err);
                 setLoading(false);
             });
-    }, [serviceQuery]);
+    }, [serviceQuery, location.search]);
+
+    // Force loading state if the URL search has changed but the data hasn't re-fetched yet
+    const isSearching = loading || lastLoadedSearch !== location.search;
 
     // Filter Logic
     const filteredProfessionals = professionals.filter((pro: any) => {
@@ -110,8 +126,14 @@ const SearchResults = () => {
         );
 
         const matchesLanguage = selectedLanguages.length === 0 || (pro.languages && pro.languages.some((lang: string) => selectedLanguages.includes(lang)));
+        
+        // Strict location filtering if locationQuery is provided
+        const matchesLocation = !locationQuery || 
+                                pro.searchLocation.includes(locationQuery.toLowerCase()) || 
+                                locationQuery.toLowerCase().includes(pro.city?.toLowerCase()) ||
+                                (pro.city && locationQuery.toLowerCase().includes(pro.city.toLowerCase()));
 
-        return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesLanguage;
+        return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesLanguage && matchesLocation;
     }).sort((a: any, b: any) => {
         if (sortBy === "rating") return b.rating - a.rating;
         if (sortBy === "reviews") return b.reviews - a.reviews;
@@ -122,8 +144,8 @@ const SearchResults = () => {
             return (expOrder[b.experience] || 0) - (expOrder[a.experience] || 0);
         }
         if (sortBy === "nearby" && locationQuery) {
-            const aMatch = a.location.toLowerCase().includes(locationQuery);
-            const bMatch = b.location.toLowerCase().includes(locationQuery);
+            const aMatch = a.searchLocation.includes(locationQuery.toLowerCase());
+            const bMatch = b.searchLocation.includes(locationQuery.toLowerCase());
             if (aMatch && !bMatch) return -1;
             if (!aMatch && bMatch) return 1;
         }
@@ -177,7 +199,7 @@ const SearchResults = () => {
                     <div className="space-y-2">
                         <h1 className="text-3xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white leading-tight">
                             {t('common.search_results_for')} <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan capitalize">
-                                {serviceQuery || t('common.every_task')}
+                                {t(`categories.${serviceQuery}`, { defaultValue: serviceQuery }) || t('common.every_task')}
                             </span> {locationQuery && <span>{t('common.in')} <span className="capitalize">{locationQuery}</span></span>}
                         </h1>
                         <div className="flex items-center gap-3">
@@ -272,7 +294,13 @@ const SearchResults = () => {
 
                     {/* RESULTS LIST */}
                     <div className="flex-1">
-                        {filteredProfessionals.length > 0 ? (
+                        {isSearching ? (
+                            <div className="flex flex-col items-center justify-center py-32 animate-in fade-in duration-500">
+                                <Loader2 className="w-12 h-12 text-primary animate-spin mb-6" />
+                                <h3 className="text-xl font-black text-slate-800 dark:text-white tracking-tight">{t('common.searching_pros')}</h3>
+                                <p className="text-slate-500 dark:text-slate-400 font-medium">{t('common.finding_experts_location')}</p>
+                            </div>
+                        ) : filteredProfessionals.length > 0 ? (
                             <div className={`grid grid-cols-1 sm:grid-cols-2 ${showFilters ? 'lg:grid-cols-2 xl:grid-cols-3' : 'lg:grid-cols-3 xl:grid-cols-4'} gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700`}>
                                 {filteredProfessionals.map((pro) => (
                                     <ProfessionalCard key={pro.id} pro={pro} />

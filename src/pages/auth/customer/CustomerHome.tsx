@@ -70,8 +70,8 @@ const CustomerHome = () => {
             const roleId = prof.profession || userData.profession;
             
             // Map location dynamically
-            const city = prof.city || userData.city || '';
-            const area = prof.subcity || userData.subcity || prof.neighborhood || userData.neighborhood || '';
+            const city = prof.city || userData.city || prof.professional_detail?.city || prof.professional_profile?.city || '';
+            const area = prof.subcity || userData.subcity || prof.professional_detail?.subcity || prof.professional_profile?.subcity || prof.neighborhood || userData.neighborhood || '';
             const locationString = city && area ? `${city}, ${area}` : city || area || 'Addis Ababa';
 
             // Map years_of_experience -> experience level label
@@ -80,8 +80,8 @@ const CustomerHome = () => {
 
             return {
               id: prof.id || prof.user_id || userData.id,
-              name: `${firstName} ${lastName}`.trim() || prof.username || userData.username || "Anonymous Professional",
-              role: categoryMap[roleId] || roleId || 'Professional',
+              name: `${firstName} ${lastName}`.trim() || prof.username || userData.username || t('common.anonymous_pro'),
+              role: t(`categories.${categoryMap[roleId] || roleId}`, { defaultValue: categoryMap[roleId] || roleId || t('common.professional') }),
               rating: prof.average_rating || prof.rating || 0,
               reviews: prof.total_jobs_completed || prof.reviews_count || 0,
               price: prof.hourly_rate || 0,
@@ -121,12 +121,12 @@ const CustomerHome = () => {
   // Derived filtered and sorted list
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortOptions = [
-    { value: "recommended", label: "Recommended", icon: Sparkles },
-    { value: "rating", label: "Top Rated", icon: Star },
-    { value: "reviews", label: "Most Jobs", icon: Briefcase },
-    { value: "experience", label: "Experienced", icon: TrendingUp },
-    { value: "price-low", label: "Price: Low to High", icon: ArrowUp },
-    { value: "price-high", label: "Price: High to Low", icon: ArrowDown },
+    { value: "recommended", label: t('common.recommended'), icon: Sparkles },
+    { value: "rating", label: t('common.top_rated'), icon: Star },
+    { value: "reviews", label: t('common.most_jobs'), icon: Briefcase },
+    { value: "experience", label: t('common.experienced'), icon: TrendingUp },
+    { value: "price-low", label: t('common.price_low_high'), icon: ArrowUp },
+    { value: "price-high", label: t('common.price_high_low'), icon: ArrowDown },
   ];
 
   const filteredProfessionals = professionals
@@ -203,7 +203,7 @@ const CustomerHome = () => {
               >
                 <ArrowUpDown size={18} className="text-slate-400" />
                 <span>
-                  {sortOptions.find(o => o.value === sortBy)?.label || "Sort Results"}
+                  {sortOptions.find(o => o.value === sortBy)?.label || t('common.sort_results')}
                 </span>
                 <ChevronDown size={18} className={`text-slate-400 transition-transform duration-300 ${isSortOpen ? 'rotate-180 text-primary' : ''}`} />
               </button>

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import CustomerNavbar from "./components/CustomerNavbar";
 import CustomerFooter from "./components/CustomerFooter";
 import { useAuth } from "../../../context/AuthContext";
+import { useData } from "../../../context/DataContext";
 import { listJobs, updateJobStatus } from "../../../api/jobs.api";
 import { Link } from "react-router-dom";
 import {
@@ -29,6 +30,7 @@ interface Job {
 const Bookings = () => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { reviews, refreshReviews, refreshJobs } = useData();
   const [bookings, setBookings] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -246,7 +248,7 @@ const Bookings = () => {
                           <Calendar size={12} />
                           {new Date(booking.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         </div>
-                        {['completed'].includes(booking.status.toLowerCase()) && (
+                        {['completed'].includes(booking.status.toLowerCase()) && !reviews.some(r => String(r.job) === String(booking.id)) && (
                           <button
                             onClick={(e) => {
                                 e.preventDefault();
@@ -379,7 +381,8 @@ const Bookings = () => {
           jobId={selectedJobForReview?.id || ''}
           professionalId={selectedJobForReview?.assigned_to || ''}
           onSuccess={() => {
-            alert(t('common.review_thanks'));
+            refreshJobs();
+            refreshReviews();
           }}
         />
       </main>

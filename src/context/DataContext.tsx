@@ -11,6 +11,8 @@ interface DataContextType {
     notificationsLoading: boolean;
     refreshJobs: () => Promise<void>;
     refreshNotifications: () => Promise<void>;
+    reviews: any[];
+    refreshReviews: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -19,6 +21,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const { user } = useAuth();
     const [jobs, setJobs] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
+    const [reviews, setReviews] = useState<any[]>([]);
     
     // Use a flag to track if we've EVER completed a fetch to prevent flashing "0"
     const [hasInitiallyFetched, setHasInitiallyFetched] = useState(false);
@@ -29,6 +32,22 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const isLoadingJobs = jobsLoading || (!!user?.id && !hasInitiallyFetched);
     const isLoadingNotifications = notificationsLoading || (!!user?.id && !hasInitiallyFetched);
+
+    const refreshReviews = useCallback(async () => {
+        if (!user?.id) {
+            setReviews([]);
+            return;
+        }
+
+        try {
+            const { getReviews } = await import("../api/auth.api");
+            const data = await getReviews();
+            setReviews(Array.isArray(data) ? data : (data?.results || []));
+        } catch (error) {
+            console.error("DataContext: refreshReviews failed", error);
+            setReviews([]);
+        }
+    }, [user?.id]);
 
     const refreshJobs = useCallback(async () => {
         if (!user?.id) {
@@ -75,14 +94,16 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         if (user?.id) {
             refreshJobs();
             refreshNotifications();
+            refreshReviews();
 
             const interval = setInterval(() => {
                 refreshJobs();
                 refreshNotifications();
+                refreshReviews();
             }, 30000); // Poll every 30s
             return () => clearInterval(interval);
         }
-    }, [user?.id, refreshJobs, refreshNotifications]);
+    }, [user?.id, refreshJobs, refreshNotifications, refreshReviews]);
 
     // Real-time notifications (WebSocket)
     useEffect(() => {
@@ -111,6 +132,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         setJobs([]);
         setNotifications([]);
+        setReviews([]);
         setJobsLoading(false);
         setNotificationsLoading(false);
     }, [user?.id]);
@@ -124,6 +146,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 notificationsLoading: isLoadingNotifications,
                 refreshJobs,
                 refreshNotifications,
+                reviews,
+                refreshReviews,
             }}
         >
             {children}
