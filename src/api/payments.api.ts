@@ -39,25 +39,43 @@ export const initializePayment = async (
   }
 ): Promise<PaymentInitializationResponse> => {
   try {
+    // Explicitly read token from storage to guarantee it's attached
+    // (same defensive pattern used across jobs.api.ts)
+    const token = localStorage.getItem("access_token");
+    if (!token || token === "undefined" || token === "null") {
+      throw Object.assign(new Error("Session expired. Please log in again."), { isAuthError: true });
+    }
+
+    const sanitizeChapaText = (text: string) => {
+      return (text || "").replace(/[^a-zA-Z0-9\-_ \.]/g, '').trim();
+    };
+
     const payload = {
       job_id: jobId,
-      amount: String(details?.amount || "0"),
+      amount: Number(details?.amount || 0).toFixed(2),
       currency: details?.currency || "ETB",
       phone_number: accountNumber || "",
       payment_method: details?.payment_method || "chapa",
       callback_url: window.location.origin + "/customer/payment-success/" + jobId,
       return_url: window.location.origin + "/customer/payment-success/" + jobId,
-      description: details?.description || "Payment for job " + jobId,
-      title: (details?.title || "Fix-Link").substring(0, 16),
+      description: sanitizeChapaText(details?.description || "Payment for job " + jobId),
+      title: sanitizeChapaText(details?.title || "Fix-Link").substring(0, 16),
       logo_url: "https://fixlink.app/logo.png"
     };
     
-    // The API should automatically handle returning checkout references
-    const response = await api.post("/payments/initialize/", payload);
+    const response = await api.post("/payments/initialize/", payload, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
     return response.data;
   } catch (error: any) {
     console.error("initializePayment: failed for job", jobId, error?.response?.data || error?.message || error);
-    throw error; // throw the raw error so callers can inspect error.response.data
+    // Provide a clearer error for 401 so users know their session expired
+    if (error?.response?.status === 401 || error?.isAuthError) {
+      const authErr = new Error("Your session has expired. Please log out and log back in to complete booking.") as any;
+      authErr.response = error?.response;
+      throw authErr;
+    }
+    throw error;
   }
 };
 

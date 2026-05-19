@@ -11,11 +11,13 @@ import {
     Star, 
     Rocket, 
     Bell,
-    LogOut
+    LogOut,
+    ClipboardList
 } from 'lucide-react';
 
 const navItems = [
     { to: "/professional/home",          icon: LayoutDashboard,  label: "dashboard" },
+    { to: "/professional/job-board",     icon: ClipboardList,    label: "job_board" },
     { to: "/professional/jobs",           icon: Briefcase,        label: "jobs" },
     { to: "/professional/messages",       icon: MessageSquare,    label: "messages" },
     { to: "/professional/earnings",       icon: CreditCard,       label: "earnings" },

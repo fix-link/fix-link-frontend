@@ -22,6 +22,9 @@
     "filters": "Filters",
     "jobs": "Jobs",
     "earnings": "Earnings",
+    "job_board": "Job Board",
+    "post_a_job": "Post a Job",
+    "my_jobs": "My Jobs",
     "profile": "Profile",
     "reviews": "Reviews",
     "promote": "Promote",
@@ -401,7 +404,11 @@
     "gateway_synchronization": "Gateway Synchronization",
     "chapa_redirect_info": "Redirecting to Chapa's encrypted financial cloud. External debit/bank authentication required.",
     "searching_pros": "Searching for Professionals",
-    "finding_experts_location": "Finding the best experts in your location..."
+    "finding_experts_location": "Finding the best experts in your location...",
+    "recent_posts": "Recent Posts",
+    "budget_high_low": "Budget: High to Low",
+    "sort_by": "Sort By",
+    "all_categories": "All Categories"
   },
   "professional": {
     "jobs_completed": "Jobs Completed",
@@ -422,7 +429,12 @@
     "Mason": "Mason",
     "Gardener": "Gardener",
     "Mechanic": "Mechanic",
-    "All Services": "All Services"
+    "All Services": "All Services",
+    "Carpentry": "Carpentry",
+    "Cleaning": "Cleaning",
+    "Electrical": "Electrical",
+    "Painting": "Painting",
+    "Plumbing": "Plumbing"
   },
   "locations": {
     "Addis Ababa": "Addis Ababa",

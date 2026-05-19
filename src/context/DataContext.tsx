@@ -58,7 +58,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         console.log("DataContext: refreshJobs starting");
         setJobsLoading(true);
         try {
-            const data = await listJobs();
+            const data = await listJobs(true);
             setJobs(Array.isArray(data) ? data : []);
             setHasInitiallyFetched(true);
             console.log("DataContext: refreshJobs completed, jobs:", data?.length);

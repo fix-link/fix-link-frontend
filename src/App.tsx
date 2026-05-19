@@ -10,8 +10,11 @@ import CustomerHome from "./pages/auth/customer/CustomerHome";
 import SearchResults from "./pages/auth/customer/SearchResults";
 import ProfessionalProfile from "./pages/auth/customer/ProfessionalProfile";
 import CustomerMessages from "./pages/auth/customer/CustomerMessages";
+import CustomerPostJob from "./pages/auth/customer/CustomerPostJob";
+import CustomerJobs from "./pages/auth/customer/CustomerJobs";
 import ProfessionalHome from "./pages/auth/professional/ProfessionalHome";
 import ProfessionalMessages from "./pages/auth/professional/ProfessionalMessages";
+import ProfessionalJobBoard from "./pages/auth/professional/ProfessionalJobBoard";
 import ProfessionalJobs from "./pages/auth/professional/ProfessionalJobs";
 import ProfessionalEarnings from "./pages/auth/professional/ProfessionalEarnings";
 import ProfessionalReviews from "./pages/auth/professional/ProfessionalReviews";
@@ -117,6 +120,16 @@ function App() {
             <Bookings />
           </ProtectedRoute>
         } />
+        <Route path="/customer/post-job" element={
+          <ProtectedRoute role="customer">
+            <CustomerPostJob />
+          </ProtectedRoute>
+        } />
+        <Route path="/customer/jobs" element={
+          <ProtectedRoute role="customer">
+            <CustomerJobs />
+          </ProtectedRoute>
+        } />
 
         <Route
           path="/professional/home"
@@ -139,6 +152,14 @@ function App() {
           element={
             <ProtectedRoute role="professional">
               <ProfessionalJobs />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/professional/job-board"
+          element={
+            <ProtectedRoute role="professional">
+              <ProfessionalJobBoard />
             </ProtectedRoute>
           }
         />

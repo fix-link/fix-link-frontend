@@ -10,7 +10,7 @@ import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../../../../components/LanguageSwitcher";
 import {
   ChevronDown, MapPin, Navigation, ArrowRight, SearchX, Search,
-  LayoutDashboard, MessageSquare, Calendar, Bell, BellOff, Clock, Settings, LogOut, Sparkles
+  LayoutDashboard, MessageSquare, Calendar, Bell, BellOff, Clock, Settings, LogOut, Sparkles, PlusCircle, Briefcase
 } from "lucide-react";
 
 const LOCATIONS = [
@@ -112,7 +112,7 @@ const CustomerNavbar = () => {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-[100] flex items-center justify-between whitespace-nowrap border-b border-white/20 dark:border-slate-800/50 px-4 sm:px-6 lg:px-10 py-3 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl shadow-sm">
+    <nav className="sticky top-0 z-[100] flex items-center justify-between border-b border-white/20 dark:border-slate-800/50 px-4 sm:px-6 lg:px-10 py-3 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl shadow-sm">
       <div className="flex items-center gap-4 text-slate-900 dark:text-white">
         {/* Logo */}
         <div className="flex items-center gap-2 shrink-0 cursor-pointer group" onClick={() => navigate('/')}>
@@ -120,7 +120,7 @@ const CustomerNavbar = () => {
         </div>
       </div>
 
-      <div className="flex-1 max-w-3xl mx-8 hidden lg:block relative z-[100]">
+      <div className="flex-1 max-w-2xl mx-4 hidden lg:block relative z-[100]">
         <div className="flex h-[52px] w-full items-center rounded-[26px] bg-white dark:bg-slate-900/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-slate-200 dark:border-slate-700/50 hover:shadow-[0_8px_30px_-4px_rgba(var(--primary-rgb),0.2)] focus-within:shadow-[0_0_0_4px_rgba(var(--primary-rgb),0.15)] focus-within:border-primary transition-all duration-500 pr-2 pl-3">
           
           <div className="relative flex-[0.35] hidden sm:block h-full group">
@@ -219,18 +219,22 @@ const CustomerNavbar = () => {
       </div>
 
       {/* Right Actions */}
-      <div className="flex flex-1 justify-end gap-1 sm:gap-3 items-center">
-        <Link to="/customer/home" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-4 py-2 rounded-xl">
+      <div className="flex flex-1 justify-end gap-1 sm:gap-2 items-center">
+        <Link to="/customer/home" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-3 py-2 rounded-xl" title={t('common.dashboard')}>
           <LayoutDashboard size={18} />
-          <span>{t('common.dashboard')}</span>
+          <span className="hidden xl:inline">{t('common.dashboard')}</span>
         </Link>
-        <Link to="/customer/messages" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-4 py-2 rounded-xl">
+        <Link to="/customer/jobs" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-3 py-2 rounded-xl" title="Jobs">
+          <Briefcase size={18} />
+          <span className="hidden xl:inline">Jobs</span>
+        </Link>
+        <Link to="/customer/messages" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-3 py-2 rounded-xl" title={t('common.messages')}>
           <MessageSquare size={18} />
-          <span>{t('common.messages')}</span>
+          <span className="hidden xl:inline">{t('common.messages')}</span>
         </Link>
-        <Link to="/customer/bookings" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-4 py-2 rounded-xl">
+        <Link to="/customer/bookings" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-3 py-2 rounded-xl" title={t('common.bookings')}>
           <Calendar size={18} />
-          <span>{t('common.bookings')}</span>
+          <span className="hidden xl:inline">{t('common.bookings')}</span>
         </Link>
         <LanguageSwitcher />
 

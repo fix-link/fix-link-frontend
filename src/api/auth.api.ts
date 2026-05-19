@@ -15,11 +15,12 @@ export const api = axios.create({
 /**
  * Helper to get full image URL from backend path
  */
-export const getImageUrl = (path: string | null | undefined): string => {
-  if (!path) return "";
+export const getImageUrl = (path: any): string => {
+  if (!path || typeof path !== "string") return "";
   if (path.startsWith("http")) return path;
   return `${API_URL.replace("/api", "")}${path.startsWith("/") ? "" : "/"}${path}`;
 };
+
 
 // Add interceptor to include token if available
 api.interceptors.request.use((config) => {
@@ -563,6 +564,15 @@ export const addPortfolioItem = async (file: File) => {
 
 export const deletePortfolioItem = async (portfolioId: string) => {
   const response = await api.delete(`/portfolios/${portfolioId}/`);
+  return response.data;
+};
+
+/**
+ * Fetch a professional's public profile details (including reviews, services, portfolio)
+ * Endpoint: GET /users/{id}/professional-profile/
+ */
+export const getProfessionalProfile = async (id: string) => {
+  const response = await api.get(`/users/${id}/professional-profile/`);
   return response.data;
 };
 

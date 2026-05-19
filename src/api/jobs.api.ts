@@ -25,23 +25,33 @@ export const createJob = async (jobData: any) => {
                 fd.append("images", photo);
             });
 
+            const token = localStorage.getItem("access_token");
             console.log("createJob: Sending FormData...");
-            const response = await api.post("/jobs/", fd);
+            const response = await api.post("/jobs/", fd, {
+                headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" }
+            });
+            clearJobsCache();
             return response.data;
         }
 
         // JSON fallback
-        const payload = {
+        const payload: any = {
             title: jobData.title,
             description: jobData.description,
-            service: jobData.service,
             address: jobData.address,
-            scheduled_at: jobData.scheduled_at,
-            budget: jobData.budget,
-            assigned_to: jobData.assigned_to
         };
+        
+        if (jobData.service) payload.service = jobData.service;
+        if (jobData.scheduled_at) payload.scheduled_at = jobData.scheduled_at;
+        if (jobData.budget) payload.budget = Number(jobData.budget);
+        if (jobData.assigned_to) payload.assigned_to = jobData.assigned_to;
+
         console.log("createJob: Sending JSON payload:", payload);
-        const response = await api.post("/jobs/", payload);
+        const token = localStorage.getItem("access_token");
+        const response = await api.post("/jobs/", payload, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        clearJobsCache();
         return response.data;
     } catch (error: any) {
         // ... rest of error handling
@@ -68,12 +78,17 @@ let jobsCacheTime = 0;
 let categoriesCache: any = null;
 let categoriesCacheTime = 0;
 
+export const clearJobsCache = () => {
+    jobsCache = null;
+    jobsCacheTime = 0;
+};
+
 /**
  * List jobs
  */
-export const listJobs = async () => {
+export const listJobs = async (bypassCache: boolean = false) => {
     // 30 second cache to avoid redundant full-list fetches
-    if (jobsCache && (Date.now() - jobsCacheTime < 30000)) {
+    if (!bypassCache && jobsCache && (Date.now() - jobsCacheTime < 30000)) {
         return jobsCache;
     }
     const response = await api.get("/jobs/");
@@ -122,11 +137,14 @@ export const getJobBids = async (jobId?: string) => {
  */
 export const placeBid = async (jobId: string, amount: number, message?: string) => {
     try {
-        const response = await api.post(`/job-bids/`, { 
-            job: jobId,
+        const token = localStorage.getItem("access_token");
+        const response = await api.post(`/jobs/${jobId}/bids/`, { 
             amount: amount,
             message: message 
+        }, {
+            headers: { Authorization: `Bearer ${token}` }
         });
+        clearJobsCache();
         return response.data;
     } catch (error: any) {
         throw new Error(parseError(error));
@@ -139,7 +157,28 @@ export const placeBid = async (jobId: string, amount: number, message?: string) 
  */
 export const acceptBid = async (bidId: string) => {
     try {
-        const response = await api.patch(`/job-bids/${bidId}/`, { status: "accepted" });
+        const token = localStorage.getItem("access_token");
+        const response = await api.patch(`/job-bids/${bidId}/`, { status: "accepted" }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        clearJobsCache();
+        return response.data;
+    } catch (error: any) {
+        throw new Error(parseError(error));
+    }
+};
+
+/**
+ * Accept a job bid via the backend's custom action
+ * POST /api/jobs/{jobId}/accept-bid/
+ */
+export const acceptJobBid = async (jobId: string, bidId: string) => {
+    try {
+        const token = localStorage.getItem("access_token");
+        const response = await api.post(`/jobs/${jobId}/accept-bid/`, { bid_id: bidId }, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        clearJobsCache();
         return response.data;
     } catch (error: any) {
         throw new Error(parseError(error));
@@ -155,6 +194,7 @@ export const assignProfessional = async (jobId: string, professionalId: string) 
         const response = await api.patch(`/jobs/${jobId}/`, { 
             assigned_to: professionalId 
         });
+        clearJobsCache();
         return response.data;
     } catch (error: any) {
         throw new Error(parseError(error));
@@ -189,12 +229,14 @@ export const updateJobStatus = async (jobId: string, status: string) => {
         try {
             const res = await api.post(`/jobs/${jobId}/${action}/`);
             console.log(`updateJobStatus: POST /${action}/ success`, res.data);
+            clearJobsCache();
             return res.data;
         } catch (e1: any) {
             // Special fallback for 'accepted': try accept-bid/ if accept-assigned/ fails
             if (status === 'accepted') {
                 try {
                     const res = await api.post(`/jobs/${jobId}/accept-bid/`);
+                    clearJobsCache();
                     return res.data;
                 } catch (e2: any) {} // let it fall through to generic fallback
             }
@@ -220,5 +262,18 @@ export const updateJobStatus = async (jobId: string, status: string) => {
         }
         console.error(`updateJobStatus: all methods failed for ${status}`, e?.response?.data);
         throw new Error(msg || `Failed to update job to ${status}`);
+    }
+};
+
+/**
+ * Fetch available/open jobs for discovery (Professional Dashboard)
+ * Endpoint: GET /jobs/discovery/
+ */
+export const getDiscoveryJobs = async () => {
+    try {
+        const response = await api.get("/jobs/discovery/");
+        return response.data;
+    } catch (error: any) {
+        throw new Error(error?.response?.data?.detail || error?.message || "Failed to fetch discovery jobs");
     }
 };

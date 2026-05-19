@@ -26,6 +26,7 @@ import {
   addPortfolioItem,
   createReview,
   getReviews,
+  getProfessionalProfile,
 } from "../../../api/auth.api";
 import { getServiceCategories, listJobs } from "../../../api/jobs.api";
 
@@ -48,13 +49,13 @@ const Stars = ({ count, className = "" }: { count: number; className?: string })
   );
 };
 
+const isUUID = (str: any) => typeof str === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 const ProfessionalProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, updateUser, isLoading: authLoading } = useAuth();
-  const [isLoading, setIsLoading] = useState(
-    !window.location.pathname.startsWith("/professional"),
-  );
+  const { user, updateUser } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
   const [isEstimateModalOpen, setIsEstimateModalOpen] = useState(false);
 
   // Check if we are in professional management mode
@@ -184,36 +185,74 @@ const ProfessionalProfile = () => {
     "December",
   ];
 
-  const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-  const isGeneric = (str: string) => !str || isUUID(str) || str === "Professional Specialist" || str === "Service Professional" || str === "Member";
+  const isUUID = (str: any) => typeof str === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  const isGeneric = (str: any) => !str || isUUID(str) || str === "Professional Specialist" || str === "Service Professional" || str === "Member";
 
   const applyData = (userData: any, catList: any[]) => {
-    // 1. Role resolution (Resolved first to be used as name fallback if needed)
-    let resolvedRole = userData.profession_name || "";
-    if (isGeneric(resolvedRole)) {
-      const candidate = userData.profession;
-      const sc = userData.service_categories;
-      const primaryId = sc && Array.isArray(sc) && sc.length > 0 ? sc[0] : candidate;
+    if (!userData) return;
+    const userObj = userData.user || userData || {};
+    
+    // 1. Role & Service ID resolution
+    let resolvedRole = userObj.profession_name || "";
+    let categoryUUID = "";
 
-      if (primaryId && !isUUID(primaryId)) {
-        resolvedRole = primaryId;
-      } else if (primaryId && isUUID(primaryId)) {
+    const candidate = userObj.profession || userData.profession;
+    const sc = userData.service_categories || userObj.service_categories;
+    const primaryId = sc && Array.isArray(sc) && sc.length > 0 ? sc[0] : candidate;
+
+    if (primaryId) {
+      if (typeof primaryId === "object" && primaryId !== null) {
+        resolvedRole = primaryId.name || resolvedRole;
+        categoryUUID = primaryId.id || "";
+      } else if (isUUID(primaryId)) {
+        categoryUUID = primaryId;
         const matched = catList.find((c: any) => c.id === primaryId);
         if (matched) {
-            resolvedRole = matched.name;
+          resolvedRole = matched.name;
+        }
+      } else if (typeof primaryId === "string") {
+        resolvedRole = primaryId;
+      }
+    }
+
+    // If resolvedRole is still generic/UUID, try to fallback or clean it up
+    if (isGeneric(resolvedRole)) {
+      if (categoryUUID) {
+        const matched = catList.find((c: any) => c.id === categoryUUID);
+        if (matched) {
+          resolvedRole = matched.name;
         } else {
-            resolvedRole = ""; // DO NOT set it to the UUID
+          resolvedRole = "Service Professional";
+        }
+      } else {
+        resolvedRole = "Service Professional";
+      }
+    }
+
+    // Now resolve the actual Service instance ID matching the categoryUUID
+    let resolvedServiceId = "";
+    if (categoryUUID) {
+      const servicesList = userData.services || [];
+      if (Array.isArray(servicesList) && servicesList.length > 0) {
+        const match = servicesList.find((s: any) => {
+          const sCatId = s.category && typeof s.category === "object" ? s.category.id : s.category;
+          return String(sCatId) === String(categoryUUID);
+        });
+        if (match) {
+          resolvedServiceId = match.id;
         }
       }
     }
+
     const finalRole = resolvedRole || "Service Professional";
     setProfileRole(finalRole);
+    setProfileServiceId(resolvedServiceId);
 
     // 2. Name resolution - strictly filter out UUIDs from ALL possible name fields
-    const rawFirst = userData.first_name || "";
-    const rawLast = userData.last_name || "";
-    const rawDisplayName = userData.name || "";
-    const rawUsername = userData.username || "";
+    const rawFirst = userObj.first_name || "";
+    const rawLast = userObj.last_name || "";
+    const rawDisplayName = userObj.name || "";
+    const rawUsername = userObj.username || "";
 
     const first = isUUID(rawFirst) ? "" : rawFirst;
     const last = isUUID(rawLast) ? "" : rawLast;
@@ -226,37 +265,58 @@ const ProfessionalProfile = () => {
     const finalName = rawName || usernameField || (!isGeneric(finalRole) ? finalRole : "Service Professional");
     setProfileName(finalName);
 
-    setProfileAbout(userData.bio || "");
-    setProfileSkills(userData.skills || "");
-    setProfileExperience(userData.years_of_experience?.toString() || "0");
+    setProfileAbout(userObj.bio || "");
+    const rawSkills = userData.skills || userObj.skills;
+    setProfileSkills(Array.isArray(rawSkills) ? rawSkills.join(", ") : (rawSkills ? String(rawSkills) : ""));
+    setProfileExperience(userObj.years_of_experience?.toString() || "0");
     
-    const city = userData.city || "";
-    const area = userData.subcity || userData.neighborhood || "";
+    const city = userData.city || userObj.city || "";
+    const area = userData.subcity || userObj.subcity || userData.neighborhood || userObj.neighborhood || "";
     setProfileLocation(city && area ? `${city}, ${area}` : city || area || "Addis Ababa");
 
-    setProfilePhone(userData.phonenumber || userData.phone || "");
-    setProfileImage(getImageUrl(userData.profile_picture || userData.profilePhoto));
-    setProfileLanguages(userData.languages || ["Amharic", "English"]);
-    setProfilePortfolio(userData.portfolio || []);
-    setProfileRating(userData.average_rating || userData.rating || 0);
-    setProfileReviewsCount(userData.total_jobs_completed || userData.reviews_count || 0);
-    setProfilePrice(userData.hourly_rate || userData.base_price || 0);
+    setProfilePhone(userObj.phonenumber || userObj.phone || "");
+    setProfileImage(getImageUrl(userData.profile_photo_url || userObj.profile_picture || userObj.profilePhoto));
+    const rawLanguages = userObj.languages;
+    setProfileLanguages(Array.isArray(rawLanguages) ? rawLanguages : ["Amharic", "English"]);
+    
+    const rawPortfolio = userData.portfolio_files || userData.portfolio;
+    setProfilePortfolio(Array.isArray(rawPortfolio) ? rawPortfolio : []);
+    
+    setProfileRating(userObj.average_rating || userObj.rating || 0);
+    setProfileReviewsCount(userObj.total_jobs_completed || userObj.reviews_count || 0);
+    setProfilePrice(userData.hourly_rate || userData.base_price || userObj.hourly_rate || userObj.base_price || 0);
 
-    if (userData.available_days) {
-      setAvailableDays(userData.available_days);
+    if (userObj.available_days) {
+      setAvailableDays(userObj.available_days);
     }
 
+    const rawReviews = userData.reviews;
+    setRealReviews(Array.isArray(rawReviews) ? rawReviews : []);
+
     // Capture the Professional Detail ID (Integer) for reviews/calendar
-    const resolvedProId = userData.professional_detail?.id || userData.professional_id || (typeof userData.id === 'number' ? userData.id : null);
+    const resolvedProId = userData.id || userData.professional_detail?.id || userData.professional_id || (typeof userObj.id === 'number' ? userObj.id : null);
     setProDetailId(resolvedProId);
   };
 
   // Use effect to initialize or update data
   useEffect(() => {
+    let isMounted = true;
+
+    // 10-second safety net: if something goes wrong, stop the spinner
+    const timeoutId = setTimeout(() => {
+      if (isMounted) {
+        console.warn("ProfessionalProfile: fetch timed out after 10s");
+        setIsLoading(false);
+      }
+    }, 10000);
+
     const fetchProfileData = async () => {
       const targetId = isProView ? ((user as any)?.user?.id || user?.id) : id;
       if (!targetId) {
-        setIsLoading(false);
+        if (!isProView) {
+          if (isMounted) setIsLoading(false);
+          clearTimeout(timeoutId);
+        }
         return;
       }
 
@@ -265,36 +325,42 @@ const ProfessionalProfile = () => {
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          applyData(parsed, []); // Apply cached data immediately
+          if (isMounted) {
+            applyData(parsed, []);
+            setIsLoading(false);
+            setIsSyncing(true);
+          }
         } catch (e) {
           console.warn("ProfessionalProfile: Cache parse fail", e);
         }
       }
 
-      setIsLoading(!cached);
-      setIsSyncing(!!cached);
-      
       try {
         const start = new Date(calendarView.year, calendarView.month, 1).toISOString().split('T')[0];
         const end = new Date(calendarView.year, calendarView.month + 1, 0).toISOString().split('T')[0];
 
-        // 2. Fetch fresh user data (Critical)
-        const freshUser = await getUserDetails(targetId);
-        
-        // 3. Fetch categories (usually cached in api)
+        // 2. Fetch fresh data from API
+        const freshUser = isProView ? await getUserDetails(targetId) : await getProfessionalProfile(targetId);
+
+        if (!isMounted) return;
+
+        // 3. Fetch categories
         const categoriesData = await getServiceCategories().catch(() => []);
         const catList = Array.isArray(categoriesData) ? categoriesData : (categoriesData as any)?.results || [];
-        setServiceCategories(catList);
 
-        // 4. Update UI with fresh data
+        if (!isMounted) return;
+
+        setServiceCategories(catList);
         applyData(freshUser, catList);
         localStorage.setItem(`prof_profile_${targetId}`, JSON.stringify(freshUser));
-        setIsLoading(false); 
-        setIsSyncing(false); 
+        setIsLoading(false);
+        setIsSyncing(false);
+        clearTimeout(timeoutId);
 
-        // 5. Fetch calendar in background (Non-blocking)
+        // 4. Fetch calendar in background (non-blocking)
         getCalendar(targetId, start, end)
           .then(calendarData => {
+            if (!isMounted) return;
             if (calendarData) {
               setBlockedDates(calendarData.blocked_dates || []);
               setJobDates(calendarData.booked_dates || []);
@@ -303,13 +369,22 @@ const ProfessionalProfile = () => {
           .catch(err => console.warn("ProfessionalProfile: Background calendar fetch failed", err));
 
       } catch (error) {
-        console.error("Failed to fetch professional details:", error);
-        setIsLoading(false);
+        console.error("ProfessionalProfile: Failed to fetch:", error);
+        if (isMounted) {
+          setIsLoading(false);
+          setIsSyncing(false);
+        }
+        clearTimeout(timeoutId);
       }
     };
 
     fetchProfileData();
-  }, [isProView, user, id]);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, [isProView, user?.id, id]);
 
   // Check if there is an accepted job between this customer and this professional
   // AND fetch all jobs for this professional to populate the calendar
@@ -319,7 +394,8 @@ const ProfessionalProfile = () => {
       if (!targetId) return;
 
       try {
-        const allJobs = await listJobs();
+        const rawJobs = await listJobs();
+        const allJobs = Array.isArray(rawJobs) ? rawJobs : [];
         const acceptedStatuses = ["accepted", "assigned", "done", "completed"];
 
         // 1. Check relationship with current user (if customer)
@@ -620,7 +696,7 @@ const ProfessionalProfile = () => {
     reviews: [], // Using realReviews state in the JSX instead of this hardcoded list
   };
 
-  if (isLoading || authLoading) {
+  if (isLoading) {
     return (
       <div className="flex h-screen w-full flex-col bg-background-light dark:bg-background-dark">
         {!isProView ? <CustomerNavbar /> : <Header />}
@@ -629,6 +705,7 @@ const ProfessionalProfile = () => {
           <p className="text-text-secondary dark:text-gray-400 font-medium">
             Loading professional profile...
           </p>
+          <p className="text-xs text-slate-400 mt-2">This may take a moment</p>
         </div>
       </div>
     );
@@ -786,8 +863,8 @@ const ProfessionalProfile = () => {
                               type="text"
                               value={profileName}
                               onChange={(e) => {
-                                const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
-                                if (!isUUID(e.target.value)) setProfileName(e.target.value);
+                                const checkUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+                                if (!checkUUID(e.target.value)) setProfileName(e.target.value);
                               }}
                               className="text-4xl font-black tracking-tight bg-slate-50/50 dark:bg-slate-800/30 backdrop-blur-xl border-2 border-primary rounded-2xl px-6 py-3 outline-none text-slate-900 dark:text-white shadow-inner w-full max-w-md"
                             />
@@ -797,7 +874,7 @@ const ProfessionalProfile = () => {
                                     <div className="h-10 w-64 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse"></div>
                                 ) : (
                                     <h1 className="text-3xl md:text-4xl font-black tracking-tight text-slate-900 dark:text-white animate-fade-in">
-                                      {isUUID(profileName) ? "Service Professional" : (profileName || "Service Professional")}
+                                      {(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(profileName)) ? "Service Professional" : (profileName || "Service Professional")}
                                     </h1>
                                 )}
                             </div>

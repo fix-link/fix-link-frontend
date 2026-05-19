@@ -401,7 +401,11 @@
     "gateway_synchronization": "ጌትዌይ ማመሳሰያ",
     "chapa_redirect_info": "ወደ Chapa የተመሰጠረ የፋይናንስ ክላውድ እየተላኩ ነው። ውጫዊ የደቢት/ባንክ ማረጋገጫ ያስፈልጋል።",
     "searching_pros": "ባለሙያዎችን በመፈለግ ላይ",
-    "finding_experts_location": "በአካባቢዎ ያሉ ምርጥ ባለሙያዎችን በመፈለግ ላይ..."
+    "finding_experts_location": "በአካባቢዎ ያሉ ምርጥ ባለሙያዎችን በመፈለግ ላይ...",
+    "recent_posts": "የቅርብ ጊዜ ልጥፎች",
+    "budget_high_low": "በጀት፡ ከከፍተኛ ወደ ዝቅተኛ",
+    "sort_by": "ደርድር",
+    "all_categories": "ሁሉም ምድቦች"
   },
   "professional": {
     "jobs_completed": "የተጠናቀቁ ስራዎች",
@@ -422,7 +426,12 @@
     "Mason": "ግንበኛ",
     "Gardener": "አትክልተኛ",
     "Mechanic": "ሜካኒክ",
-    "All Services": "ሁሉም አገልግሎቶች"
+    "All Services": "ሁሉም አገልግሎቶች",
+    "Carpentry": "የአናጺነት ስራ",
+    "Cleaning": "የጽዳት ስራ",
+    "Electrical": "የኤሌክትሪክ ስራ",
+    "Painting": "የቀለም ቅባት ስራ",
+    "Plumbing": "የቧንቧ ስራ"
   },
   "locations": {
     "Addis Ababa": "አዲስ አበባ",

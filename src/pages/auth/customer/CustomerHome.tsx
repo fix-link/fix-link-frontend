@@ -18,7 +18,7 @@ const CustomerHome = () => {
     console.log("CustomerHome: Fetching professionals and categories...");
     
     // 1. Try to load from cache for instant UI
-    const cached = localStorage.getItem('cached_professionals');
+    const cached = localStorage.getItem('cached_professionals_v2');
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
@@ -79,7 +79,7 @@ const CustomerHome = () => {
             const experienceLevel = yoe >= 5 ? 'Senior' : yoe >= 3 ? 'Mid-level' : 'Junior';
 
             return {
-              id: prof.id || prof.user_id || userData.id,
+              id: userData.id || prof.user_id || (typeof prof.user === 'string' ? prof.user : null) || prof.id,
               name: `${firstName} ${lastName}`.trim() || prof.username || userData.username || t('common.anonymous_pro'),
               role: t(`categories.${categoryMap[roleId] || roleId}`, { defaultValue: categoryMap[roleId] || roleId || t('common.professional') }),
               rating: prof.average_rating || prof.rating || 0,
@@ -97,7 +97,7 @@ const CustomerHome = () => {
 
         setProfessionals(verifiedProfessionals);
         // Update cache for next time
-        localStorage.setItem('cached_professionals', JSON.stringify(verifiedProfessionals));
+        localStorage.setItem('cached_professionals_v2', JSON.stringify(verifiedProfessionals));
         setLoading(false);
       })
       .catch((err) => {

@@ -68,7 +68,7 @@ const SearchResults = () => {
                         const locationString = city && area ? `${city}, ${area}` : city || area || 'Addis Ababa';
 
                         return {
-                            id: prof.id || prof.user_id || ud.id,
+                            id: ud.id || prof.user_id || (typeof prof.user === 'string' ? prof.user : null) || prof.id,
                             name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || t('common.anonymous_pro'),
                             role: t(`categories.${categoryMap[prof.profession || ud.profession] || prof.profession || ud.profession}`, { defaultValue: categoryMap[prof.profession || ud.profession] || t('common.professional') }),
                             rating: prof.average_rating || prof.rating || 0,

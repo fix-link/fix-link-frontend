@@ -48,10 +48,11 @@ const CustomerMessages = () => {
             return;
         }
 
-        // Removed status filter to show all chats including pending/previous
+        // Filter jobs that have an assigned professional to prevent empty placeholder chats for pending requests
         const myRequests = jobs.filter((job: any) => {
             const customerId = job.customer?.id || job.customer || job.customer_id || job.customer_detail?.id;
-            return customerId === user?.id;
+            const hasPro = !!(job.professional || job.assigned_to);
+            return customerId === user?.id && hasPro;
         });
 
         console.log("CustomerMessages: My Requests:", myRequests);
@@ -418,13 +419,18 @@ const CustomerMessages = () => {
                                         <div className="flex items-center gap-4">
                                             <div className="relative shrink-0">
                                                 <div className={`size-14 rounded-2xl bg-slate-100 dark:bg-slate-800 border-2 transition-all duration-300 overflow-hidden ${isActive ? 'border-primary ring-4 ring-primary/10 scale-105' : 'border-white dark:border-slate-700 shadow-sm group-hover:scale-105'}`}>
-                                                    {req.professional_detail?.profile_picture || req.professional_detail?.profile_photo ? (
-                                                        <img src={getImageUrl(req.professional_detail.profile_picture || req.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
-                                                             <User size={24} className="text-slate-400" />
-                                                        </div>
-                                                    )}
+                                                     {(() => {
+                                                         const detail = req.professional_detail || req.assigned_to_detail;
+                                                         if (!detail) return <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900"><User size={24} className="text-slate-400" /></div>;
+                                                         const pic = detail.profile_picture_url || detail.profile_picture || detail.profile_photo_url || detail.profile_photo || detail.user?.profile_picture_url || detail.user?.profile_photo_url;
+                                                         return pic ? (
+                                                             <img src={getImageUrl(pic)} alt="" className="w-full h-full object-cover" />
+                                                         ) : (
+                                                             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+                                                                 <User size={24} className="text-slate-400" />
+                                                             </div>
+                                                         );
+                                                     })()}
                                                 </div>
                                                 {hasUnread && (
                                                     <div className="absolute -top-1 -right-1 z-20">
@@ -439,13 +445,13 @@ const CustomerMessages = () => {
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center justify-between mb-0.5">
                                                     <h4 className={`text-sm tracking-tight truncate ${isActive ? 'font-black text-slate-900 dark:text-white' : 'font-bold text-slate-700 dark:text-slate-300 group-hover:text-primary transition-colors'}`}>
-                                                        {(() => {
-                                                            const detail = req.professional_detail;
-                                                            if (!detail) return "Professional";
-                                                            const first = detail.first_name || detail.user?.first_name;
-                                                            const last = detail.last_name || detail.user?.last_name || "";
-                                                            return first ? `${first} ${last}`.trim() : "Professional";
-                                                        })()}
+                                                         {(() => {
+                                                             const detail = req.professional_detail || req.assigned_to_detail;
+                                                             if (!detail) return "Professional";
+                                                             const first = detail.first_name || detail.user?.first_name;
+                                                             const last = detail.last_name || detail.user?.last_name || "";
+                                                             return first ? `${first} ${last}`.trim() : "Professional";
+                                                         })()}
                                                     </h4>
                                                     <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-tighter">
                                                         {(req.created_at || req.createdAt) ? new Date(req.created_at || req.createdAt).toLocaleDateString([], { month: 'short', day: 'numeric' }) : "--"}
@@ -534,11 +540,16 @@ const CustomerMessages = () => {
                                     </button>
                                     <div className="relative group cursor-pointer">
                                         <div className="size-14 rounded-2xl bg-primary/10 flex items-center justify-center font-black text-primary border-2 border-white dark:border-slate-700 shadow-lg transform group-hover:scale-105 transition-all overflow-hidden ring-4 ring-primary/5">
-                                            {activeRequest.professional_detail?.profile_picture || activeRequest.professional_detail?.profile_photo ? (
-                                                <img src={getImageUrl(activeRequest.professional_detail.profile_picture || activeRequest.professional_detail.profile_photo)} alt="" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <User size={28} />
-                                            )}
+                                            {(() => {
+                                                const detail = activeUserDetails || activeRequest.professional_detail || activeRequest.assigned_to_detail;
+                                                if (!detail) return <User size={28} />;
+                                                const pic = detail.profile_picture_url || detail.profile_picture || detail.profile_photo_url || detail.profile_photo || detail.user?.profile_picture_url || detail.user?.profile_photo_url;
+                                                return pic ? (
+                                                    <img src={getImageUrl(pic)} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <User size={28} />
+                                                );
+                                            })()}
                                         </div>
                                         <div className="absolute -bottom-1 -right-1 size-4.5 bg-green-500 border-[3px] border-white dark:border-slate-900 rounded-full shadow-sm" />
                                     </div>
@@ -549,7 +560,7 @@ const CustomerMessages = () => {
                                         >
                                             <h3 className="text-slate-900 dark:text-white text-lg font-black tracking-tight leading-none group-hover/name:translate-x-1 transition-all">
                                                 {(() => {
-                                                    const detail = activeUserDetails || activeRequest.professional_detail;
+                                                    const detail = activeUserDetails || activeRequest.professional_detail || activeRequest.assigned_to_detail;
                                                     if (!detail) return "Professional";
                                                     const first = detail.first_name || detail.user?.first_name || detail.user_detail?.first_name;
                                                     const last = detail.last_name || detail.user?.last_name || detail.user_detail?.last_name || "";
