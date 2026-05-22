@@ -66,6 +66,16 @@ const CustomerHome = () => {
           const ud = prof.user || {};
           const roleId = prof.profession || ud.profession;
           const yoe = Number(prof.years_of_experience || ud.years_of_experience || 0);
+          const locationParts = [
+            prof.city || ud.city,
+            prof.subcity || ud.subcity,
+            prof.location,
+            prof.neighborhood || ud.neighborhood,
+          ]
+            .filter(Boolean)
+            .map((part: string) => part.trim());
+          const location = locationParts.length > 0 ? locationParts.join(', ') : 'Addis Ababa';
+
           return {
             id: ud.id || prof.user_id || (typeof prof.user === 'string' ? prof.user : null) || prof.id,
             name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || t('common.anonymous_pro'),
@@ -75,7 +85,7 @@ const CustomerHome = () => {
             price: prof.hourly_rate || 0,
             verified: prof.is_verified_professional || false,
             image: getImageUrl(prof.profile_picture || ud.profile_picture),
-            location: 'Addis Ababa', // placeholder – will be replaced by enrichment
+            location,
             experience: yoe >= 5 ? 'Senior' : yoe >= 3 ? 'Mid-level' : 'Junior',
             languages: Array.isArray(prof.languages || ud.languages)
               ? (prof.languages || ud.languages)
@@ -83,39 +93,8 @@ const CustomerHome = () => {
           };
         });
 
-        // Enrich location from individual public profiles (parallel, failures safe)
-        const profileResults = await Promise.allSettled(
-          baseCards.map((card: any) =>
-            card.id ? getProfessionalProfile(String(card.id)) : Promise.resolve(null)
-          )
-        );
-
-        const enriched = baseCards.map((card: any, i: number) => {
-          const result = profileResults[i];
-          if (result.status === 'fulfilled' && result.value) {
-            const p = result.value as any;
-            const city = (p.city || '').trim().replace(/^[\s,]+|[\s,]+$/g, '').replace(/\s*,\s*/g, ', ');
-            const area = (p.subcity || p.neighborhood || '').trim().replace(/^[\s,]+|[\s,]+$/g, '').replace(/\s*,\s*/g, ', ');
-            let location = 'Addis Ababa';
-            if (city && area) {
-              if (area.toLowerCase().includes(city.toLowerCase())) {
-                location = area;
-              } else if (city.toLowerCase().includes(area.toLowerCase())) {
-                location = city;
-              } else {
-                location = `${city}, ${area}`;
-              }
-            } else {
-              location = city || area || 'Addis Ababa';
-            }
-            location = location.trim().replace(/^[\s,]+|[\s,]+$/g, '');
-            return { ...card, location };
-          }
-          return card;
-        });
-
-        setProfessionals(enriched);
-        localStorage.setItem('cached_professionals_v3', JSON.stringify(enriched));
+        setProfessionals(baseCards);
+        localStorage.setItem('cached_professionals_v3', JSON.stringify(baseCards));
         setLoading(false);
       } catch (err) {
         console.error("Failed to fetch dashboard data", err);

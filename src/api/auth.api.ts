@@ -346,7 +346,11 @@ export const googleLogin = async (credential: string) => {
 const userDetailsCache = new Map<string, { data: any; timestamp: number }>();
 const USER_DETAILS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+const professionalProfileCache = new Map<string, { data: any; timestamp: number }>();
+const PROFESSIONAL_PROFILE_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
+
 const isUserCacheFresh = (timestamp: number) => Date.now() - timestamp < USER_DETAILS_CACHE_TTL;
+const isProfileCacheFresh = (timestamp: number) => Date.now() - timestamp < PROFESSIONAL_PROFILE_CACHE_TTL;
 
 export const getUserDetails = async (id: string) => {
   const cached = userDetailsCache.get(id);
@@ -571,9 +575,21 @@ export const deletePortfolioItem = async (portfolioId: string) => {
  * Fetch a professional's public profile details (including reviews, services, portfolio)
  * Endpoint: GET /users/{id}/professional-profile/
  */
-export const getProfessionalProfile = async (id: string) => {
+export const getProfessionalProfile = async (id: string, bypassCache = false) => {
+  if (!bypassCache) {
+    const cached = professionalProfileCache.get(id);
+    if (cached && isProfileCacheFresh(cached.timestamp)) {
+      return cached.data;
+    }
+  }
+
   const response = await api.get(`/users/${id}/professional-profile/`);
+  professionalProfileCache.set(id, { data: response.data, timestamp: Date.now() });
   return response.data;
+};
+
+export const clearProfessionalProfileCache = () => {
+  professionalProfileCache.clear();
 };
 
 export default api;

@@ -50,7 +50,7 @@ const ProfessionalMessages = () => {
     const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const { jobs, notifications, jobsLoading, notificationsLoading } = useData();
+    const { jobs, notifications, jobsLoading, notificationsLoading, refreshJobs } = useData();
 
     // Prevent blocking UI flash during background context polling
     const isLoading = (jobsLoading || notificationsLoading) && jobs.length === 0;
@@ -140,6 +140,14 @@ const ProfessionalMessages = () => {
     const activeRequestId = activeRequest?.id;
     const requestId = activeRequestId;
 
+    const areMessagesEqual = (prev: any[], next: any[]) => {
+        if (prev.length !== next.length) return false;
+        return prev.every((msg, idx) => {
+            const nextMsg = next[idx];
+            return nextMsg && msg.id === nextMsg.id && msg.updated_at === nextMsg.updated_at && msg.created_at === nextMsg.created_at;
+        });
+    };
+
     useEffect(() => {
         if (urlConversationId && !activeRequest) {
             getConversationById(urlConversationId)
@@ -179,7 +187,7 @@ const ProfessionalMessages = () => {
             try {
                 const list = await getMessages(conversationId);
                 setMessages(prev => {
-                    if (JSON.stringify(prev) === JSON.stringify(list)) return prev;
+                    if (areMessagesEqual(prev, list)) return prev;
                     return list;
                 });
                 // Mark as read
@@ -266,13 +274,13 @@ const ProfessionalMessages = () => {
             const updated = await updateJobStatus(activeRequestId, 'accepted');
             console.log("ProfessionalMessages: ACCEPT SUCCESS response:", updated);
             
-            // Force immediate UI reflection by updating all sets
             const updatedRequests = (prev: any[]) => prev.map(r => 
                 r.id === activeRequestId ? { ...r, status: 'accepted' } : r
             );
             
             setProfessionalRequests(updatedRequests);
             setHydratedRequests(updatedRequests);
+            await refreshJobs();
             
             console.log("ProfessionalMessages: State updated to 'accepted'");
         } catch (error: any) {
@@ -338,6 +346,7 @@ const ProfessionalMessages = () => {
             );
             setProfessionalRequests(updated);
             setHydratedRequests(updated);
+            await refreshJobs();
         } catch (error: any) {
             alert(t('common.failed_start_job', { error: error.message }));
         }
@@ -353,6 +362,7 @@ const ProfessionalMessages = () => {
             setHydratedRequests(prev => prev.map(r => 
                 r.id === activeRequestId ? { ...r, status: 'done' } : r
             ));
+            await refreshJobs();
         } catch (error: any) {
             alert(t('common.failed_mark_done', { error: error.message }));
         }
@@ -368,6 +378,7 @@ const ProfessionalMessages = () => {
             setHydratedRequests(prev => prev.map(r => 
                 r.id === activeRequestId ? { ...r, status: 'cancelled' } : r
             ));
+            await refreshJobs();
         } catch (error: any) {
             alert(t('common.failed_decline', { error: error.message }));
         }

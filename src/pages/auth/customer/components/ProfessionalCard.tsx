@@ -1,6 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Star, MapPin, BadgeCheck, ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getProfessionalProfile } from "../../../../api/auth.api";
 import { useTranslation } from "react-i18next";
 
 export type Professional = {
@@ -36,6 +38,39 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
       .replace(/\s+/g, " ")
       .trim();
   };
+
+  const [locationOverride, setLocationOverride] = useState<string | null>(null);
+
+  useEffect(() => {
+    // If base props have no detailed location, try to fetch public profile (cached in API)
+    const hasCity = Boolean((pro as any).city || (pro as any).subcity || (pro as any).neighborhood || (pro as any).area);
+    if (!hasCity && pro.id) {
+      (async () => {
+        try {
+          const profile = await getProfessionalProfile(String(pro.id));
+          const city = profile?.city || profile?.location || profile?.subcity || '';
+          const subcity = profile?.subcity || profile?.neighborhood || '';
+          const combined = [city, subcity].filter(Boolean).join(', ');
+          if (combined) setLocationOverride(cleanLocation(combined));
+        } catch (err) {
+          // ignore failures — expensive fetch avoided elsewhere
+        }
+      })();
+    }
+  }, [pro.id]);
+
+  const locationFull = (() => {
+    // Prefer fetched override first
+    if (locationOverride) return locationOverride;
+    // Prefer explicit `pro.location` if present
+    if (pro.location && String(pro.location).trim()) return cleanLocation(String(pro.location));
+    // Otherwise try common location fields
+    const parts = [ (pro as any).city, (pro as any).subcity, (pro as any).neighborhood, (pro as any).area ]
+      .filter(Boolean)
+      .map((p: string) => String(p).trim());
+    if (parts.length) return cleanLocation(parts.join(', '));
+    return 'Addis Ababa';
+  })();
 
   return (
     <div
@@ -73,9 +108,9 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
           <Star size={14} className="fill-amber-500 text-amber-500" />
           <span className="font-black text-amber-600 dark:text-amber-400 text-sm leading-none">{pro.rating?.toFixed(1)}</span>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors">
-          <MapPin size={14} className="text-primary" />
-          <span className="font-black text-primary text-[10px] uppercase tracking-wider line-clamp-1">{cleanLocation(pro.location)}</span>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors w-full">
+          <MapPin size={14} className="text-primary flex-shrink-0" />
+          <span className="font-black text-primary text-sm tracking-normal whitespace-normal break-words text-left">{locationFull}</span>
         </div>
       </div>
 

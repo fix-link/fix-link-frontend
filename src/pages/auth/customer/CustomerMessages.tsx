@@ -267,7 +267,7 @@ const CustomerMessages = () => {
         setApprovingJobId(jobId);
         try {
             await updateJobStatus(jobId, 'completed');
-            // Optimistically update or rely on real-time polling to update UI
+            await refreshJobs();
         } catch (error) {
             console.error("Failed to verify & pay:", error);
             alert("Failed to verify & pay. Please try again.");

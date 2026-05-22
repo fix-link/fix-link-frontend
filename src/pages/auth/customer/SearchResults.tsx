@@ -6,7 +6,6 @@ import ProfessionalCard from "./components/ProfessionalCard";
 import CustomerFooter from "./components/CustomerFooter";
 import FiltersSidebar from "./components/FiltersSidebar";
 import { getProfessionals, getServiceCategories } from "../../../api/jobs.api";
-import { getProfessionalProfile } from "../../../api/auth.api";
 import { 
   Search, ArrowUpDown, 
   Loader2, SearchX, ChevronDown,
@@ -57,7 +56,6 @@ const SearchResults = () => {
                     return `${(import.meta.env.VITE_API_URL || 'https://fix-link-5332f899c079.herokuapp.com').replace(/\/$/, '')}${cleanPath}`;
                 };
 
-                // Filter to professionals, build base cards
                 const proList = fetched.filter(
                     (u: any) => u.role === 'professional' || u.is_professional || u.user?.role === 'professional'
                 );
@@ -65,6 +63,16 @@ const SearchResults = () => {
                 const baseCards = proList.map((prof: any) => {
                     const ud = prof.user || {};
                     const yoe = Number(prof.years_of_experience || ud.years_of_experience || 0);
+                    const locationParts = [
+                        prof.city || ud.city,
+                        prof.subcity || ud.subcity,
+                        prof.location,
+                        prof.neighborhood || ud.neighborhood,
+                    ]
+                        .filter(Boolean)
+                        .map((part: string) => part.trim());
+                    const location = locationParts.length > 0 ? locationParts.join(', ') : 'Addis Ababa';
+
                     return {
                         id: ud.id || prof.user_id || (typeof prof.user === 'string' ? prof.user : null) || prof.id,
                         name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || t('common.anonymous_pro'),
@@ -73,60 +81,27 @@ const SearchResults = () => {
                         reviews: prof.total_jobs_completed || prof.reviews_count || 0,
                         price: prof.hourly_rate || 0,
                         verified: prof.is_verified_professional || false,
-                        city: '',
-                        subcity: '',
-                        location: 'Addis Ababa', // placeholder – enriched below
-                        searchLocation: 'addis ababa አዲስ አበባ',
+                        city: prof.city || ud.city || '',
+                        subcity: prof.subcity || ud.subcity || '',
+                        location,
+                        searchLocation: location.toLowerCase(),
                         image: getImageUrl(prof.profile_picture || ud.profile_picture),
                         experience: yoe > 5 ? t('common.senior') : yoe > 2 ? t('common.mid_level') : t('common.junior'),
                         availability: t('common.today'),
-                        languages: [t('common.amharic'), t('common.english')]
+                        languages: Array.isArray(prof.languages || ud.languages)
+                            ? (prof.languages || ud.languages)
+                            : (prof.languages || ud.languages || '').toString().split(',').map((l: string) => l.trim()).filter(Boolean),
                     };
                 });
 
-                // Enrich location from individual public profiles (parallel, safe)
-                const profileResults = await Promise.allSettled(
-                    baseCards.map((card: any) =>
-                        card.id ? getProfessionalProfile(String(card.id)) : Promise.resolve(null)
-                    )
-                );
-
-                const mapped = baseCards.map((card: any, i: number) => {
-                    const result = profileResults[i];
-                    if (result.status === 'fulfilled' && result.value) {
-                        const p = result.value as any;
-                        const city = (p.city || '').trim().replace(/^[\s,]+|[\s,]+$/g, '').replace(/\s*,\s*/g, ', ');
-                        const area = (p.subcity || p.neighborhood || '').trim().replace(/^[\s,]+|[\s,]+$/g, '').replace(/\s*,\s*/g, ', ');
-                        let location = 'Addis Ababa';
-                        if (city && area) {
-                            if (area.toLowerCase().includes(city.toLowerCase())) {
-                                location = area;
-                            } else if (city.toLowerCase().includes(area.toLowerCase())) {
-                                location = city;
-                            } else {
-                                location = `${city}, ${area}`;
-                            }
-                        } else {
-                            location = city || area || 'Addis Ababa';
-                        }
-                        location = location.trim().replace(/^[\s,]+|[\s,]+$/g, '');
-                        const searchLoc = (city || area)
-                            ? `${city} ${area} ${t(`locations.${city}`, { defaultValue: '' })}`.toLowerCase()
-                            : 'addis ababa አዲስ አበባ';
-                        return { ...card, city, subcity: area, location, searchLocation: searchLoc };
-                    }
-                    return card;
-                });
-
-                // Filter by service query if present
                 const filteredByService = serviceQuery
-                    ? mapped.filter((p: any) => {
+                    ? baseCards.filter((p: any) => {
                         const localizedQuery = t(`categories.${serviceQuery}`, { defaultValue: serviceQuery }).toLowerCase();
                         return p.role.toLowerCase().includes(serviceQuery.toLowerCase()) ||
                                p.role.toLowerCase().includes(localizedQuery) ||
                                p.name.toLowerCase().includes(serviceQuery.toLowerCase());
                     })
-                    : mapped;
+                    : baseCards;
 
                 setProfessionals(filteredByService);
                 setLastLoadedSearch(location.search);
