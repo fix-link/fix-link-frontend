@@ -13,6 +13,9 @@ interface DataContextType {
     refreshNotifications: () => Promise<void>;
     reviews: any[];
     refreshReviews: () => Promise<void>;
+    earningsSummary: any;
+    earningsLoading: boolean;
+    refreshEarnings: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -22,6 +25,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const [jobs, setJobs] = useState<any[]>([]);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [reviews, setReviews] = useState<any[]>([]);
+    const [earningsSummary, setEarningsSummary] = useState<any>(null);
     
     // Use a flag to track if we've EVER completed a fetch to prevent flashing "0"
     const [hasInitiallyFetched, setHasInitiallyFetched] = useState(false);
@@ -29,9 +33,11 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     // Loading is true if we are actively fetching OR if we have a user but haven't fetched anything yet
     const [jobsLoading, setJobsLoading] = useState(false);
     const [notificationsLoading, setNotificationsLoading] = useState(false);
+    const [earningsLoading, setEarningsLoading] = useState(false);
 
     const isLoadingJobs = jobsLoading || (!!user?.id && !hasInitiallyFetched);
     const isLoadingNotifications = notificationsLoading || (!!user?.id && !hasInitiallyFetched);
+    const isLoadingEarnings = earningsLoading || (!!user?.id && user?.role === "professional" && !earningsSummary);
 
     const refreshReviews = useCallback(async () => {
         if (!user?.id) {
@@ -90,20 +96,45 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [user?.id]);
 
+    const refreshEarnings = useCallback(async () => {
+        const userId = (user as any)?.user?.id || user?.id;
+        if (!userId || user?.role !== "professional") {
+            setEarningsSummary(null);
+            return;
+        }
+
+        setEarningsLoading(true);
+        try {
+            const { getEarningsSummary } = await import("../api/payments.api");
+            const summary = await getEarningsSummary(userId);
+            setEarningsSummary(summary);
+        } catch (error) {
+            console.error("DataContext: refreshEarnings failed", error);
+        } finally {
+            setEarningsLoading(false);
+        }
+    }, [user]);
+
     useEffect(() => {
         if (user?.id) {
             refreshJobs();
             refreshNotifications();
             refreshReviews();
+            if (user?.role === "professional") {
+                refreshEarnings();
+            }
 
             const interval = setInterval(() => {
                 refreshJobs();
                 refreshNotifications();
                 refreshReviews();
+                if (user?.role === "professional") {
+                    refreshEarnings();
+                }
             }, 30000); // Poll every 30s
             return () => clearInterval(interval);
         }
-    }, [user?.id, refreshJobs, refreshNotifications, refreshReviews]);
+    }, [user?.id, user?.role, refreshJobs, refreshNotifications, refreshReviews, refreshEarnings]);
 
     // Real-time notifications (WebSocket)
     useEffect(() => {
@@ -118,6 +149,13 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                     if (String(ev.event_type).toLowerCase().includes("job")) {
                         refreshJobs();
                     }
+                    if (user?.role === "professional" && (
+                        String(ev.event_type).toLowerCase().includes("payment") || 
+                        String(ev.event_type).toLowerCase().includes("escrow") ||
+                        String(ev.event_type).toLowerCase().includes("job")
+                    )) {
+                        refreshEarnings();
+                    }
                 }
             },
             onError: () => {
@@ -126,15 +164,17 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         });
 
         return () => cleanup();
-    }, [user?.id, refreshJobs, refreshNotifications]);
+    }, [user?.id, user?.role, refreshJobs, refreshNotifications, refreshEarnings]);
 
     // Clear all data when user changes to prevent cross-user data leakage
     useEffect(() => {
         setJobs([]);
         setNotifications([]);
         setReviews([]);
+        setEarningsSummary(null);
         setJobsLoading(false);
         setNotificationsLoading(false);
+        setEarningsLoading(false);
     }, [user?.id]);
 
     return (
@@ -148,6 +188,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 refreshNotifications,
                 reviews,
                 refreshReviews,
+                earningsSummary,
+                earningsLoading: isLoadingEarnings,
+                refreshEarnings,
             }}
         >
             {children}

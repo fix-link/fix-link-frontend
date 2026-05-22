@@ -11,7 +11,7 @@ const ProfessionalHome: React.FC = () => {
   const { user } = useAuth();
   const { t } = useTranslation();
   // ✅ Use shared DataContext — no duplicate polling, no lag
-  const { jobs: allJobs, jobsLoading } = useData();
+  const { jobs: allJobs, jobsLoading, earningsSummary, earningsLoading } = useData();
 
   // Filter only this professional's jobs - handle both UUID and integer IDs
   const userId = (user as any)?.user?.id || user?.id;
@@ -42,9 +42,12 @@ const ProfessionalHome: React.FC = () => {
     ["accepted", "booked", "in_progress", "done"].includes(j.status)
   ).length;
 
-  const totalEarnings = jobs
-    .filter((j: any) => ["completed", "approved"].includes(j.status))
-    .reduce((sum: number, j: any) => sum + getAmount(j), 0);
+  // Consistent with ProfessionalEarnings.tsx: use backend gross_earned or fallback
+  const totalEarnings =
+    Number(earningsSummary?.gross_earned ?? NaN) ||
+    jobs
+      .filter((j: any) => ["completed", "approved"].includes(j.status))
+      .reduce((sum: number, j: any) => sum + getAmount(j), 0);
 
   const rating = user?.average_rating || 0;
 
@@ -137,7 +140,7 @@ const ProfessionalHome: React.FC = () => {
                                 icon="payments"
                                 color="bg-purple-500"
                                 isCurrency
-                                loading={jobsLoading}
+                                loading={earningsLoading}
                             />
                             <StatsCard
                                 title={t('professional.experience_score')}

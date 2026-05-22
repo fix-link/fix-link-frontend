@@ -179,13 +179,13 @@ const ProfessionalJobBoard = () => {
                             <div className="space-y-3">
                                 <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary font-black uppercase tracking-widest text-[10px] mb-2">
                                     <Sparkles size={14} className="animate-pulse" />
-                                    <span>Opportunities</span>
+                                    <span>{t('common.opportunities')}</span>
                                 </div>
                                 <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                                    Job <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">Board</span>
+                                    {t('common.job_board_main')}
                                 </h1>
                                 <p className="text-sm font-bold text-slate-500 max-w-lg">
-                                    Browse open requests from customers in your area and submit competitive proposals to win more work.
+                                    {t('common.job_board_subtitle')}
                                 </p>
                             </div>
                             
@@ -195,7 +195,7 @@ const ProfessionalJobBoard = () => {
                                     <Search className="text-slate-400" size={20} />
                                     <input
                                         type="text"
-                                        placeholder="Search jobs..."
+                                        placeholder={t('common.search_jobs')}
                                         value={search}
                                         onChange={e => setSearch(e.target.value)}
                                         className="bg-transparent outline-none w-full text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400"
@@ -260,15 +260,15 @@ const ProfessionalJobBoard = () => {
                             {discoveryLoading && openJobs.length === 0 ? (
                                 <div className="py-32 flex flex-col items-center gap-6 text-slate-400">
                                     <Loader2 size={48} className="animate-spin text-primary" />
-                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Scanning market...</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">{t('common.scanning_market')}</p>
                                 </div>
                             ) : filteredJobs.length === 0 ? (
                                 <div className="py-32 flex flex-col items-center gap-6 text-slate-400 text-center bg-white/50 dark:bg-slate-900/40 rounded-[3rem] border border-slate-200/50 dark:border-slate-800/50">
                                     <div className="size-24 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700">
                                         <Briefcase size={40} className="text-slate-300" />
                                     </div>
-                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">No open jobs found</h3>
-                                    <p className="text-sm font-bold text-slate-500 max-w-xs">There are no new job requests matching your criteria right now. Check back later.</p>
+                                    <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t('common.no_open_jobs')}</h3>
+                                    <p className="text-sm font-bold text-slate-500 max-w-xs">{t('common.no_open_jobs_subtitle')}</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -289,7 +289,7 @@ const ProfessionalJobBoard = () => {
                                                 </div>
                                                 {job.budget && (
                                                     <div className="bg-emerald-500/10 text-emerald-600 px-3 py-1.5 rounded-xl font-black text-xs border border-emerald-500/20 flex items-center gap-1.5 animate-fade-in">
-                                                        <CreditCard size={12} /> ETB {job.budget}
+                                                        <CreditCard size={12} /> {t('common.etb')} {job.budget}
                                                     </div>
                                                 )}
                                             </div>
@@ -299,10 +299,10 @@ const ProfessionalJobBoard = () => {
                                             
                                             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between mt-auto">
                                                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                                    <MapPin size={12} /> {job.address || job.city || "Various"}
+                                                    <MapPin size={12} /> {job.address || job.city || t('common.location_not_specified')}
                                                 </div>
                                                 <div className="text-[10px] font-black uppercase tracking-widest text-primary group-hover:underline flex items-center gap-1">
-                                                    View Details <Send size={10} />
+                                                    {t('common.view_details')} <Send size={10} />
                                                 </div>
                                             </div>
                                         </div>
@@ -321,7 +321,7 @@ const ProfessionalJobBoard = () => {
                     <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[3rem] shadow-2xl border border-slate-100 dark:border-slate-800 flex flex-col animate-in zoom-in slide-in-from-bottom-8 duration-500 max-h-[90vh]">
                         
                         <div className="p-8 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Submit Proposal</h3>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t('common.submit_proposal')}</h3>
                             <button 
                                 onClick={() => !isBidding && setSelectedJob(null)}
                                 className="size-12 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 hover:text-rose-500 transition-all border border-slate-100 dark:border-slate-700 shadow-sm"
@@ -336,8 +336,8 @@ const ProfessionalJobBoard = () => {
                                     <div className="size-20 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6">
                                         <CheckCircle2 size={40} className="text-emerald-500" />
                                     </div>
-                                    <h4 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Proposal Submitted!</h4>
-                                    <p className="text-slate-500 font-bold">The customer will review your bid shortly.</p>
+                                    <h4 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{t('common.proposal_submitted')}</h4>
+                                    <p className="text-slate-500 font-bold">{t('common.proposal_submitted_subtitle')}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-8">
@@ -352,15 +352,15 @@ const ProfessionalJobBoard = () => {
                                                 {t(`categories.${getJobCategory(selectedJob)}`, { defaultValue: getJobCategory(selectedJob) })}
                                             </div>
                                             <div className="flex items-center gap-2 text-xs font-black text-slate-500 bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
-                                                <MapPin size={14} className="text-primary" /> {selectedJob.address || selectedJob.city || "Location not specified"}
+                                                <MapPin size={14} className="text-primary" /> {selectedJob.address || selectedJob.city || t('common.location_not_specified')}
                                             </div>
                                             <div className="flex items-center gap-2 text-xs font-black text-slate-500 bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700">
                                                 <Calendar size={14} className="text-primary" /> 
-                                                {selectedJob.scheduled_at ? new Date(selectedJob.scheduled_at).toLocaleDateString() : "Flexible Date"}
+                                                {selectedJob.scheduled_at ? new Date(selectedJob.scheduled_at).toLocaleDateString() : t('common.flexible_date')}
                                             </div>
                                             {selectedJob.budget && (
                                                 <div className="flex items-center gap-2 text-xs font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 rounded-xl border border-emerald-200 dark:border-emerald-500/20">
-                                                    <CreditCard size={14} /> Customer Budget: ETB {selectedJob.budget}
+                                                    <CreditCard size={14} /> {t('common.customer_budget_etb')} {selectedJob.budget}
                                                 </div>
                                             )}
                                         </div>
@@ -370,7 +370,7 @@ const ProfessionalJobBoard = () => {
                                     <form id="bid-form" onSubmit={handleBidSubmit} className="space-y-6">
                                         <div className="space-y-2">
                                             <label className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                                                <CreditCard size={14} className="text-primary" /> Your Bid Amount (ETB) *
+                                                <CreditCard size={14} className="text-primary" /> {t('common.your_bid_amount')}
                                             </label>
                                             <input
                                                 type="number"
@@ -385,13 +385,13 @@ const ProfessionalJobBoard = () => {
 
                                         <div className="space-y-2">
                                             <label className="text-xs font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
-                                                <Send size={14} className="text-primary" /> Pitch Message (Optional)
+                                                <Send size={14} className="text-primary" /> {t('common.pitch_message')}
                                             </label>
                                             <textarea
                                                 rows={3}
                                                 value={bidMessage}
                                                 onChange={e => setBidMessage(e.target.value)}
-                                                placeholder="Tell the customer why you are the best fit for this job..."
+                                                placeholder={t('common.pitch_message_placeholder')}
                                                 className="w-full bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-slate-900 dark:text-white font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none"
                                             />
                                         </div>
@@ -409,9 +409,9 @@ const ProfessionalJobBoard = () => {
                                     className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-primary/30 transition-all active:scale-95 disabled:opacity-70 group w-full sm:w-auto justify-center"
                                 >
                                     {isBidding ? (
-                                        <><Loader2 className="animate-spin" size={16} /> Submitting...</>
+                                        <><Loader2 className="animate-spin" size={16} /> {t('common.submitting')}</>
                                     ) : (
-                                        <>Submit Proposal <Send size={16} className="group-hover:translate-x-1 transition-transform" /></>
+                                        <>{t('common.submit_proposal')} <Send size={16} className="group-hover:translate-x-1 transition-transform" /></>
                                     )}
                                 </button>
                             </div>

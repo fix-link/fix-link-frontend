@@ -129,20 +129,20 @@ const CustomerJobs = () => {
                     <div className="space-y-3">
                         <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary font-black uppercase tracking-widest text-[10px] mb-2">
                             <Briefcase size={14} />
-                            <span>Job Management</span>
+                            <span>{t('common.job_management')}</span>
                         </div>
                         <h1 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                            My <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent-cyan">Posted Jobs</span>
+                            {t('common.my_posted_jobs')}
                         </h1>
                         <p className="text-sm font-bold text-slate-500 max-w-lg">
-                            Track the status of your requests, review proposals from professionals, and manage your projects.
+                            {t('common.track_status_posted')}
                         </p>
                     </div>
                     <Link
                         to="/customer/post-job"
                         className="flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-primary-light text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] hover:shadow-xl hover:scale-[1.02] transition-all"
                     >
-                        <Sparkles size={16} /> Post a New Job
+                        <Sparkles size={16} /> {t('common.post_new_job')}
                     </Link>
                 </div>
 
@@ -150,26 +150,26 @@ const CustomerJobs = () => {
                     {jobsLoading && myJobs.length === 0 ? (
                         <div className="py-32 flex flex-col items-center gap-6 text-slate-400">
                             <Clock size={48} className="animate-spin text-primary" />
-                            <p className="text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">Syncing data stream...</p>
+                            <p className="text-[10px] font-black uppercase tracking-[0.4em] animate-pulse">{t('common.syncing_data_stream')}</p>
                         </div>
                     ) : myJobs.length === 0 ? (
                         <div className="py-32 flex flex-col items-center gap-6 text-slate-400 text-center">
                             <div className="size-24 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700">
                                 <Briefcase size={40} className="text-slate-300" />
                             </div>
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">No jobs posted yet</h3>
-                            <p className="text-sm font-bold text-slate-500 max-w-xs">You haven't requested any services. Post a job to start receiving bids from top professionals.</p>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t('common.no_jobs_posted_yet')}</h3>
+                            <p className="text-sm font-bold text-slate-500 max-w-xs">{t('common.no_jobs_posted_yet_subtitle')}</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto custom-scrollbar">
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b border-slate-100 dark:border-slate-800/50 bg-slate-50/30 dark:bg-slate-900/40">
-                                        <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Job Details</th>
-                                        <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Budget</th>
-                                        <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Status</th>
-                                        <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Date Posted</th>
-                                        <th className="px-6 py-6 text-right text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Action</th>
+                                        <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{t('common.job_details')}</th>
+                                        <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{t('common.budget')}</th>
+                                        <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{t('common.status')}</th>
+                                        <th className="px-6 py-6 text-left text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{t('common.date')}</th>
+                                        <th className="px-6 py-6 text-right text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">{t('common.action')}</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100/50 dark:divide-slate-800/30">
@@ -185,7 +185,7 @@ const CustomerJobs = () => {
                                                     </div>
                                                     <div className="min-w-0 space-y-1">
                                                         <p className="text-[14px] font-black text-slate-900 dark:text-white tracking-tight truncate group-hover:text-primary transition-colors">
-                                                            {job.title || "Job Details Hidden"}
+                                                            {job.title || t('common.job_details_hidden')}
                                                         </p>
                                                         <div className="flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest opacity-60">
                                                             <MapPin size={10} /> {job.address || job.city || "N/A"}
@@ -195,13 +195,13 @@ const CustomerJobs = () => {
                                             </td>
                                             <td className="px-6 py-6">
                                                 <p className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                                                    {job.budget ? `ETB ${job.budget}` : "Negotiable"}
+                                                    {job.budget ? `${job.budget} ${t('common.etb')}` : t('common.to_be_negotiated')}
                                                 </p>
                                             </td>
                                             <td className="px-6 py-6">
                                                 <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-xl text-[8px] font-black uppercase tracking-[0.2em] border shadow-sm ${STATUS_COLORS[job.status] || "bg-slate-100 text-slate-600 border-slate-200"}`}>
                                                     <span className="size-1.5 rounded-full bg-current animate-pulse shadow-[0_0_8px_currentColor]" />
-                                                    {job.status?.replace(/_/g, " ")}
+                                                    {t(`common.${job.status}`, { defaultValue: job.status?.replace(/_/g, " ") })}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-6">
@@ -216,14 +216,14 @@ const CustomerJobs = () => {
                                                         onClick={() => setSelectedJob(job)}
                                                         className="inline-flex items-center gap-2 px-5 py-2.5 text-[9px] font-black uppercase tracking-[0.15em] text-white bg-primary hover:bg-primary-dark rounded-[1rem] transition-all duration-300 active:scale-95 shadow-xl shadow-primary/30"
                                                     >
-                                                        Review Bids
+                                                        {t('common.review_bids')}
                                                     </button>
                                                 ) : (
                                                     <Link
                                                         to={`/customer/messages?requestId=${job.id}`}
                                                         className="inline-flex items-center gap-2 px-5 py-2.5 text-[9px] font-black uppercase tracking-[0.15em] text-primary bg-primary/10 hover:bg-primary hover:text-white rounded-[1rem] transition-all duration-300 active:scale-95 group/btn"
                                                     >
-                                                        View Job <Terminal size={14} className="transition-transform group-hover/btn:translate-x-1" />
+                                                        {t('common.view_job')} <Terminal size={14} className="transition-transform group-hover/btn:translate-x-1" />
                                                     </Link>
                                                 )}
                                             </td>
@@ -244,7 +244,7 @@ const CustomerJobs = () => {
                         {/* Header */}
                         <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between shrink-0">
                             <div>
-                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Review Proposals</h3>
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{t('common.review_proposals')}</h3>
                                 <p className="text-xs font-bold text-slate-500 mt-1">{selectedJob.title}</p>
                             </div>
                             <button 
@@ -260,15 +260,15 @@ const CustomerJobs = () => {
                             {bidsLoading ? (
                                 <div className="py-20 flex flex-col items-center justify-center text-slate-400">
                                     <Clock size={40} className="animate-spin text-primary mb-4" />
-                                    <p className="text-xs font-black uppercase tracking-widest animate-pulse">Fetching Proposals...</p>
+                                    <p className="text-xs font-black uppercase tracking-widest animate-pulse">{t('common.fetching_proposals')}</p>
                                 </div>
                             ) : bids.length === 0 ? (
                                 <div className="py-20 flex flex-col items-center justify-center text-slate-400 text-center">
                                     <div className="size-20 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center border-2 border-dashed border-slate-200 dark:border-slate-700 mb-6">
                                         <Briefcase size={32} className="text-slate-300" />
                                     </div>
-                                    <h4 className="text-xl font-black text-slate-900 dark:text-white">No bids yet</h4>
-                                    <p className="text-xs font-bold text-slate-500 max-w-sm mt-2">Professionals haven't bid on this job yet. We will notify you when a proposal is submitted.</p>
+                                    <h4 className="text-xl font-black text-slate-900 dark:text-white">{t('common.no_bids_yet')}</h4>
+                                    <p className="text-xs font-bold text-slate-500 max-w-sm mt-2">{t('common.no_bids_yet_subtitle')}</p>
                                 </div>
                             ) : (
                                 <div className="space-y-6">
@@ -280,7 +280,7 @@ const CustomerJobs = () => {
                                                     <Link 
                                                         to={`/customer/profile/${bid.professional?.id || bid.professional_detail?.user_id || bid.professional}`}
                                                         className="flex items-center gap-4 hover:opacity-80 transition-opacity"
-                                                        title="View Profile"
+                                                        title={t('common.view_profile')}
                                                     >
                                                         <div className="size-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black text-xl border border-primary/20 overflow-hidden shrink-0">
                                                             {bid.professional_detail?.profile_picture_url || bid.professional_detail?.profile_picture || bid.professional_detail?.profile_photo_url || bid.professional_detail?.profile_photo ? (
@@ -297,7 +297,7 @@ const CustomerJobs = () => {
                                                             </h5>
                                                             <div className="flex items-center gap-2 mt-1">
                                                                 <span className="text-[10px] bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-lg font-black uppercase tracking-widest flex items-center gap-1">
-                                                                    <Check size={10} /> Verified Expert
+                                                                    <Check size={10} /> {t('common.verified_expert')}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -311,15 +311,15 @@ const CustomerJobs = () => {
                                                 
                                                 {/* Action/Price */}
                                                 <div className="sm:w-48 flex flex-col items-end justify-center shrink-0 border-t sm:border-t-0 sm:border-l border-slate-200 dark:border-slate-700 pt-6 sm:pt-0 sm:pl-6">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Proposed Budget</p>
-                                                    <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mb-4">ETB {bid.amount}</p>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">{t('common.proposed_budget')}</p>
+                                                    <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mb-4">{bid.amount} {t('common.etb')}</p>
                                                     
                                                     <button
                                                         onClick={() => handleAcceptBid(bid.id, selectedJob.id)}
                                                         disabled={acceptingBid === bid.id}
                                                         className="w-full py-3 bg-gradient-to-r from-primary to-accent-cyan text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:shadow-lg hover:shadow-primary/30 active:scale-95 transition-all flex items-center justify-center disabled:opacity-70"
                                                     >
-                                                        {acceptingBid === bid.id ? "Accepting..." : "Accept & Pay"}
+                                                        {acceptingBid === bid.id ? t('common.accepting') : t('common.accept_pay')}
                                                     </button>
                                                 </div>
                                             </div>

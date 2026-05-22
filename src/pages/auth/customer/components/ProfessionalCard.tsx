@@ -28,6 +28,15 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
     navigate(`/customer/profile/${pro.id || 1}`);
   };
 
+  const cleanLocation = (loc?: string) => {
+    if (!loc) return "";
+    return loc
+      .replace(/^[\s,]+|[\s,]+$/g, "")
+      .replace(/\s*,\s*/g, ", ")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+
   return (
     <div
       onClick={handleViewProfile}
@@ -66,7 +75,7 @@ const ProfessionalCard: React.FC<ProfessionalCardProps> = ({ pro }) => {
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-primary/10 border border-primary/20 group-hover:bg-primary/20 transition-colors">
           <MapPin size={14} className="text-primary" />
-          <span className="font-black text-primary text-[10px] uppercase tracking-wider line-clamp-1">{pro.location?.split(',')[0]}</span>
+          <span className="font-black text-primary text-[10px] uppercase tracking-wider line-clamp-1">{cleanLocation(pro.location)}</span>
         </div>
       </div>
 

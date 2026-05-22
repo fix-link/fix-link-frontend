@@ -224,9 +224,9 @@ const CustomerNavbar = () => {
           <LayoutDashboard size={18} />
           <span className="hidden xl:inline">{t('common.dashboard')}</span>
         </Link>
-        <Link to="/customer/jobs" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-3 py-2 rounded-xl" title="Jobs">
+        <Link to="/customer/jobs" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-3 py-2 rounded-xl" title={t('common.jobs')}>
           <Briefcase size={18} />
-          <span className="hidden xl:inline">Jobs</span>
+          <span className="hidden xl:inline">{t('common.jobs')}</span>
         </Link>
         <Link to="/customer/messages" className="hidden sm:flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-primary dark:hover:text-primary hover:bg-primary/5 transition-all font-bold px-3 py-2 rounded-xl" title={t('common.messages')}>
           <MessageSquare size={18} />

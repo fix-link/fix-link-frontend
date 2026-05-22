@@ -6,6 +6,7 @@ import ProfessionalCard from "./components/ProfessionalCard";
 import CustomerFooter from "./components/CustomerFooter";
 import FiltersSidebar from "./components/FiltersSidebar";
 import { getProfessionals, getServiceCategories } from "../../../api/jobs.api";
+import { getProfessionalProfile } from "../../../api/auth.api";
 import { 
   Search, ArrowUpDown, 
   Loader2, SearchX, ChevronDown,
@@ -34,16 +35,16 @@ const SearchResults = () => {
     const [sortBy, setSortBy] = useState<string>("recommended");
 
     useEffect(() => {
-        Promise.all([getProfessionals(), getServiceCategories()])
-            .then(([userData, categoriesData]) => {
+        const fetchAndEnrich = async () => {
+            try {
+                const [userData, categoriesData] = await Promise.all([getProfessionals(), getServiceCategories()]);
+
                 const categoryMap: Record<string, string> = {};
                 if (Array.isArray(categoriesData)) {
-                    categoriesData.forEach((cat: any) => {
-                        categoryMap[cat.id] = cat.name;
-                    });
+                    categoriesData.forEach((cat: any) => { categoryMap[cat.id] = cat.name; });
                 }
 
-                let fetched = [];
+                let fetched: any[] = [];
                 if (Array.isArray(userData)) fetched = userData;
                 else if (userData?.results) fetched = userData.results;
                 else fetched = userData?.professionals || userData?.data || [];
@@ -56,45 +57,72 @@ const SearchResults = () => {
                     return `${(import.meta.env.VITE_API_URL || 'https://fix-link-5332f899c079.herokuapp.com').replace(/\/$/, '')}${cleanPath}`;
                 };
 
-                const mapped = fetched
-                    .filter((u: any) => u.role === 'professional' || u.is_professional || u.user?.role === 'professional')
-                    .map((prof: any) => {
-                        const ud = prof.user || {};
-                        const roleName = categoryMap[prof.profession || ud.profession] || t('common.professional');
-                        
-                        // Map location dynamically
-                        const city = prof.city || ud.city || '';
-                        const area = prof.subcity || ud.subcity || prof.neighborhood || ud.neighborhood || '';
-                        const locationString = city && area ? `${city}, ${area}` : city || area || 'Addis Ababa';
+                // Filter to professionals, build base cards
+                const proList = fetched.filter(
+                    (u: any) => u.role === 'professional' || u.is_professional || u.user?.role === 'professional'
+                );
 
-                        return {
-                            id: ud.id || prof.user_id || (typeof prof.user === 'string' ? prof.user : null) || prof.id,
-                            name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || t('common.anonymous_pro'),
-                            role: t(`categories.${categoryMap[prof.profession || ud.profession] || prof.profession || ud.profession}`, { defaultValue: categoryMap[prof.profession || ud.profession] || t('common.professional') }),
-                            rating: prof.average_rating || prof.rating || 0,
-                            reviews: prof.total_jobs_completed || prof.reviews_count || 0,
-                            price: prof.hourly_rate || 0,
-                            verified: prof.is_verified_professional || false,
-                            city: prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || ud.professional_detail?.city || '',
-                            subcity: prof.subcity || ud.subcity || prof.professional_detail?.subcity || prof.professional_profile?.subcity || ud.professional_detail?.subcity || '',
-                            location: (prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || prof.address || ud.address) 
-                                ? `${prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || prof.address || ud.address}${prof.subcity || ud.subcity || prof.professional_detail?.subcity || prof.professional_profile?.subcity || prof.neighborhood || ud.neighborhood ? ', ' + (prof.subcity || ud.subcity || prof.professional_detail?.subcity || prof.professional_profile?.subcity || prof.neighborhood || ud.neighborhood) : ''}`
-                                : 'Addis Ababa',
-                            searchLocation: (prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || prof.address || ud.address) 
-                                ? `${prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || prof.address || ud.address} ${prof.subcity || ud.subcity || prof.professional_detail?.subcity || prof.professional_profile?.subcity || prof.neighborhood || ud.neighborhood || ''} ${t(`locations.${prof.city || ud.city || prof.professional_detail?.city || prof.professional_profile?.city || prof.address || ud.address}`, { defaultValue: '' })}`.toLowerCase()
-                                : 'addis ababa አዲስ አበባ',
-                            image: getImageUrl(prof.profile_picture || ud.profile_picture),
-                            experience: prof.years_of_experience > 5 ? t('common.senior') : prof.years_of_experience > 2 ? t('common.mid_level') : t('common.junior'),
-                            availability: t('common.today'),
-                            languages: [t('common.amharic'), t('common.english')]
-                        };
-                    });
+                const baseCards = proList.map((prof: any) => {
+                    const ud = prof.user || {};
+                    const yoe = Number(prof.years_of_experience || ud.years_of_experience || 0);
+                    return {
+                        id: ud.id || prof.user_id || (typeof prof.user === 'string' ? prof.user : null) || prof.id,
+                        name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || t('common.anonymous_pro'),
+                        role: t(`categories.${categoryMap[prof.profession || ud.profession] || prof.profession || ud.profession}`, { defaultValue: categoryMap[prof.profession || ud.profession] || t('common.professional') }),
+                        rating: prof.average_rating || prof.rating || 0,
+                        reviews: prof.total_jobs_completed || prof.reviews_count || 0,
+                        price: prof.hourly_rate || 0,
+                        verified: prof.is_verified_professional || false,
+                        city: '',
+                        subcity: '',
+                        location: 'Addis Ababa', // placeholder – enriched below
+                        searchLocation: 'addis ababa አዲስ አበባ',
+                        image: getImageUrl(prof.profile_picture || ud.profile_picture),
+                        experience: yoe > 5 ? t('common.senior') : yoe > 2 ? t('common.mid_level') : t('common.junior'),
+                        availability: t('common.today'),
+                        languages: [t('common.amharic'), t('common.english')]
+                    };
+                });
+
+                // Enrich location from individual public profiles (parallel, safe)
+                const profileResults = await Promise.allSettled(
+                    baseCards.map((card: any) =>
+                        card.id ? getProfessionalProfile(String(card.id)) : Promise.resolve(null)
+                    )
+                );
+
+                const mapped = baseCards.map((card: any, i: number) => {
+                    const result = profileResults[i];
+                    if (result.status === 'fulfilled' && result.value) {
+                        const p = result.value as any;
+                        const city = (p.city || '').trim().replace(/^[\s,]+|[\s,]+$/g, '').replace(/\s*,\s*/g, ', ');
+                        const area = (p.subcity || p.neighborhood || '').trim().replace(/^[\s,]+|[\s,]+$/g, '').replace(/\s*,\s*/g, ', ');
+                        let location = 'Addis Ababa';
+                        if (city && area) {
+                            if (area.toLowerCase().includes(city.toLowerCase())) {
+                                location = area;
+                            } else if (city.toLowerCase().includes(area.toLowerCase())) {
+                                location = city;
+                            } else {
+                                location = `${city}, ${area}`;
+                            }
+                        } else {
+                            location = city || area || 'Addis Ababa';
+                        }
+                        location = location.trim().replace(/^[\s,]+|[\s,]+$/g, '');
+                        const searchLoc = (city || area)
+                            ? `${city} ${area} ${t(`locations.${city}`, { defaultValue: '' })}`.toLowerCase()
+                            : 'addis ababa አዲስ አበባ';
+                        return { ...card, city, subcity: area, location, searchLocation: searchLoc };
+                    }
+                    return card;
+                });
 
                 // Filter by service query if present
-                const filteredByService = serviceQuery 
+                const filteredByService = serviceQuery
                     ? mapped.filter((p: any) => {
                         const localizedQuery = t(`categories.${serviceQuery}`, { defaultValue: serviceQuery }).toLowerCase();
-                        return p.role.toLowerCase().includes(serviceQuery.toLowerCase()) || 
+                        return p.role.toLowerCase().includes(serviceQuery.toLowerCase()) ||
                                p.role.toLowerCase().includes(localizedQuery) ||
                                p.name.toLowerCase().includes(serviceQuery.toLowerCase());
                     })
@@ -103,11 +131,13 @@ const SearchResults = () => {
                 setProfessionals(filteredByService);
                 setLastLoadedSearch(location.search);
                 setLoading(false);
-            })
-            .catch(err => {
+            } catch (err) {
                 console.error("Search fetch error:", err);
                 setLoading(false);
-            });
+            }
+        };
+
+        fetchAndEnrich();
     }, [serviceQuery, location.search]);
 
     // Force loading state if the URL search has changed but the data hasn't re-fetched yet

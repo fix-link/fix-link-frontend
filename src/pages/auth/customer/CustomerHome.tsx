@@ -4,6 +4,7 @@ import ProfessionalCard, { type Professional } from "./components/ProfessionalCa
 import CustomerFooter from "./components/CustomerFooter";
 import FiltersSidebar from "./components/FiltersSidebar";
 import { getProfessionals, getServiceCategories } from "../../../api/jobs.api";
+import { getProfessionalProfile } from "../../../api/auth.api";
 import { Sparkles, Star, Briefcase, TrendingUp, ArrowUp, ArrowDown, Settings2, ArrowUpDown, ChevronDown, Check } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -15,43 +16,38 @@ const CustomerHome = () => {
 
   // Fetch professionals and categories from backend
   useEffect(() => {
-    console.log("CustomerHome: Fetching professionals and categories...");
-    
-    // 1. Try to load from cache for instant UI
-    const cached = localStorage.getItem('cached_professionals_v2');
+    // 1. Try to load from cache for instant UI (v3 cache has real location data)
+    const cached = localStorage.getItem('cached_professionals_v3');
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setProfessionals(parsed);
-          setLoading(false); // Show cache immediately
+          setLoading(false);
         }
       } catch (e) {
         console.warn("CustomerHome: Failed to parse cache", e);
       }
     }
-    
-    Promise.all([getProfessionals(), getServiceCategories()])
-      .then(([userData, categoriesData]) => {
-        console.log("CustomerHome: Fresh data received");
+
+    const fetchAndEnrich = async () => {
+      try {
+        const [userData, categoriesData] = await Promise.all([getProfessionals(), getServiceCategories()]);
 
         const categoryMap: Record<string, string> = {};
         if (Array.isArray(categoriesData)) {
-          categoriesData.forEach((cat: any) => {
-            categoryMap[cat.id] = cat.name;
-          });
+          categoriesData.forEach((cat: any) => { categoryMap[cat.id] = cat.name; });
         }
 
-        let fetchedProfessionals = [];
+        let fetchedProfessionals: any[] = [];
         if (Array.isArray(userData)) {
-            fetchedProfessionals = userData;
+          fetchedProfessionals = userData;
         } else if (userData && Array.isArray(userData.results)) {
-            fetchedProfessionals = userData.results;
+          fetchedProfessionals = userData.results;
         } else if (userData && typeof userData === 'object') {
-            fetchedProfessionals = userData.professionals || userData.data || [];
+          fetchedProfessionals = userData.professionals || userData.data || [];
         }
 
-        // Helper to format image URLs
         const defaultAvatar = `data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'><rect width='150' height='150' fill='%23e2e8f0'/><circle cx='75' cy='58' r='30' fill='%2394a3b8'/><ellipse cx='75' cy='130' rx='50' ry='35' fill='%2394a3b8'/></svg>`;
         const getImageUrl = (path: string) => {
           if (!path) return defaultAvatar;
@@ -60,50 +56,74 @@ const CustomerHome = () => {
           return `${(import.meta.env.VITE_API_URL || 'https://fix-link-5332f899c079.herokuapp.com').replace(/\/$/, '')}${cleanPath}`;
         };
 
-        // Filter for professionals and map data
-        const verifiedProfessionals = fetchedProfessionals
-          .filter((u: any) => u.role === 'professional' || u.is_professional || (u.user && u.user.role === 'professional'))
-          .map((prof: any) => {
-            const userData = prof.user || {};
-            const firstName = prof.first_name || userData.first_name || '';
-            const lastName = prof.last_name || userData.last_name || '';
-            const roleId = prof.profession || userData.profession;
-            
-            // Map location dynamically
-            const city = prof.city || userData.city || prof.professional_detail?.city || prof.professional_profile?.city || '';
-            const area = prof.subcity || userData.subcity || prof.professional_detail?.subcity || prof.professional_profile?.subcity || prof.neighborhood || userData.neighborhood || '';
-            const locationString = city && area ? `${city}, ${area}` : city || area || 'Addis Ababa';
+        // Filter to professionals only
+        const proList = fetchedProfessionals.filter(
+          (u: any) => u.role === 'professional' || u.is_professional || (u.user && u.user.role === 'professional')
+        );
 
-            // Map years_of_experience -> experience level label
-            const yoe = Number(prof.years_of_experience || userData.years_of_experience || 0);
-            const experienceLevel = yoe >= 5 ? 'Senior' : yoe >= 3 ? 'Mid-level' : 'Junior';
+        // Build base cards (location will be enriched below)
+        const baseCards = proList.map((prof: any) => {
+          const ud = prof.user || {};
+          const roleId = prof.profession || ud.profession;
+          const yoe = Number(prof.years_of_experience || ud.years_of_experience || 0);
+          return {
+            id: ud.id || prof.user_id || (typeof prof.user === 'string' ? prof.user : null) || prof.id,
+            name: `${prof.first_name || ud.first_name || ''} ${prof.last_name || ud.last_name || ''}`.trim() || prof.username || ud.username || t('common.anonymous_pro'),
+            role: t(`categories.${categoryMap[roleId] || roleId}`, { defaultValue: categoryMap[roleId] || roleId || t('common.professional') }),
+            rating: prof.average_rating || prof.rating || 0,
+            reviews: prof.total_jobs_completed || prof.reviews_count || 0,
+            price: prof.hourly_rate || 0,
+            verified: prof.is_verified_professional || false,
+            image: getImageUrl(prof.profile_picture || ud.profile_picture),
+            location: 'Addis Ababa', // placeholder – will be replaced by enrichment
+            experience: yoe >= 5 ? 'Senior' : yoe >= 3 ? 'Mid-level' : 'Junior',
+            languages: Array.isArray(prof.languages || ud.languages)
+              ? (prof.languages || ud.languages)
+              : (prof.languages || ud.languages || '').toString().split(',').map((l: string) => l.trim()).filter(Boolean),
+          };
+        });
 
-            return {
-              id: userData.id || prof.user_id || (typeof prof.user === 'string' ? prof.user : null) || prof.id,
-              name: `${firstName} ${lastName}`.trim() || prof.username || userData.username || t('common.anonymous_pro'),
-              role: t(`categories.${categoryMap[roleId] || roleId}`, { defaultValue: categoryMap[roleId] || roleId || t('common.professional') }),
-              rating: prof.average_rating || prof.rating || 0,
-              reviews: prof.total_jobs_completed || prof.reviews_count || 0,
-              price: prof.hourly_rate || 0,
-              verified: prof.is_verified_professional || false,
-              image: getImageUrl(prof.profile_picture || userData.profile_picture),
-              location: locationString,
-              experience: experienceLevel,
-              languages: Array.isArray(prof.languages || userData.languages)
-                ? (prof.languages || userData.languages)
-                : (prof.languages || userData.languages || '').toString().split(',').map((l: string) => l.trim()).filter(Boolean),
-            };
-          });
+        // Enrich location from individual public profiles (parallel, failures safe)
+        const profileResults = await Promise.allSettled(
+          baseCards.map((card: any) =>
+            card.id ? getProfessionalProfile(String(card.id)) : Promise.resolve(null)
+          )
+        );
 
-        setProfessionals(verifiedProfessionals);
-        // Update cache for next time
-        localStorage.setItem('cached_professionals_v2', JSON.stringify(verifiedProfessionals));
+        const enriched = baseCards.map((card: any, i: number) => {
+          const result = profileResults[i];
+          if (result.status === 'fulfilled' && result.value) {
+            const p = result.value as any;
+            const city = (p.city || '').trim().replace(/^[\s,]+|[\s,]+$/g, '').replace(/\s*,\s*/g, ', ');
+            const area = (p.subcity || p.neighborhood || '').trim().replace(/^[\s,]+|[\s,]+$/g, '').replace(/\s*,\s*/g, ', ');
+            let location = 'Addis Ababa';
+            if (city && area) {
+              if (area.toLowerCase().includes(city.toLowerCase())) {
+                location = area;
+              } else if (city.toLowerCase().includes(area.toLowerCase())) {
+                location = city;
+              } else {
+                location = `${city}, ${area}`;
+              }
+            } else {
+              location = city || area || 'Addis Ababa';
+            }
+            location = location.trim().replace(/^[\s,]+|[\s,]+$/g, '');
+            return { ...card, location };
+          }
+          return card;
+        });
+
+        setProfessionals(enriched);
+        localStorage.setItem('cached_professionals_v3', JSON.stringify(enriched));
         setLoading(false);
-      })
-      .catch((err) => {
+      } catch (err) {
         console.error("Failed to fetch dashboard data", err);
         setLoading(false);
-      });
+      }
+    };
+
+    fetchAndEnrich();
   }, []);
 
   // Filter Visibility State

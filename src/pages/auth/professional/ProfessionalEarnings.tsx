@@ -4,7 +4,7 @@ import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { useAuth } from "../../../context/AuthContext";
 import { useData } from "../../../context/DataContext";
-import { getEarningsSummary, listPayments, withdrawFunds } from "../../../api/payments.api";
+import { listPayments, withdrawFunds } from "../../../api/payments.api";
 import {
     TrendingUp,
     Clock,
@@ -21,23 +21,8 @@ const ProfessionalEarnings: React.FC = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
     const navigate = useNavigate();
-    const { jobs, jobsLoading } = useData();
-    const [earningsSummary, setEarningsSummary] = useState<any>(null);
+    const { jobs, jobsLoading, earningsSummary, earningsLoading, refreshEarnings } = useData();
     const [isWithdrawing, setIsWithdrawing] = useState(false);
-
-    useEffect(() => {
-        const fetchSummary = async () => {
-            try {
-                const userId = (user as any)?.user?.id || user?.id;
-                if (!userId) return;
-                const summary = await getEarningsSummary(userId);
-                setEarningsSummary(summary);
-            } catch (err) {
-                console.error("Failed to fetch earnings summary", err);
-            }
-        };
-        fetchSummary();
-    }, [user?.id]);
 
     const myCompletedJobs = useMemo(() => {
         const userId = (user as any)?.user?.id || user?.id;
@@ -115,8 +100,7 @@ const ProfessionalEarnings: React.FC = () => {
             });
             alert(t('common.withdrawal_success'));
             // Refresh summary
-            const summary = await getEarningsSummary(userId);
-            setEarningsSummary(summary);
+            await refreshEarnings();
         } catch (err: any) {
             alert(t('common.withdrawal_failed', { error: err.message || "Unknown error" }));
         } finally {
@@ -176,7 +160,7 @@ const ProfessionalEarnings: React.FC = () => {
                                     accent: "text-emerald-500",
                                     iconBg: "bg-emerald-500/10 dark:bg-emerald-500/20",
                                     sub: t('common.completed_jobs_count', { count: myCompletedJobs.length }),
-                                    loading: jobsLoading
+                                    loading: earningsLoading
                                 },
                                 {
                                     label: t('common.pending_payouts'),
@@ -185,7 +169,7 @@ const ProfessionalEarnings: React.FC = () => {
                                     accent: "text-amber-500",
                                     iconBg: "bg-amber-500/10 dark:bg-amber-500/20",
                                     sub: t('common.active_jobs_count', { count: myActiveJobs.length }),
-                                    loading: jobsLoading
+                                    loading: earningsLoading
                                 },
                                 {
                                     label: t('common.average_income'),
@@ -194,7 +178,7 @@ const ProfessionalEarnings: React.FC = () => {
                                     accent: "text-blue-500",
                                     iconBg: "bg-blue-500/10 dark:bg-blue-500/20",
                                     sub: t('common.avg_earnings_per_job'),
-                                    loading: jobsLoading
+                                    loading: earningsLoading
                                 },
                             ].map(card => (
                                 <div key={card.label} className="group relative overflow-hidden rounded-[2.5rem] bg-white/80 dark:bg-slate-900/60 backdrop-blur-3xl p-10 border border-slate-100 dark:border-slate-800/50 shadow-xl shadow-slate-200/50 dark:shadow-none transition-all duration-500 hover:shadow-2xl hover:-translate-y-2">
@@ -239,7 +223,7 @@ const ProfessionalEarnings: React.FC = () => {
                                             <span className="flex h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.8)]"></span>
                                             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-400">{t('common.withdrawable_balance')}</p>
                                         </div>
-                                        {jobsLoading ? (
+                                        {earningsLoading ? (
                                             <div className="h-20 w-64 bg-white/10 rounded-3xl animate-pulse"></div>
                                         ) : (
                                             <h2 className="text-7xl lg:text-8xl font-black text-white tracking-tighter leading-none">

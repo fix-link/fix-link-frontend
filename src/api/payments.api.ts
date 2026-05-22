@@ -58,7 +58,7 @@ export const initializePayment = async (
       payment_method: details?.payment_method || "chapa",
       callback_url: window.location.origin + "/customer/payment-success/" + jobId,
       return_url: window.location.origin + "/customer/payment-success/" + jobId,
-      description: sanitizeChapaText(details?.description || "Payment for job " + jobId),
+      description: sanitizeChapaText(details?.description || "Payment for job " + jobId).substring(0, 50),
       title: sanitizeChapaText(details?.title || "Fix-Link").substring(0, 16),
       logo_url: "https://fixlink.app/logo.png"
     };
