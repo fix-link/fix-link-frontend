@@ -17,6 +17,9 @@ import {
     Sparkles
 } from "lucide-react";
 import { createJob, getServiceCategories } from "../../../api/jobs.api";
+import LocationInput from "../../../components/LocationInput";
+import type { LocationSelection } from "../../../types/location.types";
+import { formatLocationDisplay } from "../../../utils/location";
 
 const CustomerPostJob = () => {
     const { t } = useTranslation();
@@ -25,12 +28,16 @@ const CustomerPostJob = () => {
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [locationSel, setLocationSel] = useState<LocationSelection | null>(null);
 
     const [formData, setFormData] = useState({
         title: "",
         description: "",
         service: "",
-        address: "Addis Ababa",
+        address: "",
+        subcity: "",
+        lat: undefined as number | undefined,
+        lng: undefined as number | undefined,
         budget: "",
         scheduled_at: "",
         photos: [] as File[]
@@ -72,6 +79,10 @@ const CustomerPostJob = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!formData.address?.trim()) {
+            setError("Please select your subcity in Addis Ababa.");
+            return;
+        }
         setLoading(true);
         setError(null);
         try {
@@ -82,7 +93,7 @@ const CustomerPostJob = () => {
                 title: `[${formData.service}] ${formData.title}`,
                 description: `Category: ${formData.service}\n\n${formData.description}`,
                 service: undefined, // Omit ServiceCategory UUID as it's not a valid Service PK
-                address: formData.address,
+                address: formData.address || (locationSel ? formatLocationDisplay(locationSel) : ""),
                 budget: formData.budget,
                 scheduled_at: formData.scheduled_at,
                 photos: formData.photos
@@ -189,22 +200,26 @@ const CustomerPostJob = () => {
                                     </select>
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="space-y-2 md:col-span-2">
                                     <label className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-500">
-                                        <MapPin size={16} className="text-primary" /> Location
+                                        <MapPin size={16} className="text-primary" /> Location (Addis Ababa subcity)
                                     </label>
-                                    <select
-                                        name="address"
+                                    <LocationInput
                                         value={formData.address}
-                                        onChange={handleChange}
-                                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-slate-900 dark:text-white font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer"
-                                    >
-                                        {["Addis Ababa", "Adama", "Bahir Dar", "Hawassa", "Gondar", "Mekelle", "Dire Dawa", "Jimma", "Bishoftu", "Dessie"].map(loc => (
-                                            <option key={loc} value={loc} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
-                                                {loc}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        onInputChange={(v) => setFormData((prev) => ({ ...prev, address: v }))}
+                                        onSelect={(sel) => {
+                                            setLocationSel(sel);
+                                            setFormData((prev) => ({
+                                                ...prev,
+                                                address: formatLocationDisplay(sel),
+                                                subcity: sel.subcity,
+                                                lat: sel.lat,
+                                                lng: sel.lng,
+                                            }));
+                                        }}
+                                        placeholder="e.g. Bole, Kazanchis"
+                                        className="w-full bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-slate-900 dark:text-white font-bold outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                                    />
                                 </div>
 
                                 <div className="space-y-2">

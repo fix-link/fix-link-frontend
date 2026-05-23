@@ -8,23 +8,12 @@ import { getImageUrl } from "../../../../api/auth.api";
 import { useTheme } from "../../../../context/ThemeContext";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "../../../../components/LanguageSwitcher";
+import LocationInput from "../../../../components/LocationInput";
+import { formatLocationDisplay } from "../../../../utils/location";
 import {
-  ChevronDown, MapPin, Navigation, ArrowRight, SearchX, Search,
+  ChevronDown, MapPin, ArrowRight, Search,
   LayoutDashboard, MessageSquare, Calendar, Bell, BellOff, Clock, Settings, LogOut, Sparkles, PlusCircle, Briefcase
 } from "lucide-react";
-
-const LOCATIONS = [
-  "Addis Ababa",
-  "Adama",
-  "Bahir Dar",
-  "Hawassa",
-  "Gondar",
-  "Mekelle",
-  "Dire Dawa",
-  "Jimma",
-  "Bishoftu",
-  "Dessie"
-];
 
 const CustomerNavbar = () => {
   const { user, logout } = useAuth();
@@ -34,9 +23,9 @@ const CustomerNavbar = () => {
 
   // Search State
   const [location, setLocation] = useState("Addis Ababa");
+  const [locationSubcity, setLocationSubcity] = useState("");
   const [service, setService] = useState("All Services");
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const suggestionRef = useRef<HTMLDivElement>(null);
@@ -69,7 +58,8 @@ const CustomerNavbar = () => {
     // Navigate to search page with query params
     const params = new URLSearchParams();
     if (service && service !== "All Services") params.append("service", service);
-    if (location) params.append("location", location);
+    if (locationSubcity) params.append("location", locationSubcity);
+    else if (location) params.append("location", location);
     navigate(`/customer/search?${params.toString()}`);
   };
 
@@ -90,15 +80,10 @@ const CustomerNavbar = () => {
     }
   };
 
-  const filteredLocations = LOCATIONS.filter(loc =>
-    loc.toLowerCase().includes(location.toLowerCase())
-  );
-
-  // Close suggestions when clicking outside
+  // Close menus when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
       }
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
@@ -138,71 +123,18 @@ const CustomerNavbar = () => {
             <div className="absolute right-0 top-1/4 bottom-1/4 w-px bg-slate-200 dark:bg-slate-700/50"></div>
           </div>
           
-          <div className="flex flex-1 items-center px-5 relative h-full cursor-text group" onClick={() => {
-              const input = document.getElementById('navbar-location-input');
-              input?.focus();
-          }}>
-            <MapPin size={18} strokeWidth={2.5} className="text-slate-400 group-focus-within:text-primary transition-colors mr-3" />
-            <div className="relative flex-1 h-full flex items-center" ref={suggestionRef}>
-              <input
-                id="navbar-location-input"
-                className="w-full h-full bg-transparent border-none focus:ring-0 text-[14px] font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 outline-none"
-                placeholder={t('common.where_need_service')}
-                type="text"
-                value={location}
-                onChange={(e) => {
-                  setLocation(e.target.value);
-                  setShowSuggestions(true);
-                }}
-                onFocus={() => setShowSuggestions(true)}
-              />
-
-              {/* Location Suggestions Dropdown */}
-              {showSuggestions && (
-                <div className="absolute top-[calc(100%+20px)] left-[-50px] right-[-50px] bg-white/90 dark:bg-slate-900/90 backdrop-blur-3xl rounded-[32px] shadow-[0_30px_80px_rgba(0,0,0,0.2)] border border-white/60 dark:border-slate-700/50 overflow-hidden z-[100] animate-in fade-in slide-in-from-top-4 zoom-in-95 duration-300">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-                  
-                  <div className="px-8 py-5 border-b border-slate-100/50 dark:border-slate-700/50 flex items-center justify-between relative z-10">
-                    <span className="text-[11px] font-black text-primary dark:text-primary tracking-[0.2em] uppercase flex items-center gap-2">
-                       <Sparkles size={14} className="animate-pulse" /> {t('common.popular_recommendations')}
-                    </span>
-                  </div>
-                  <div className="max-h-[350px] overflow-y-auto custom-scrollbar py-3 relative z-10">
-                    {filteredLocations.length > 0 ? (
-                      filteredLocations.map((loc, idx) => (
-                        <button
-                          key={loc}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setLocation(loc);
-                            setShowSuggestions(false);
-                          }}
-                          className="w-full text-left px-8 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/50 group transition-all duration-300 flex items-center justify-between"
-                        >
-                          <div className="flex items-center gap-4">
-                             <div className="size-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center group-hover:bg-primary/10 group-hover:scale-110 transition-all duration-300">
-                               <Navigation size={16} strokeWidth={2.5} className="text-slate-400 group-hover:text-primary transition-colors" />
-                             </div>
-                             <div>
-                                 <span className="text-[14px] font-black text-slate-800 dark:text-slate-200 group-hover:text-primary transition-colors block">{loc}</span>
-                                 <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{idx < 3 ? t('common.trending') : t('common.matches_query')}</span>
-                             </div>
-                          </div>
-                          <ArrowRight size={16} strokeWidth={3} className="text-slate-300 opacity-0 group-hover:opacity-100 -translate-x-4 group-hover:translate-x-0 transition-all duration-300" />
-                        </button>
-                      ))
-                    ) : (
-                      <div className="px-8 py-12 text-center">
-                        <div className="size-16 rounded-[24px] bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-4">
-                           <SearchX size={28} className="text-slate-300" />
-                        </div>
-                        <p className="text-sm text-slate-500 font-black tracking-tight">{t('common.no_locations_found')}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
+          <div className="flex flex-1 items-center px-3 relative h-full group" ref={suggestionRef}>
+            <LocationInput
+              value={location}
+              onInputChange={setLocation}
+              onSelect={(sel) => {
+                setLocation(formatLocationDisplay(sel));
+                setLocationSubcity(sel.subcity);
+              }}
+              placeholder={t('common.where_need_service')}
+              className="w-full h-full bg-transparent border-none focus:ring-0 text-[14px] font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 outline-none pl-8"
+              icon={<MapPin size={18} strokeWidth={2.5} className="text-slate-400 group-focus-within:text-primary transition-colors" />}
+            />
           </div>
           
           <button

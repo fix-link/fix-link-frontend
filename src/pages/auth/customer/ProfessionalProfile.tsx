@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import LocationInput from "../../../components/LocationInput";
+import type { LocationSelection } from "../../../types/location.types";
+import { formatLocationDisplay } from "../../../utils/location";
 import {
   getUserDetails,
   getImageUrl,
@@ -127,6 +129,7 @@ const ProfessionalProfile = () => {
   const [profileSkills, setProfileSkills] = useState("");
   const [profileExperience, setProfileExperience] = useState("");
   const [profileLocation, setProfileLocation] = useState("");
+  const [profileLocationData, setProfileLocationData] = useState<LocationSelection | null>(null);
   const [profileLanguages, setProfileLanguages] = useState<string[]>([]);
   const [profilePortfolio, setProfilePortfolio] = useState<any[]>([]);
   const [realReviews, setRealReviews] = useState<any[]>([]);
@@ -513,9 +516,12 @@ const ProfessionalProfile = () => {
           last_name: lName,
           bio: profileAbout,
           years_of_experience: Number(profileExperience),
-          city: profileLocation.split(",")[0]?.trim() || "",
-          subcity: profileLocation.split(",")[1]?.trim() || "",
-          neighborhood: profileLocation.split(",")[1]?.trim() || "", // Alternative field for some backends
+          country: profileLocationData?.country || "Ethiopia",
+          city: profileLocationData?.city || profileLocation.split(",")[1]?.trim() ? "Addis Ababa" : profileLocation.split(",")[0]?.trim() || "Addis Ababa",
+          subcity: profileLocationData?.subcity || profileLocation.split(",")[0]?.trim() || profileLocation.split(",")[1]?.trim() || "",
+          neighborhood: profileLocationData?.subcity || profileLocation.split(",")[1]?.trim() || "",
+          ...(profileLocationData?.lat != null && { lat: profileLocationData.lat }),
+          ...(profileLocationData?.lng != null && { lng: profileLocationData.lng }),
           skills: profileSkills,
           phonenumber: profilePhone,
           languages: profileLanguages,
@@ -969,7 +975,11 @@ const ProfessionalProfile = () => {
                               {isEditing ? (
                                 <LocationInput
                                   value={profileLocation}
-                                  onSelect={(loc) => setProfileLocation(loc)}
+                                  onSelect={(sel) => {
+                                    setProfileLocation(formatLocationDisplay(sel));
+                                    setProfileLocationData(sel);
+                                  }}
+                                  placeholder="Subcity in Addis Ababa"
                                   className="w-full text-lg font-black bg-slate-50/50 dark:bg-slate-800/30 border-b-2 border-primary outline-none px-4 py-1"
                                 />
                               ) : (

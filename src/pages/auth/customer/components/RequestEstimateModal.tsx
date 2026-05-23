@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { createJob } from "../../../../api/jobs.api";
 import { useAuth } from "../../../../context/AuthContext";
 import LocationInput from "../../../../components/LocationInput";
+import { useGpsLocation } from "../../../../hooks/useGpsLocation";
+import { formatLocationDisplay } from "../../../../utils/location";
 import { 
   X, Send, 
   CheckCircle2, Loader2, LocateFixed
@@ -23,30 +25,15 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
     const [location, setLocation] = useState("");
     const [budget, setBudget] = useState("");
     const [isSubmitted, setIsSubmitted] = useState(false);
-    const [isLocating, setIsLocating] = useState(false);
+    const [locationSel, setLocationSel] = useState<{ subcity: string; lat: number; lng: number } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     if (!isOpen) return null;
 
-    const handleGetCurrentLocation = () => {
-        setIsLocating(true);
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(
-                () => {
-                    setLocation("Addis Ababa (Current Location)");
-                    setIsLocating(false);
-                },
-                (error) => {
-                    console.error("Error getting location:", error);
-                    setIsLocating(false);
-                    alert("Could not get current location. Please type manually.");
-                }
-            );
-        } else {
-            setIsLocating(false);
-            alert("Geolocation is not supported by your browser.");
-        }
-    };
+    const { isLocating, getCurrentLocation } = useGpsLocation((sel) => {
+        setLocationSel(sel);
+        setLocation(formatLocationDisplay(sel));
+    });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -192,12 +179,17 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
                                 <div className="relative group">
                                     <LocationInput 
                                         value={location} 
-                                        onSelect={setLocation} 
+                                        onInputChange={setLocation}
+                                        onSelect={(sel) => {
+                                            setLocationSel(sel);
+                                            setLocation(formatLocationDisplay(sel));
+                                        }}
+                                        placeholder="Subcity in Addis Ababa (e.g. Bole)"
                                         className="w-full pl-6 pr-14 h-16 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400/50 focus:border-primary focus:bg-white dark:focus:bg-slate-800 transition-all text-sm font-black shadow-sm" 
                                     />
                                     <button
                                         type="button"
-                                        onClick={handleGetCurrentLocation}
+                                        onClick={getCurrentLocation}
                                         disabled={isLocating}
                                         className="absolute right-4 top-1/2 -translate-y-1/2 size-10 rounded-xl flex items-center justify-center text-primary bg-primary/5 hover:bg-primary/10 transition-colors disabled:opacity-50 z-10"
                                         title="Use current location"

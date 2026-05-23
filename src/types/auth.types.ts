@@ -41,6 +41,11 @@ export interface User {
   phone?: string;
   city?: string;
   subcity?: string;
+  country?: string;
+  neighborhood?: string;
+  location?: string;
+  lat?: number;
+  lng?: number;
   available_days?: number[];
   blocked_dates?: string[];
   preferred_payout_method?: string;

@@ -133,9 +133,10 @@ const SearchResults = () => {
         const matchesLanguage = selectedLanguages.length === 0 || (pro.languages && pro.languages.some((lang: string) => selectedLanguages.includes(lang)));
         
         // Strict location filtering if locationQuery is provided
-        const matchesLocation = !locationQuery || 
-                                pro.searchLocation.includes(locationQuery.toLowerCase()) || 
-                                locationQuery.toLowerCase().includes(pro.city?.toLowerCase()) ||
+        const matchesLocation = !locationQuery ||
+                                pro.searchLocation.includes(locationQuery.toLowerCase()) ||
+                                (pro.subcity && pro.subcity.toLowerCase().includes(locationQuery.toLowerCase())) ||
+                                locationQuery.toLowerCase().includes(pro.city?.toLowerCase() || "") ||
                                 (pro.city && locationQuery.toLowerCase().includes(pro.city.toLowerCase()));
 
         return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesLanguage && matchesLocation;

@@ -203,10 +203,13 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
         if (formData.shortBio) fd.append("bio", formData.shortBio);
 
         // If location is provided, parse it into city/subcity if they are missing
-        const city = formData.city || (formData.location?.split(',')[0]?.trim());
+        const city = formData.city || (formData.location?.split(',')[0]?.trim()) || "Addis Ababa";
         const subcity = formData.subcity || (formData.location?.split(',')[1]?.trim() || "");
         if (city) fd.append("city", city);
         if (subcity) fd.append("subcity", subcity);
+        if (formData.country) fd.append("country", formData.country);
+        if (formData.lat != null) fd.append("lat", String(formData.lat));
+        if (formData.lng != null) fd.append("lng", String(formData.lng));
 
         if (formData.houseNumber) fd.append("house_number", formData.houseNumber);
         if (formData.payoutMethod) fd.append("preferred_payout_method", formData.payoutMethod);
@@ -222,9 +225,12 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
         if (formData.gender) fd.append("gender", formData.gender);
         if (formData.dateOfBirth) fd.append("date_of_birth", formData.dateOfBirth);
         if (formData.location) {
-          fd.append("city", formData.location.split(',')[0]?.trim());
-          fd.append("subcity", formData.location.split(',')[1]?.trim() || "");
+          fd.append("city", formData.city || formData.location.split(',')[0]?.trim() || "Addis Ababa");
+          fd.append("subcity", formData.subcity || formData.location.split(',')[1]?.trim() || "");
         }
+        if (formData.country) fd.append("country", formData.country);
+        if (formData.lat != null) fd.append("lat", String(formData.lat));
+        if (formData.lng != null) fd.append("lng", String(formData.lng));
       }
 
       // Universal profile picture
@@ -261,8 +267,11 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
         ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
         ...(formData.shortBio && { bio: formData.shortBio }),
         // Smart location merge
-        city: formData.city || (formData.location?.split(',')[0]?.trim()),
+        city: formData.city || (formData.location?.split(',')[0]?.trim()) || "Addis Ababa",
         subcity: formData.subcity || (formData.location?.split(',')[1]?.trim() || ""),
+        ...(formData.country && { country: formData.country }),
+        ...(formData.lat != null && { lat: formData.lat }),
+        ...(formData.lng != null && { lng: formData.lng }),
         ...(formData.houseNumber && { house_number: formData.houseNumber }),
         ...(formData.payoutMethod && { preferred_payout_method: formData.payoutMethod }),
         ...(formData.accountNumber && { payout_account_number: formData.accountNumber }),
@@ -278,9 +287,12 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
         ...(formData.gender && { gender: formData.gender }),
         ...(formData.dateOfBirth && { date_of_birth: formData.dateOfBirth }),
         ...(formData.location && {
-          city: formData.location.split(',')[0]?.trim(),
-          subcity: formData.location.split(',')[1]?.trim() || ""
+          city: formData.city || formData.location.split(',')[0]?.trim() || "Addis Ababa",
+          subcity: formData.subcity || formData.location.split(',')[1]?.trim() || "",
         }),
+        ...(formData.country && { country: formData.country }),
+        ...(formData.lat != null && { lat: formData.lat }),
+        ...(formData.lng != null && { lng: formData.lng }),
       };
     }
 

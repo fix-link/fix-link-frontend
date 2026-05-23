@@ -7,6 +7,8 @@ import Sidebar from "../professional/components/Sidebar";
 import Header from "../professional/components/Header";
 import { getImageUrl, changePassword, deleteUserProfile, getUserDetails } from "../../../api/auth.api";
 import LocationInput from "../../../components/LocationInput";
+import type { LocationSelection } from "../../../types/location.types";
+import { formatLocationDisplay, mergeLocationIntoForm } from "../../../utils/location";
 import PhoneInput from "../../../components/PhoneInput";
 import { useTranslation } from "react-i18next";
 import { 
@@ -29,6 +31,7 @@ const AccountSettings = () => {
     const [email] = useState(user?.email || "");
     const [phone, setPhone] = useState((user as any)?.phonenumber || user?.phone || "");
     const [location, setLocation] = useState(user?.city ? `${user.city}${user.subcity ? ', ' + user.subcity : ''}` : "");
+    const [locationData, setLocationData] = useState<LocationSelection | null>(null);
     const [profilePreview, setProfilePreview] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [basePrice, setBasePrice] = useState(user?.hourly_rate || user?.base_price || 0);
@@ -78,8 +81,11 @@ const AccountSettings = () => {
                 last_name: lastName,
                 email,
                 phonenumber: phone,
-                city: location.split(',')[0]?.trim(),
-                subcity: location.split(',')[1]?.trim() || "",
+                country: locationData?.country || "Ethiopia",
+                city: locationData?.city || location.split(',')[0]?.trim() || "Addis Ababa",
+                subcity: locationData?.subcity || location.split(',')[1]?.trim() || "",
+                ...(locationData?.lat != null && { lat: locationData.lat }),
+                ...(locationData?.lng != null && { lng: locationData.lng }),
                 hourly_rate: Number(basePrice)
             });
             setUpdateSuccess(true);
@@ -305,7 +311,11 @@ const AccountSettings = () => {
                                                     <MapPin className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary transition-colors z-[5]" size={20} />
                                                     <LocationInput
                                                         value={location}
-                                                        onSelect={(loc) => setLocation(loc)}
+                                                        onSelect={(sel) => {
+                                                            setLocation(formatLocationDisplay(sel));
+                                                            setLocationData(sel);
+                                                        }}
+                                                        placeholder="Subcity in Addis Ababa (e.g. Bole)"
                                                         className="w-full px-6 py-4 pl-16 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/30 focus:ring-4 focus:ring-primary/10 focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-all font-bold text-slate-800 dark:text-white outline-none"
                                                     />
                                                 </div>

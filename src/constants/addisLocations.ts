@@ -1,0 +1,23 @@
+/** Addis Ababa subcities — used for quick picks and client-side validation hints. */
+export const ADDIS_SUBCITIES = [
+  "Bole",
+  "Yeka",
+  "Arada",
+  "Kirkos",
+  "Lideta",
+  "Gullele",
+  "Kolfe Keranio",
+  "Akaky Kaliti",
+  "Nifas Silk-Lafto",
+  "Kazanchis",
+  "Megenagna",
+  "CMC",
+  "Summit",
+  "Gerji",
+  "Piassa",
+  "Mexico",
+  "Saris",
+  "Gotera",
+  "Ayat",
+  "Lafto",
+] as const;

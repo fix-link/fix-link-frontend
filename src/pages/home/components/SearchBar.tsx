@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import LocationInput from "../../../components/LocationInput";
+import { formatLocationDisplay } from "../../../utils/location";
 import { Wrench, MapPin, Search } from "lucide-react";
 
 const SearchBar: React.FC = () => {
   const [location, setLocation] = useState("");
+  const [locationSubcity, setLocationSubcity] = useState("");
 
   return (
     <div className="w-full max-w-4xl mx-auto glass-panel p-2 md:p-3 rounded-2xl md:rounded-full mt-8 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
@@ -27,7 +29,11 @@ const SearchBar: React.FC = () => {
           <LocationInput
             className="w-full h-14 pl-10 bg-transparent border-none text-text-light dark:text-text-dark font-medium focus:ring-0 placeholder-gray-500"
             value={location}
-            onSelect={(loc: string) => setLocation(loc)}
+            onSelect={(sel) => {
+              setLocation(formatLocationDisplay(sel));
+              setLocationSubcity(sel.subcity);
+            }}
+            placeholder="Subcity in Addis Ababa (e.g. Bole)"
             icon={
               <MapPin size={20} className="text-gray-500" />
             }

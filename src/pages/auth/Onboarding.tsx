@@ -6,6 +6,9 @@ import { updateUserProfile } from "../../api/auth.api";
 import { Phone, Calendar, MapPin, ArrowRight, CheckCircle2 } from "lucide-react";
 import LoadingSpinner from "../../components/LoadingSpinner";
 import ErrorMessage from "../../components/ErrorMessage";
+import LocationInput from "../../components/LocationInput";
+import type { LocationSelection } from "../../types/location.types";
+import { formatLocationDisplay } from "../../utils/location";
 
 const Onboarding: React.FC = () => {
   const { t } = useTranslation();
@@ -15,6 +18,7 @@ const Onboarding: React.FC = () => {
   const [phone, setPhone] = useState("");
   const [dob, setDob] = useState("");
   const [location, setLocation] = useState("");
+  const [locationData, setLocationData] = useState<LocationSelection | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
@@ -38,9 +42,12 @@ const Onboarding: React.FC = () => {
       await updateUserProfile(user.id, {
         phonenumber: phone,
         date_of_birth: dob,
-        city: location.split(',')[0]?.trim(),
-        subcity: location.split(',')[1]?.trim() || ""
-      });
+        country: locationData?.country || "Ethiopia",
+        city: locationData?.city || "Addis Ababa",
+        subcity: locationData?.subcity || location.split(',')[0]?.trim() || "",
+        ...(locationData?.lat != null && { lat: locationData.lat }),
+        ...(locationData?.lng != null && { lng: locationData.lng }),
+      } as any);
       
       setStep(2);
       setTimeout(() => {
@@ -144,13 +151,15 @@ const Onboarding: React.FC = () => {
                   {t('common.city_area')}
                 </label>
                 <div className="relative group">
-                  <input
-                    type="text"
-                    placeholder="e.g. Addis Ababa, Bole"
-                    className="w-full h-16 px-6 rounded-3xl bg-slate-50/50 dark:bg-slate-800/50 border-2 border-transparent focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-lg font-bold text-slate-900 dark:text-white shadow-inner"
+                  <LocationInput
                     value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    required
+                    onInputChange={setLocation}
+                    onSelect={(sel) => {
+                      setLocation(formatLocationDisplay(sel));
+                      setLocationData(sel);
+                    }}
+                    placeholder="Subcity in Addis Ababa (e.g. Bole)"
+                    className="w-full h-16 px-6 rounded-3xl bg-slate-50/50 dark:bg-slate-800/50 border-2 border-transparent focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-lg font-bold text-slate-900 dark:text-white shadow-inner"
                   />
                 </div>
               </div>

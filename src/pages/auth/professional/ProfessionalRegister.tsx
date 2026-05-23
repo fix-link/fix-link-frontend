@@ -13,6 +13,8 @@ import ErrorMessage from "../../../components/ErrorMessage";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 import SuccessMessage from "../../../components/SuccessMessage";
 import LocationInput from "../../../components/LocationInput";
+import { useGpsLocation } from "../../../hooks/useGpsLocation";
+import { FIXED_CITY, mergeLocationIntoForm } from "../../../utils/location";
 import PasswordStrength from "../../../components/PasswordStrength";
 import { validatePassword } from "../../../utils/validation";
 import PhoneInput from "../../../components/PhoneInput";
@@ -51,7 +53,7 @@ const ProfessionalRegister = () => {
     phone: "",
     gender: "",
     dateOfBirth: "",
-    city: "",
+    city: FIXED_CITY,
     subcity: "",
     houseNumber: "",
     serviceCategory: "",
@@ -95,16 +97,9 @@ const ProfessionalRegister = () => {
     }
   };
 
-  const handleUseGPS = () => {
-    if (!navigator.geolocation) return alert("Geolocation is not supported");
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const coords = `${position.coords.latitude}, ${position.coords.longitude}`;
-        setForm({ ...form, location: coords });
-      },
-      () => alert(t('common.failed_update_profile'))
-    );
-  };
+  const { isLocating, getCurrentLocation } = useGpsLocation((sel) => {
+    setForm((prev) => mergeLocationIntoForm(prev, sel));
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,7 +295,7 @@ const ProfessionalRegister = () => {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                <div className="space-y-2">
                 <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.city_req')}</label>
-                <input type="text" name="city" value={form.city} onChange={handleChange} className="w-full h-12 px-5 rounded-full bg-white/50 dark:bg-gray-800/50 border border-border-light dark:border-border-dark focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none" required />
+                <input type="text" name="city" value={form.city || FIXED_CITY} readOnly className="w-full h-12 px-5 rounded-full bg-slate-100/80 dark:bg-gray-800/80 border border-border-light dark:border-border-dark text-slate-500 cursor-not-allowed outline-none" required />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.subcity_req')}</label>
@@ -314,11 +309,15 @@ const ProfessionalRegister = () => {
               <div className="sm:col-span-3 space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-text-light dark:text-text-dark ml-1">{t('common.precise_location_req')}</label>
-                  <LocationInput value={form.location} onSelect={(loc) => setForm({ ...form, location: loc })} />
+                  <LocationInput
+                    value={form.location}
+                    onSelect={(sel) => setForm((prev) => mergeLocationIntoForm(prev, sel))}
+                    placeholder="Subcity in Addis Ababa (e.g. Bole)"
+                  />
                 </div>
-                <button type="button" onClick={handleUseGPS} className="flex items-center gap-2 px-6 h-12 rounded-full bg-accent-cyan/10 text-accent-cyan font-bold hover:bg-accent-cyan/20 transition-all active:scale-95">
-                  <LocateFixed size={18} />
-                  <span>{t('common.use_gps')}</span>
+                <button type="button" onClick={getCurrentLocation} disabled={isLocating} className="flex items-center gap-2 px-6 h-12 rounded-full bg-accent-cyan/10 text-accent-cyan font-bold hover:bg-accent-cyan/20 transition-all active:scale-95 disabled:opacity-60">
+                  <LocateFixed size={18} className={isLocating ? "animate-pulse" : ""} />
+                  <span>{isLocating ? "..." : t('common.use_gps')}</span>
                 </button>
               </div>
             </div>

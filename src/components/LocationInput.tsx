@@ -1,40 +1,83 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { searchAddisLocations } from "../api/nominatim.api";
+import type { LocationSelection } from "../types/location.types";
+import { formatLocationDisplay } from "../utils/location";
+import { Loader2, MapPin } from "lucide-react";
 
 interface Props {
   value: string;
-  onSelect: (location: string) => void;
-  className?: string; // Custom class for the input
-  icon?: React.ReactNode; // Optional icon to render inside
+  onSelect: (location: LocationSelection) => void;
+  onInputChange?: (value: string) => void;
+  className?: string;
+  icon?: React.ReactNode;
+  placeholder?: string;
+  disabled?: boolean;
 }
 
-const mockLocations = [
-  "Addis Ababa, Bole",
-  "Addis Ababa, Kazanchis",
-  "Adama, Nazret",
-  "Bahir Dar",
-  "Hawassa",
-];
-
-const LocationInput = ({ value, onSelect, className, icon }: Props) => {
+const LocationInput = ({
+  value,
+  onSelect,
+  onInputChange,
+  className,
+  icon,
+  placeholder = "Search subcity (e.g. Bole)",
+  disabled = false,
+}: Props) => {
   const [query, setQuery] = useState(value);
+  const [suggestions, setSuggestions] = useState<LocationSelection[]>([]);
   const [show, setShow] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
-
-  const filtered = mockLocations.filter((loc) =>
-    loc.toLowerCase().includes(query.toLowerCase())
-  );
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    setQuery(value);
+  }, [value]);
+
+  const runSearch = useCallback(async (text: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const results = await searchAddisLocations(text);
+      setSuggestions(results);
+    } catch {
+      setSuggestions([]);
+      setError("Could not load locations. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!show) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      runSearch(query);
+    }, 400);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, show, runSearch]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
         setShow(false);
       }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
     };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const pick = (sel: LocationSelection) => {
+    const display = formatLocationDisplay(sel);
+    setQuery(display);
+    onInputChange?.(display);
+    onSelect(sel);
+    setShow(false);
+    setError(null);
+  };
 
   return (
     <div className="relative w-full" ref={wrapperRef}>
@@ -47,31 +90,50 @@ const LocationInput = ({ value, onSelect, className, icon }: Props) => {
         id="location"
         name="location"
         value={query}
-        onFocus={() => setShow(true)}
+        disabled={disabled}
+        onFocus={() => {
+          setShow(true);
+          runSearch(query);
+        }}
         onChange={(e) => {
           setQuery(e.target.value);
+          onInputChange?.(e.target.value);
           setShow(true);
         }}
         className={className || "form-input h-12 w-full"}
-        placeholder="Enter location"
+        placeholder={placeholder}
+        autoComplete="off"
       />
+      {loading && show && (
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 z-10 pointer-events-none text-slate-400">
+          <Loader2 size={18} className="animate-spin" />
+        </div>
+      )}
 
-      {show && filtered.length > 0 && (
-        <div className="absolute z-[60] left-0 right-0 top-full mt-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-          {filtered.map((loc, i) => (
+      {show && (suggestions.length > 0 || error) && (
+        <div className="absolute z-[60] left-0 right-0 top-full mt-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-white/20 dark:border-slate-700/50 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800/50 text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+            <MapPin size={12} />
+            Addis Ababa, Ethiopia
+          </div>
+          {error && (
+            <p className="px-4 py-3 text-xs font-bold text-amber-600 dark:text-amber-400">{error}</p>
+          )}
+          {suggestions.map((sel, i) => (
             <button
-              key={loc}
+              key={`${sel.subcity}-${sel.lat}-${i}`}
               type="button"
               className={`w-full text-left px-5 py-3 text-sm font-medium transition-colors hover:bg-primary hover:text-white dark:text-slate-200 dark:hover:text-white ${
-                i !== filtered.length - 1 ? 'border-b border-slate-100 dark:border-slate-800/50' : ''
+                i !== suggestions.length - 1
+                  ? "border-b border-slate-100 dark:border-slate-800/50"
+                  : ""
               }`}
-              onClick={() => {
-                onSelect(loc);
-                setQuery(loc);
-                setShow(false);
-              }}
+              onClick={() => pick(sel)}
             >
-              {loc}
+              <span className="block font-bold">{sel.subcity}</span>
+              <span className="block text-[10px] opacity-70 font-bold uppercase tracking-wider">
+                {sel.city}, {sel.country}
+              </span>
             </button>
           ))}
         </div>

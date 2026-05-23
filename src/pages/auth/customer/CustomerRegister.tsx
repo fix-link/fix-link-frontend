@@ -12,6 +12,7 @@ import ErrorMessage from "../../../components/ErrorMessage";
 import LoadingSpinner from "../../../components/LoadingSpinner";
 import SuccessMessage from "../../../components/SuccessMessage";
 import LocationInput from "../../../components/LocationInput";
+import { mergeLocationIntoForm } from "../../../utils/location";
 import PasswordStrength from "../../../components/PasswordStrength";
 import { validatePassword } from "../../../utils/validation";
 import PhoneInput from "../../../components/PhoneInput";
@@ -243,7 +244,8 @@ const CustomerRegister = () => {
                 <MapPin size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary transition-colors" />
                 <LocationInput
                   value={form.location}
-                  onSelect={(loc) => setForm({ ...form, location: loc })}
+                  onSelect={(sel) => setForm((prev) => mergeLocationIntoForm(prev, sel))}
+                  placeholder="Subcity in Addis Ababa (e.g. Bole)"
                   className="w-full h-12 pl-11 pr-4 rounded-full bg-white/50 dark:bg-gray-800/50 border border-border-light dark:border-border-dark focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all outline-none text-text-light dark:text-white"
                 />
               </div>
