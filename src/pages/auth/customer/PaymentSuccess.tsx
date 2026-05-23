@@ -35,7 +35,7 @@ const PaymentSuccess = () => {
 
                 // Call the /book/ endpoint to confirm the job is now booked/paid
                 await updateJobStatus(jobId, 'booked');
-                await refreshJobs();
+                await refreshJobs(true);
             } catch (err) {
                 console.error("PaymentSuccess: Failed to sync status", err);
             } finally {

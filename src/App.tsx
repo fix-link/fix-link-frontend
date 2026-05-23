@@ -1,3 +1,4 @@
+import { lazy, Suspense, useEffect, type ReactNode } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Home from "./pages/home/Home";
 import EmailSignup from "./pages/signup/EmailSignup";
@@ -6,30 +7,36 @@ import ChooseRole from "./pages/auth/ChooseRole";
 import CustomerRegister from "./pages/auth/customer/CustomerRegister";
 import Onboarding from "./pages/auth/Onboarding";
 import ProfessionalRegister from "./pages/auth/professional/ProfessionalRegister";
-import CustomerHome from "./pages/auth/customer/CustomerHome";
-import SearchResults from "./pages/auth/customer/SearchResults";
-import ProfessionalProfile from "./pages/auth/customer/ProfessionalProfile";
-import CustomerMessages from "./pages/auth/customer/CustomerMessages";
-import CustomerPostJob from "./pages/auth/customer/CustomerPostJob";
-import CustomerJobs from "./pages/auth/customer/CustomerJobs";
-import ProfessionalHome from "./pages/auth/professional/ProfessionalHome";
-import ProfessionalMessages from "./pages/auth/professional/ProfessionalMessages";
-import ProfessionalJobBoard from "./pages/auth/professional/ProfessionalJobBoard";
-import ProfessionalJobs from "./pages/auth/professional/ProfessionalJobs";
-import ProfessionalEarnings from "./pages/auth/professional/ProfessionalEarnings";
-import ProfessionalReviews from "./pages/auth/professional/ProfessionalReviews";
-import ProfessionalNotifications from "./pages/auth/professional/ProfessionalNotifications";
 import LoginPage from "./pages/auth/login";
 import ForgotPassword from "./pages/auth/login/ForgotPassword";
 import PendingApproval from "./pages/signup/PendingApproval";
-import AccountSettings from "./pages/auth/customer/AccountSettings";
-import Bookings from "./pages/auth/customer/Bookings";
-import PaymentCheckout from "./pages/auth/customer/PaymentCheckout";
-import PaymentSuccess from "./pages/auth/customer/PaymentSuccess";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
-import { useEffect } from "react";
+import PageLoader from "./components/PageLoader";
 import { useTheme } from "./context/ThemeContext";
+
+const CustomerHome = lazy(() => import("./pages/auth/customer/CustomerHome"));
+const SearchResults = lazy(() => import("./pages/auth/customer/SearchResults"));
+const ProfessionalProfile = lazy(() => import("./pages/auth/customer/ProfessionalProfile"));
+const CustomerMessages = lazy(() => import("./pages/auth/customer/CustomerMessages"));
+const CustomerPostJob = lazy(() => import("./pages/auth/customer/CustomerPostJob"));
+const CustomerJobs = lazy(() => import("./pages/auth/customer/CustomerJobs"));
+const Bookings = lazy(() => import("./pages/auth/customer/Bookings"));
+const PaymentCheckout = lazy(() => import("./pages/auth/customer/PaymentCheckout"));
+const PaymentSuccess = lazy(() => import("./pages/auth/customer/PaymentSuccess"));
+const AccountSettings = lazy(() => import("./pages/auth/customer/AccountSettings"));
+
+const ProfessionalHome = lazy(() => import("./pages/auth/professional/ProfessionalHome"));
+const ProfessionalMessages = lazy(() => import("./pages/auth/professional/ProfessionalMessages"));
+const ProfessionalJobBoard = lazy(() => import("./pages/auth/professional/ProfessionalJobBoard"));
+const ProfessionalJobs = lazy(() => import("./pages/auth/professional/ProfessionalJobs"));
+const ProfessionalEarnings = lazy(() => import("./pages/auth/professional/ProfessionalEarnings"));
+const ProfessionalReviews = lazy(() => import("./pages/auth/professional/ProfessionalReviews"));
+const ProfessionalNotifications = lazy(() => import("./pages/auth/professional/ProfessionalNotifications"));
+
+const LazyPage = ({ children }: { children: ReactNode }) => (
+  <Suspense fallback={<PageLoader />}>{children}</Suspense>
+);
 
 const ThemeManager = () => {
   const { theme } = useTheme();
@@ -37,10 +44,11 @@ const ThemeManager = () => {
 
   useEffect(() => {
     const root = document.documentElement;
-    // Standard approach: Home page and Auth flow are theme-neutral (usually light or brand-fixed)
-    // Only apply dashboard dark mode if we're in the dashboard areas
-    const isDashboard = location.pathname.startsWith('/customer') || location.pathname.startsWith('/professional') || location.pathname.startsWith('/account-settings');
-    
+    const isDashboard =
+      location.pathname.startsWith("/customer") ||
+      location.pathname.startsWith("/professional") ||
+      location.pathname.startsWith("/account-settings");
+
     if (isDashboard && theme === "dark") {
       root.classList.add("dark");
     } else {
@@ -57,27 +65,31 @@ function App() {
       <ThemeManager />
       <ScrollToTop />
       <Routes>
-        {/* Home Page */}
         <Route path="/" element={<Home />} />
-        {/* Signup flow */}
         <Route path="/signup/email" element={<EmailSignup />} />
         <Route path="/signup/verify" element={<VerifyOTP />} />
         <Route path="/signup/role" element={<ChooseRole />} />
-        <Route path="/signup/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+        <Route
+          path="/signup/onboarding"
+          element={
+            <ProtectedRoute>
+              <Onboarding />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Registration */}
         <Route path="/signup/customer" element={<CustomerRegister />} />
         <Route path="/signup/professional" element={<ProfessionalRegister />} />
-        {/* Login & Recovery */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Dashboards */}
         <Route
           path="/customer/home"
           element={
             <ProtectedRoute role="customer">
-              <CustomerHome />
+              <LazyPage>
+                <CustomerHome />
+              </LazyPage>
             </ProtectedRoute>
           }
         />
@@ -85,57 +97,100 @@ function App() {
           path="/customer/search"
           element={
             <ProtectedRoute role="customer">
-              <SearchResults />
+              <LazyPage>
+                <SearchResults />
+              </LazyPage>
             </ProtectedRoute>
           }
         />
-        <Route path="/customer/profile/:id" element={
-          <ProtectedRoute role="customer">
-            <ProfessionalProfile />
-          </ProtectedRoute>
-        } />
-
-        <Route path="/customer/messages/:id" element={
-          <ProtectedRoute role="customer">
-            <CustomerMessages />
-          </ProtectedRoute>
-        } />
-        <Route path="/customer/messages" element={
-          <ProtectedRoute role="customer">
-            <CustomerMessages />
-          </ProtectedRoute>
-        } />
-        <Route path="/customer/checkout/:jobId" element={
-          <ProtectedRoute role="customer">
-            <PaymentCheckout />
-          </ProtectedRoute>
-        } />
-        <Route path="/customer/payment-success/:jobId" element={
-          <ProtectedRoute role="customer">
-            <PaymentSuccess />
-          </ProtectedRoute>
-        } />
-        <Route path="/customer/bookings" element={
-          <ProtectedRoute role="customer">
-            <Bookings />
-          </ProtectedRoute>
-        } />
-        <Route path="/customer/post-job" element={
-          <ProtectedRoute role="customer">
-            <CustomerPostJob />
-          </ProtectedRoute>
-        } />
-        <Route path="/customer/jobs" element={
-          <ProtectedRoute role="customer">
-            <CustomerJobs />
-          </ProtectedRoute>
-        } />
+        <Route
+          path="/customer/profile/:id"
+          element={
+            <ProtectedRoute role="customer">
+              <LazyPage>
+                <ProfessionalProfile />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/messages/:id"
+          element={
+            <ProtectedRoute role="customer">
+              <LazyPage>
+                <CustomerMessages />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/messages"
+          element={
+            <ProtectedRoute role="customer">
+              <LazyPage>
+                <CustomerMessages />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/checkout/:jobId"
+          element={
+            <ProtectedRoute role="customer">
+              <LazyPage>
+                <PaymentCheckout />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/payment-success/:jobId"
+          element={
+            <ProtectedRoute role="customer">
+              <LazyPage>
+                <PaymentSuccess />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/bookings"
+          element={
+            <ProtectedRoute role="customer">
+              <LazyPage>
+                <Bookings />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/post-job"
+          element={
+            <ProtectedRoute role="customer">
+              <LazyPage>
+                <CustomerPostJob />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer/jobs"
+          element={
+            <ProtectedRoute role="customer">
+              <LazyPage>
+                <CustomerJobs />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
 
         <Route
           path="/professional/home"
           element={
             <ProtectedRoute role="professional">
-              <ProfessionalHome />
+              <LazyPage>
+                <ProfessionalHome />
+              </LazyPage>
             </ProtectedRoute>
           }
         />
@@ -143,7 +198,9 @@ function App() {
           path="/professional/messages"
           element={
             <ProtectedRoute role="professional">
-              <ProfessionalMessages />
+              <LazyPage>
+                <ProfessionalMessages />
+              </LazyPage>
             </ProtectedRoute>
           }
         />
@@ -151,7 +208,9 @@ function App() {
           path="/professional/jobs"
           element={
             <ProtectedRoute role="professional">
-              <ProfessionalJobs />
+              <LazyPage>
+                <ProfessionalJobs />
+              </LazyPage>
             </ProtectedRoute>
           }
         />
@@ -159,7 +218,9 @@ function App() {
           path="/professional/job-board"
           element={
             <ProtectedRoute role="professional">
-              <ProfessionalJobBoard />
+              <LazyPage>
+                <ProfessionalJobBoard />
+              </LazyPage>
             </ProtectedRoute>
           }
         />
@@ -167,7 +228,9 @@ function App() {
           path="/professional/earnings"
           element={
             <ProtectedRoute role="professional">
-              <ProfessionalEarnings />
+              <LazyPage>
+                <ProfessionalEarnings />
+              </LazyPage>
             </ProtectedRoute>
           }
         />
@@ -175,7 +238,9 @@ function App() {
           path="/professional/reviews"
           element={
             <ProtectedRoute role="professional">
-              <ProfessionalReviews />
+              <LazyPage>
+                <ProfessionalReviews />
+              </LazyPage>
             </ProtectedRoute>
           }
         />
@@ -183,7 +248,9 @@ function App() {
           path="/professional/notifications"
           element={
             <ProtectedRoute role="professional">
-              <ProfessionalNotifications />
+              <LazyPage>
+                <ProfessionalNotifications />
+              </LazyPage>
             </ProtectedRoute>
           }
         />
@@ -191,18 +258,24 @@ function App() {
           path="/professional/profile"
           element={
             <ProtectedRoute role="professional">
-              <ProfessionalProfile />
+              <LazyPage>
+                <ProfessionalProfile />
+              </LazyPage>
             </ProtectedRoute>
           }
         />
 
         <Route path="/signup/pending-approval" element={<PendingApproval />} />
-        <Route path="/account-settings" element={
-          <ProtectedRoute>
-            <AccountSettings />
-          </ProtectedRoute>
-        } />
-
+        <Route
+          path="/account-settings"
+          element={
+            <ProtectedRoute>
+              <LazyPage>
+                <AccountSettings />
+              </LazyPage>
+            </ProtectedRoute>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );

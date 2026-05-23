@@ -5,7 +5,8 @@ import CustomerNavbar from './components/CustomerNavbar';
 import { useAuth } from '../../../context/AuthContext';
 import { updateJobStatus } from '../../../api/jobs.api';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
-import { getMessages, sendMessage, markAsRead, getOrCreateConversation, getConversationById } from '../../../api/conversations.api';
+import { sendMessage, getOrCreateConversation, getConversationById } from '../../../api/conversations.api';
+import { useConversationMessageSync } from '../../../hooks/useConversationMessageSync';
 import { useData } from '../../../context/DataContext';
 import {
   MessageSquare, User, ArrowLeft, ChevronRight, 
@@ -165,30 +166,11 @@ const CustomerMessages = () => {
         }
     }, [activeRequestId, activeRequest?.conversation_id, activeRequest?.professional, activeRequest?.assigned_to, searchParams.get('conversationId')]);
 
-    // Polling for messages
-    useEffect(() => {
-        if (!conversationId) return;
-
-        const fetchMessages = async () => {
-            try {
-                const list = await getMessages(conversationId);
-                setMessages(prev => {
-                    if (JSON.stringify(prev) === JSON.stringify(list)) return prev;
-                    return list;
-                });
-                // Mark as read
-                if (list.some(m => !m.is_read && m.sender !== user?.id)) {
-                    markAsRead(conversationId);
-                }
-            } catch (err) {
-                console.error("CustomerMessages: Polling error", err);
-            }
-        };
-
-        fetchMessages();
-        const interval = setInterval(fetchMessages, 5000);
-        return () => clearInterval(interval);
-    }, [conversationId, user?.id]);
+    useConversationMessageSync(
+        conversationId,
+        setMessages,
+        (list) => list.some((m) => !m.is_read && m.sender !== user?.id)
+    );
 
     // Auto-scroll to bottom (most recent message)
     useEffect(() => {
@@ -267,7 +249,7 @@ const CustomerMessages = () => {
         setApprovingJobId(jobId);
         try {
             await updateJobStatus(jobId, 'completed');
-            await refreshJobs();
+            await refreshJobs(true);
         } catch (error) {
             console.error("Failed to verify & pay:", error);
             alert("Failed to verify & pay. Please try again.");
@@ -994,7 +976,7 @@ const CustomerMessages = () => {
                 jobId={activeRequestId || ''}
                 professionalId={activeRequest?.professional || activeRequest?.assigned_to || ''}
                 onSuccess={() => {
-                    refreshJobs();
+                    refreshJobs(true);
                     refreshReviews();
                     alert("Thank you for your review!");
                 }}

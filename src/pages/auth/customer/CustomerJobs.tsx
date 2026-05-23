@@ -102,7 +102,7 @@ const CustomerJobs = () => {
             const response = await acceptJobBid(jobId, bidId);
             const conversationId = response.conversation_id || response.conversation?.id;
             
-            await refreshJobs();
+            await refreshJobs(true);
             
             // Redirect to messages page so they can chat and then complete checkout booking
             if (conversationId) {

@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { devLog } from "../utils/devLog";
 
 /**
  * ScrollToTop component that resets scroll position and clears body styles on route change.
@@ -19,7 +20,7 @@ const ScrollToTop = () => {
     // Clear any lingering backdrop classes
     document.querySelectorAll('.modal-backdrop, .bg-black\\/60, .backdrop-blur').forEach(el => el.remove());
     
-    console.log(`Route changed to ${pathname}, resetting scroll and body styles.`);
+    devLog(`Route changed to ${pathname}, resetting scroll and body styles.`);
   }, [pathname]);
 
   return null;

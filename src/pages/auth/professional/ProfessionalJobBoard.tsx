@@ -151,7 +151,7 @@ const ProfessionalJobBoard = () => {
                 setSelectedJob(null);
                 setBidAmount("");
                 setBidMessage("");
-                refreshJobs();
+                refreshJobs(true);
             }, 2000);
         } catch (error: any) {
             console.error("Failed to place bid", error);

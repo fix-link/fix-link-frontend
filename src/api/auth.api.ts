@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { Role, User } from "../types/auth.types";
+import { devLog } from "../utils/devLog";
 
 const _rawBase = (import.meta.env.VITE_API_URL || "https://fix-link-5332f899c079.herokuapp.com").replace(/\/+$/, "").replace(/\/api$/, "");
 const API_URL = _rawBase + "/api";
@@ -25,7 +26,7 @@ export const getImageUrl = (path: any): string => {
 // Add interceptor to include token if available
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
-  console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`, token ? "With Token" : "No Token");
+  devLog(`API Request: ${config.method?.toUpperCase()} ${config.url}`, token ? "With Token" : "No Token");
 
   // Guard against invalid/expired/undefined token strings
   // Do NOT send the token for login, register, or token refresh endpoints
@@ -347,6 +348,7 @@ const userDetailsCache = new Map<string, { data: any; timestamp: number }>();
 const USER_DETAILS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 const professionalProfileCache = new Map<string, { data: any; timestamp: number }>();
+const professionalProfileInFlight = new Map<string, Promise<any>>();
 const PROFESSIONAL_PROFILE_CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 const isUserCacheFresh = (timestamp: number) => Date.now() - timestamp < USER_DETAILS_CACHE_TTL;
@@ -418,7 +420,7 @@ export const updateUserProfile = async (id: string, data: Partial<User> | FormDa
 export const verifyOtp = async (email: string, otp: string) => {
   try {
     const response = await api.post("/users/verify-email/", { email, otp });
-    console.log("OTP Verification Response:", response.data);
+    devLog("OTP Verification Response:", response.data);
     return response.data;
   } catch (error: any) {
     console.error("OTP Verification Error:", error.response?.data);
@@ -432,7 +434,7 @@ export const verifyOtp = async (email: string, otp: string) => {
 export const resendOtp = async (email: string) => {
   try {
     const response = await api.post("/users/resend-email-otp/", { email });
-    console.log("OTP Resend Response:", response.data);
+    devLog("OTP Resend Response:", response.data);
     return response.data;
   } catch (error: any) {
     console.error("OTP Resend Error:", error.response?.data);
@@ -581,11 +583,25 @@ export const getProfessionalProfile = async (id: string, bypassCache = false) =>
     if (cached && isProfileCacheFresh(cached.timestamp)) {
       return cached.data;
     }
+    const inflight = professionalProfileInFlight.get(id);
+    if (inflight) return inflight;
   }
 
-  const response = await api.get(`/users/${id}/professional-profile/`);
-  professionalProfileCache.set(id, { data: response.data, timestamp: Date.now() });
-  return response.data;
+  const request = api
+    .get(`/users/${id}/professional-profile/`)
+    .then((response) => {
+      professionalProfileCache.set(id, { data: response.data, timestamp: Date.now() });
+      return response.data;
+    })
+    .finally(() => {
+      professionalProfileInFlight.delete(id);
+    });
+
+  if (!bypassCache) {
+    professionalProfileInFlight.set(id, request);
+  }
+
+  return request;
 };
 
 export const clearProfessionalProfileCache = () => {

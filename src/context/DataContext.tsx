@@ -3,13 +3,14 @@ import { useAuth } from "./AuthContext";
 import { listJobs } from "../api/jobs.api";
 import { getNotifications, type Notification } from "../api/notifications.api";
 import { connectNotificationsSocket } from "../api/realtime";
+import { devLog } from "../utils/devLog";
 
 interface DataContextType {
     jobs: any[];
     notifications: Notification[];
     jobsLoading: boolean;
     notificationsLoading: boolean;
-    refreshJobs: () => Promise<void>;
+    refreshJobs: (force?: boolean) => Promise<void>;
     refreshNotifications: () => Promise<void>;
     reviews: any[];
     refreshReviews: () => Promise<void>;
@@ -55,19 +56,19 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [user?.id]);
 
-    const refreshJobs = useCallback(async () => {
+    const refreshJobs = useCallback(async (force = false) => {
         if (!user?.id) {
             setJobs([]);
             return;
         }
 
-        console.log("DataContext: refreshJobs starting");
+        devLog("DataContext: refreshJobs starting", force ? "(force)" : "");
         setJobsLoading(true);
         try {
-            const data = await listJobs(true);
+            const data = await listJobs(force);
             setJobs(Array.isArray(data) ? data : []);
             setHasInitiallyFetched(true);
-            console.log("DataContext: refreshJobs completed, jobs:", data?.length);
+            devLog("DataContext: refreshJobs completed, jobs:", data?.length);
         } catch (error) {
             console.error("DataContext: refreshJobs failed", error);
             setJobs([]);
@@ -117,7 +118,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         if (user?.id) {
-            refreshJobs();
+            refreshJobs(true);
             refreshNotifications();
             refreshReviews();
             if (user?.role === "professional") {
@@ -125,7 +126,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
             }
 
             const interval = setInterval(() => {
-                refreshJobs();
+                refreshJobs(false);
                 refreshNotifications();
                 refreshReviews();
                 if (user?.role === "professional") {
@@ -147,7 +148,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
                 if (ev?.event_type) {
                     refreshNotifications();
                     if (String(ev.event_type).toLowerCase().includes("job")) {
-                        refreshJobs();
+                        refreshJobs(true);
                     }
                     if (user?.role === "professional" && (
                         String(ev.event_type).toLowerCase().includes("payment") || 

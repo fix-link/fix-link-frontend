@@ -6,7 +6,8 @@ import Header from './components/Header';
 import { useAuth } from '../../../context/AuthContext';
 import { updateJobStatus } from '../../../api/jobs.api';
 import { getImageUrl, getUserDetails } from '../../../api/auth.api';
-import { getMessages, sendMessage, getOrCreateConversation, markAsRead, getConversationById } from '../../../api/conversations.api';
+import { sendMessage, getOrCreateConversation, getConversationById } from '../../../api/conversations.api';
+import { useConversationMessageSync } from '../../../hooks/useConversationMessageSync';
 import { useData } from '../../../context/DataContext';
 import { 
     Inbox, 
@@ -140,14 +141,6 @@ const ProfessionalMessages = () => {
     const activeRequestId = activeRequest?.id;
     const requestId = activeRequestId;
 
-    const areMessagesEqual = (prev: any[], next: any[]) => {
-        if (prev.length !== next.length) return false;
-        return prev.every((msg, idx) => {
-            const nextMsg = next[idx];
-            return nextMsg && msg.id === nextMsg.id && msg.updated_at === nextMsg.updated_at && msg.created_at === nextMsg.created_at;
-        });
-    };
-
     useEffect(() => {
         if (urlConversationId && !activeRequest) {
             getConversationById(urlConversationId)
@@ -179,32 +172,15 @@ const ProfessionalMessages = () => {
         }
     }, [activeRequestId, searchParams.get('conversationId')]);
 
-    // Polling for messages
-    useEffect(() => {
-        if (!conversationId) return;
-
-        const fetchMessages = async () => {
-            try {
-                const list = await getMessages(conversationId);
-                setMessages(prev => {
-                    if (areMessagesEqual(prev, list)) return prev;
-                    return list;
-                });
-                // Mark as read
-                const userId = (user as any)?.user?.id || user?.id;
-                const proId = (user as any)?.id;
-                if (list.some(m => !m.is_read && m.sender !== userId && m.sender !== proId)) {
-                    markAsRead(conversationId);
-                }
-            } catch (err) {
-                console.error("ProfessionalMessages: Polling error", err);
-            }
-        };
-
-        fetchMessages();
-        const interval = setInterval(fetchMessages, 5000);
-        return () => clearInterval(interval);
-    }, [conversationId, user?.id]);
+    useConversationMessageSync(
+        conversationId,
+        setMessages,
+        (list) => {
+            const userId = (user as any)?.user?.id || user?.id;
+            const proId = (user as any)?.id;
+            return list.some((m) => !m.is_read && m.sender !== userId && m.sender !== proId);
+        }
+    );
 
     // Auto-scroll to bottom
     useEffect(() => {
@@ -280,7 +256,7 @@ const ProfessionalMessages = () => {
             
             setProfessionalRequests(updatedRequests);
             setHydratedRequests(updatedRequests);
-            await refreshJobs();
+            await refreshJobs(true);
             
             console.log("ProfessionalMessages: State updated to 'accepted'");
         } catch (error: any) {
@@ -346,7 +322,7 @@ const ProfessionalMessages = () => {
             );
             setProfessionalRequests(updated);
             setHydratedRequests(updated);
-            await refreshJobs();
+            await refreshJobs(true);
         } catch (error: any) {
             alert(t('common.failed_start_job', { error: error.message }));
         }
@@ -362,7 +338,7 @@ const ProfessionalMessages = () => {
             setHydratedRequests(prev => prev.map(r => 
                 r.id === activeRequestId ? { ...r, status: 'done' } : r
             ));
-            await refreshJobs();
+            await refreshJobs(true);
         } catch (error: any) {
             alert(t('common.failed_mark_done', { error: error.message }));
         }
@@ -378,7 +354,7 @@ const ProfessionalMessages = () => {
             setHydratedRequests(prev => prev.map(r => 
                 r.id === activeRequestId ? { ...r, status: 'cancelled' } : r
             ));
-            await refreshJobs();
+            await refreshJobs(true);
         } catch (error: any) {
             alert(t('common.failed_decline', { error: error.message }));
         }

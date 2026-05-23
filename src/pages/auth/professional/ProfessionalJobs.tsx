@@ -150,7 +150,7 @@ const ProfessionalJobs: React.FC = () => {
                                 </div>
                             </div>
                             <button
-                                onClick={refreshJobs}
+                                onClick={() => refreshJobs(true)}
                                 className="flex items-center gap-3 px-8 py-3.5 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-slate-600 dark:text-slate-300 hover:bg-primary hover:text-white hover:border-primary transition-all shadow-xl active:scale-95 group"
                             >
                                 <RefreshCw size={20} className="group-hover:rotate-180 transition-transform duration-700" />
@@ -456,7 +456,7 @@ const ProfessionalJobs: React.FC = () => {
                 againstUserId={selectedJobForDispute?.customer || ''}
                 onSuccess={() => {
                     alert(t('common.dispute_success_msg'));
-                    refreshJobs();
+                    refreshJobs(true);
                 }}
             />
         </div>

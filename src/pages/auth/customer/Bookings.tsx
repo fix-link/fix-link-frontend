@@ -381,7 +381,7 @@ const Bookings = () => {
           jobId={selectedJobForReview?.id || ''}
           professionalId={selectedJobForReview?.assigned_to || ''}
           onSuccess={() => {
-            refreshJobs();
+            refreshJobs(true);
             refreshReviews();
           }}
         />
