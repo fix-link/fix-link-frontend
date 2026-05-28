@@ -476,24 +476,48 @@ const ProfessionalProfile = () => {
     setRealReviews([]); // Clear previous reviews to prevent "mixing"
     setLoadingReviews(true);
     
-    getReviews(String(targetId))
-      .then((data) => {
+    const fetchAndEnrich = async () => {
+      try {
+        const data = await getReviews(String(targetId));
         const rawList = Array.isArray(data) ? data : (data?.results || []);
         
-        // Frontend Safety Filter: Ensure reviews actually belong to this professional
-        // This prevents the "mixed up" glitch where the backend might return all reviews
+        // Frontend Safety Filter
         const filteredList = rawList.filter((r: any) => {
             const rPro = String(r.professional || r.professional_id || "");
             const currentId = String(id || "");
             const currentProDetailId = String(proDetailId || "");
-            
             return rPro === currentId || rPro === currentProDetailId;
         });
 
-        setRealReviews(filteredList);
-      })
-      .catch((err) => console.warn('ProfessionalProfile: Reviews fetch failed', err))
-      .finally(() => setLoadingReviews(false));
+        // Enrich: the /reviews/ endpoint returns `reviewer` as a plain FK integer.
+        // We need to fetch each reviewer's full user details to get their profile picture.
+        const reviewerIds = [...new Set(
+            filteredList.map((r: any) => r.reviewer || r.customer).filter(Boolean)
+        )] as string[];
+
+        const reviewerMap: Record<string, any> = {};
+        await Promise.allSettled(
+            reviewerIds.map(async (uid: any) => {
+                try {
+                    const details = await getUserDetails(String(uid));
+                    reviewerMap[String(uid)] = details;
+                } catch { /* ignore per-reviewer failures */ }
+            })
+        );
+
+        const enrichedList = filteredList.map((r: any) => {
+            const reviewerId = r.reviewer || r.customer;
+            return { ...r, _reviewer_detail: reviewerMap[String(reviewerId)] || null };
+        });
+
+        setRealReviews(enrichedList);
+      } catch (err) {
+        console.warn('ProfessionalProfile: Reviews fetch failed', err);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+    fetchAndEnrich();
   }, [id, isProView, user?.id, proDetailId]);
 
   useEffect(() => {
@@ -1367,11 +1391,15 @@ const ProfessionalProfile = () => {
                           {realReviews.map((review: any, idx: number) => {
                             const customerName = review.customer_name || 
                               review.reviewer_name ||
+                              (review._reviewer_detail?.first_name ? `${review._reviewer_detail.first_name} ${review._reviewer_detail.last_name || ''}`.trim() : null) ||
                               (review.customer_detail?.first_name ? `${review.customer_detail.first_name} ${review.customer_detail.last_name || ''}`.trim() : null) ||
                               (review.reviewer_detail?.first_name ? `${review.reviewer_detail.first_name} ${review.reviewer_detail.last_name || ''}`.trim() : null) ||
                               (review.user_detail?.first_name ? `${review.user_detail.first_name} ${review.user_detail.last_name || ''}`.trim() : null) ||
                               'Verified Customer';
                              const avatarUrl = getImageUrl(
+                               review._reviewer_detail?.profile_picture ||
+                               review._reviewer_detail?.profile_photo_url ||
+                               review._reviewer_detail?.profile_photo ||
                                review.customer_profile?.profile_picture ||
                                review.customer_detail?.profile_picture ||
                                review.customer?.profile_picture ||
@@ -1386,7 +1414,7 @@ const ProfessionalProfile = () => {
                                review.reviewer_detail?.profile_photo ||
                                review.profile_picture
                              );
-                            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=random&color=fff&bold=true`;
+                            const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=6C63FF&color=fff&bold=true`;
                             const ratingVal = Number(review.rating) || 0;
                             const reviewDate = review.created_at
                               ? new Date(review.created_at).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
@@ -1400,7 +1428,7 @@ const ProfessionalProfile = () => {
                                   <img
                                     src={avatarUrl || fallbackAvatar}
                                     alt={customerName}
-                                    onError={(e) => { e.currentTarget.src = fallbackAvatar; }}
+                                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = fallbackAvatar; }}
                                     className="size-12 rounded-2xl object-cover border-2 border-white dark:border-slate-800 shadow-md group-hover:scale-105 transition-transform duration-300"
                                   />
                                 </div>

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import { useAuth } from "../../../context/AuthContext";
-import { getImageUrl, getReviews } from "../../../api/auth.api";
+import { getImageUrl, getReviews, getUserDetails } from "../../../api/auth.api";
 import { 
     Star as StarIcon, 
     CheckCircle2, 
@@ -36,11 +36,31 @@ const ProfessionalReviews: React.FC = () => {
                     const rPro = String(r.professional || r.professional_id || "");
                     const currentProId = String(proId || "");
                     const currentUserId = String(user?.id || "");
-                    
                     return rPro === currentProId || rPro === currentUserId;
                 });
 
-                setRealReviews(filteredList);
+                // Enrich: the /reviews/ endpoint returns `reviewer` as a plain FK integer.
+                // We need to fetch each reviewer's full user details to get their profile picture.
+                const reviewerIds = [...new Set(
+                    filteredList.map((r: any) => r.reviewer || r.customer).filter(Boolean)
+                )] as string[];
+
+                const reviewerMap: Record<string, any> = {};
+                await Promise.allSettled(
+                    reviewerIds.map(async (uid: any) => {
+                        try {
+                            const details = await getUserDetails(String(uid));
+                            reviewerMap[String(uid)] = details;
+                        } catch { /* ignore per-reviewer failures */ }
+                    })
+                );
+
+                const enrichedList = filteredList.map((r: any) => {
+                    const reviewerId = r.reviewer || r.customer;
+                    return { ...r, _reviewer_detail: reviewerMap[String(reviewerId)] || null };
+                });
+
+                setRealReviews(enrichedList);
             } catch (err) {
                 console.error("Failed to fetch reviews", err);
             } finally {
@@ -190,6 +210,9 @@ const ProfessionalReviews: React.FC = () => {
                                                     <div className="size-20 rounded-[2rem] overflow-hidden border-4 border-white dark:border-slate-800 shadow-2xl group-hover:rotate-[-6deg] transition-all duration-500 ease-out">
                                                          <img 
                                                              src={getImageUrl(
+                                                                 review._reviewer_detail?.profile_picture ||
+                                                                 review._reviewer_detail?.profile_photo_url ||
+                                                                 review._reviewer_detail?.profile_photo ||
                                                                  review.customer_profile?.profile_picture || 
                                                                  review.customer_detail?.profile_picture || 
                                                                  review.customer?.profile_picture ||
@@ -203,10 +226,12 @@ const ProfessionalReviews: React.FC = () => {
                                                                  review.customer_detail?.profile_photo ||
                                                                  review.reviewer_detail?.profile_photo ||
                                                                  review.profile_picture
-                                                             )} 
+                                                             ) || `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                                                 review._reviewer_detail ? `${review._reviewer_detail.first_name || ''} ${review._reviewer_detail.last_name || ''}`.trim() : (review.customer_name || 'C')
+                                                             )}&background=6C63FF&color=fff&bold=true`} 
                                                              alt="User" 
                                                              className="size-full object-cover"
-                                                             onError={(e) => (e.currentTarget.src = `https://ui-avatars.com/api/?name=${review.customer_name || 'Customer'}&background=random`)}
+                                                             onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(review.customer_name || 'C')}&background=6C63FF&color=fff&bold=true`; }}
                                                          />
                                                     </div>
                                                 </div>
