@@ -1,7 +1,9 @@
 export interface PasswordValidationResult {
     isValid: boolean;
     hasLength: boolean;
-    hasNumberOrSymbol: boolean;
+    hasUppercase: boolean;
+    hasLowercase: boolean;
+    hasNumber: boolean;
     hasNoPersonalInfo: boolean;
     errors: string[];
 }
@@ -22,13 +24,25 @@ export const validatePassword = (
         errors.push("Password must be at least 8 characters");
     }
 
-    // 2. Check Number or Symbol
-    const hasNumberOrSymbol = /[\d!@#$%^&*(),.?":{}|<>]/.test(password);
-    if (!hasNumberOrSymbol) {
-        errors.push("Password must contain a number or symbol");
+    // 2. Check Uppercase
+    const hasUppercase = /[A-Z]/.test(password);
+    if (!hasUppercase) {
+        errors.push("Password must contain at least one uppercase letter");
     }
 
-    // 3. Check Personal Info
+    // 3. Check Lowercase
+    const hasLowercase = /[a-z]/.test(password);
+    if (!hasLowercase) {
+        errors.push("Password must contain at least one lowercase letter");
+    }
+
+    // 4. Check Number
+    const hasNumber = /\d/.test(password);
+    if (!hasNumber) {
+        errors.push("Password must contain at least one number");
+    }
+
+    // 5. Check Personal Info
     let hasNoPersonalInfo = true;
     if (userData) {
         const lowerPassword = password.toLowerCase();
@@ -47,12 +61,14 @@ export const validatePassword = (
         }
     }
 
-    const isValid = hasLength && hasNumberOrSymbol && hasNoPersonalInfo;
+    const isValid = hasLength && hasUppercase && hasLowercase && hasNumber && hasNoPersonalInfo;
 
     return {
         isValid,
         hasLength,
-        hasNumberOrSymbol,
+        hasUppercase,
+        hasLowercase,
+        hasNumber,
         hasNoPersonalInfo,
         errors
     };
