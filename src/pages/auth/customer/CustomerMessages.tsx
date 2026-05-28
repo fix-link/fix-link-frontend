@@ -689,48 +689,27 @@ const CustomerMessages = () => {
                                     <div ref={messagesEndRef} />
                                 </div>
                             </div>                             {/* Messaging Input */}
-                             <form onSubmit={handleSendMessage} className="p-6 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl border-t border-slate-100/50 dark:border-slate-800/50">
-                                 <div className="flex items-end gap-3 max-w-5xl mx-auto">
-                                     <div className="flex-1 flex flex-col gap-2">
-                                         <div className="flex items-center gap-1 mb-1 px-2">
-                                             <button type="button" className="p-2 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-primary">
-                                                 <ImageIcon size={18} />
-                                             </button>
-                                             <button type="button" className="p-2 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-primary">
-                                                 <Paperclip size={18} />
-                                             </button>
-                                             <button type="button" className="p-2 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-primary">
-                                                 <Mic size={18} />
-                                             </button>
-                                             <button type="button" className="p-2 transition-all hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 hover:text-primary">
-                                                 <Smile size={18} />
-                                             </button>
-                                         </div>
-                                         <div className="flex items-center bg-white dark:bg-slate-800 rounded-[24px] px-5 py-2 ring-1 ring-slate-200/50 dark:ring-slate-700/50 shadow-sm focus-within:ring-primary/30 focus-within:shadow-lg focus-within:shadow-primary/5 transition-all">
-                                             <input
-                                                 className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2.5"
-                                                 placeholder={t('common.type_message')}
-                                                 type="text"
-                                                 value={messageInput}
-                                                 onChange={(e) => setMessageInput(e.target.value)}
-                                                 disabled={isSending}
-                                             />
-                                             <div className="flex items-center gap-2">
-                                                 <span className="text-[10px] font-black text-slate-300 dark:text-slate-600 uppercase tracking-widest hidden sm:block">
-                                                     {t('common.press_enter_to_send')}
-                                                 </span>
-                                             </div>
-                                         </div>
+                             <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800/50">
+                                 <div className="flex items-center gap-3 max-w-5xl mx-auto">
+                                     <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 rounded-full px-5 py-1.5 ring-1 ring-slate-200/50 dark:ring-slate-700/50 focus-within:ring-primary/50 transition-all">
+                                         <input
+                                             className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2.5"
+                                             placeholder={t('common.type_message')}
+                                             type="text"
+                                             value={messageInput}
+                                             onChange={(e) => setMessageInput(e.target.value)}
+                                             disabled={isSending}
+                                         />
                                      </div>
                                      <button
                                          type="submit"
-                                         className="size-14 flex items-center justify-center bg-primary text-white rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-xl shadow-primary/30 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 group"
+                                         className="size-12 flex items-center justify-center bg-primary text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 group"
                                          disabled={!messageInput.trim() || isSending || !conversationId}
                                      >
                                          {isSending ? (
-                                             <Loader2 size={24} className="animate-spin" />
+                                             <Loader2 size={20} className="animate-spin" />
                                          ) : (
-                                             <Send size={24} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                             <Send size={20} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                          )}
                                      </button>
                                  </div>

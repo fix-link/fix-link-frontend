@@ -146,7 +146,7 @@ const CustomerHome = () => {
       return matchesPrice && matchesRating && matchesVerified && matchesExperience && matchesLanguage;
     })
     .sort((a: any, b: any) => {
-      if (sortBy === "rating") return b.rating - a.rating;
+      if (sortBy === "rating" || sortBy === "recommended") return b.rating - a.rating;
       if (sortBy === "reviews") return b.reviews - a.reviews;
       if (sortBy === "price-low") return a.price - b.price;
       if (sortBy === "price-high") return b.price - a.price;

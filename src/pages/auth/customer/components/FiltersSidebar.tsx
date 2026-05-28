@@ -119,14 +119,14 @@ const FiltersSidebar: React.FC<FiltersSidebarProps> = ({
                                     type="text"
                                     value="10000+"
                                     readOnly
-                                    className="w-full pl-9 pr-4 py-3 rounded-2xl border-2 border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30 text-xs font-black focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-800 dark:text-white"
+                                    className="w-full pl-8 pr-1 py-3 rounded-2xl border-2 border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30 text-[11px] font-black focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-800 dark:text-white"
                                 />
                             ) : (
                                 <input
                                     type="number"
                                     value={priceMax}
                                     onChange={(e) => setPriceMax(Number(e.target.value))}
-                                    className="w-full pl-9 pr-4 py-3 rounded-2xl border-2 border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30 text-xs font-black focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-800 dark:text-white"
+                                    className="w-full pl-8 pr-1 py-3 rounded-2xl border-2 border-slate-50 dark:border-slate-800/50 bg-slate-50/50 dark:bg-slate-900/30 text-xs font-black focus:border-primary focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-800 dark:text-white"
                                 />
                             )}
                         </div>

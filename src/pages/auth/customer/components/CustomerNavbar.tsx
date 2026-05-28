@@ -22,7 +22,7 @@ const CustomerNavbar = () => {
   const { t } = useTranslation();
 
   // Search State
-  const [location, setLocation] = useState("Addis Ababa");
+  const [location, setLocation] = useState("");
   const [locationSubcity, setLocationSubcity] = useState("");
   const [service, setService] = useState("All Services");
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -114,7 +114,7 @@ const CustomerNavbar = () => {
               onChange={(e) => setService(e.target.value)}
               className="w-full h-full bg-transparent border-none focus:ring-0 text-[14px] font-black pl-4 pr-10 text-slate-800 dark:text-slate-100 cursor-pointer appearance-none outline-none group-hover:text-primary transition-colors [appearance:none] [&::-ms-expand]:hidden"
             >
-              <option className="bg-white dark:bg-slate-900" value="All Services">{t('categories.All Services')}</option>
+              <option className="bg-white dark:bg-slate-900" value="All Services">{t('categories.All Services', { defaultValue: 'All Services' })}</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.name} className="bg-white dark:bg-slate-900">{t(`categories.${cat.name}`, { defaultValue: cat.name })}</option>
               ))}

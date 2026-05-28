@@ -31,7 +31,8 @@ import {
     Send,
     CheckCheck,
     Flag,
-    AlertTriangle
+    AlertTriangle,
+    Loader2
 } from 'lucide-react';
 import DisputeModal from '../../../components/DisputeModal';
 
@@ -687,17 +688,12 @@ const ProfessionalMessages = () => {
                                     </div>
                                 </div>
 
-                                {/* Send Bar */}
-                                <form onSubmit={handleSendMessage} className="p-4 md:p-6 bg-white/40 dark:bg-slate-900/40 backdrop-blur-3xl border-t border-slate-100/50 dark:border-slate-800/50">
-                                    <div className="flex items-center gap-4 max-w-5xl mx-auto">
-                                        <div className="flex items-center gap-2">
-                                            <button type="button" className="size-10 flex items-center justify-center transition-all bg-white dark:bg-slate-800 hover:bg-primary/10 hover:text-primary rounded-xl text-slate-400 border border-slate-200/50 dark:border-slate-700/50 shadow-lg">
-                                                <Paperclip size={20} />
-                                            </button>
-                                        </div>
-                                        <div className="flex-1 flex items-center bg-white dark:bg-slate-800 rounded-[1.5rem] px-6 py-2.5 ring-1 ring-slate-200/50 dark:ring-slate-700/50 shadow-2xl focus-within:ring-primary/40 focus-within:shadow-primary/5 transition-all group">
+                                {/* Messaging Input */}
+                                <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800/50">
+                                    <div className="flex items-center gap-3 max-w-5xl mx-auto">
+                                        <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-800 rounded-full px-5 py-1.5 ring-1 ring-slate-200/50 dark:ring-slate-700/50 focus-within:ring-primary/50 transition-all">
                                             <input
-                                                className="flex-1 bg-transparent border-none focus:ring-0 text-[14px] font-bold text-slate-700 dark:text-white placeholder-slate-400/60 outline-none"
+                                                className="flex-1 bg-transparent border-none focus:ring-0 text-[15px] font-medium text-slate-700 dark:text-white placeholder-slate-400 outline-none py-2.5"
                                                 placeholder={t('common.type_message')}
                                                 type="text"
                                                 value={messageInput}
@@ -707,11 +703,14 @@ const ProfessionalMessages = () => {
                                         </div>
                                         <button
                                             type="submit"
-                                            className="size-11 flex items-center justify-center bg-primary text-white rounded-xl hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-primary/30 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 group overflow-hidden relative"
-                                            disabled={!messageInput.trim() || isSending}
+                                            className="size-12 flex items-center justify-center bg-primary text-white rounded-full hover:scale-105 active:scale-95 transition-all shadow-md shadow-primary/20 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 group"
+                                            disabled={!messageInput.trim() || isSending || !conversationId}
                                         >
-                                            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                                                <Send size={20} className="group-hover:-rotate-12 transition-transform" />
+                                            {isSending ? (
+                                                <Loader2 size={20} className="animate-spin" />
+                                            ) : (
+                                                <Send size={20} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                            )}
                                         </button>
                                     </div>
                                 </form>
