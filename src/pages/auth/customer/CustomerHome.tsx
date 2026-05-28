@@ -87,9 +87,12 @@ const CustomerHome = () => {
             image: getImageUrl(prof.profile_picture || ud.profile_picture),
             location,
             experience: yoe >= 5 ? 'Senior' : yoe >= 3 ? 'Mid-level' : 'Junior',
-            languages: Array.isArray(prof.languages || ud.languages)
-              ? (prof.languages || ud.languages)
-              : (prof.languages || ud.languages || '').toString().split(',').map((l: string) => l.trim()).filter(Boolean),
+            languages: (() => {
+              const raw = prof.languages ?? ud.languages;
+              if (Array.isArray(raw)) return raw.filter(Boolean);
+              if (typeof raw === 'string' && raw.trim()) return raw.split(',').map((l: string) => l.trim()).filter(Boolean);
+              return [];
+            })(),
           };
         });
 

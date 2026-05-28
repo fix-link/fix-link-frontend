@@ -188,12 +188,26 @@ const ProfessionalReviews: React.FC = () => {
                                             <div className="flex flex-col md:flex-row gap-12">
                                                 <div className="shrink-0 flex md:flex-col items-center gap-6">
                                                     <div className="size-20 rounded-[2rem] overflow-hidden border-4 border-white dark:border-slate-800 shadow-2xl group-hover:rotate-[-6deg] transition-all duration-500 ease-out">
-                                                        <img 
-                                                            src={getImageUrl(review.customer_profile?.profile_picture || review.customer?.profile_picture)} 
-                                                            alt="User" 
-                                                            className="size-full object-cover"
-                                                            onError={(e) => (e.currentTarget.src = `https://ui-avatars.com/api/?name=${review.customer_name || 'Customer'}&background=random`)}
-                                                        />
+                                                         <img 
+                                                             src={getImageUrl(
+                                                                 review.customer_profile?.profile_picture || 
+                                                                 review.customer_detail?.profile_picture || 
+                                                                 review.customer?.profile_picture ||
+                                                                 review.reviewer_profile?.profile_picture ||
+                                                                 review.reviewer_detail?.profile_picture ||
+                                                                 review.reviewer?.profile_picture ||
+                                                                 review.user_profile?.profile_picture ||
+                                                                 review.user_detail?.profile_picture ||
+                                                                 review.user?.profile_picture ||
+                                                                 review.customer_profile?.profile_photo ||
+                                                                 review.customer_detail?.profile_photo ||
+                                                                 review.reviewer_detail?.profile_photo ||
+                                                                 review.profile_picture
+                                                             )} 
+                                                             alt="User" 
+                                                             className="size-full object-cover"
+                                                             onError={(e) => (e.currentTarget.src = `https://ui-avatars.com/api/?name=${review.customer_name || 'Customer'}&background=random`)}
+                                                         />
                                                     </div>
                                                 </div>
 

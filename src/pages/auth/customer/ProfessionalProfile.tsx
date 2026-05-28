@@ -161,6 +161,7 @@ const ProfessionalProfile = () => {
   const [profilePrice, setProfilePrice] = useState(0);
   const [hasAcceptedJob, setHasAcceptedJob] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Advanced Calendar States
   const [jobDates, setJobDates] = useState<string[]>([]); // Dates with confirmed bookings
@@ -504,6 +505,7 @@ const ProfessionalProfile = () => {
 
   const handleSave = async () => {
     if (isProView && user?.id) {
+      setIsSavingProfile(true);
       try {
         // Determine first/last name from profileName
         const nameParts = profileName.trim().split(" ");
@@ -555,6 +557,8 @@ const ProfessionalProfile = () => {
         console.error("Save failed:", err);
         const msg = err.message || "Failed to save changes. Please try again.";
         alert(msg);
+      } finally {
+        setIsSavingProfile(false);
       }
     }
   };
@@ -789,10 +793,15 @@ const ProfessionalProfile = () => {
                       </button>
                       <button
                         onClick={handleSave}
-                        className="px-10 py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 group"
+                        disabled={isSavingProfile}
+                        className="px-10 py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 group disabled:opacity-75 disabled:scale-100 disabled:cursor-not-allowed"
                       >
-                        <span className="material-symbols-outlined text-base group-hover:rotate-12 transition-transform">save</span>
-                        Update Info
+                        {isSavingProfile ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <span className="material-symbols-outlined text-base group-hover:rotate-12 transition-transform">save</span>
+                        )}
+                        {isSavingProfile ? "Updating..." : "Update Info"}
                       </button>
                     </div>
                   ) : (
@@ -938,7 +947,7 @@ const ProfessionalProfile = () => {
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">Composite Rating</p>
                             <div className="flex items-center gap-3">
                               <Stars count={profileRating} className="text-lg" />
-                              <span className="text-2xl font-black text-slate-900 dark:text-white">{profileRating}</span>
+                              <span className="text-2xl font-black text-slate-900 dark:text-white">{profileRating ? parseFloat(String(profileRating)).toFixed(1) : '0.0'}</span>
                               <span className="text-xs font-bold text-slate-400">({profileReviewsCount})</span>
                             </div>
                           </div>
@@ -1362,7 +1371,21 @@ const ProfessionalProfile = () => {
                               (review.reviewer_detail?.first_name ? `${review.reviewer_detail.first_name} ${review.reviewer_detail.last_name || ''}`.trim() : null) ||
                               (review.user_detail?.first_name ? `${review.user_detail.first_name} ${review.user_detail.last_name || ''}`.trim() : null) ||
                               'Verified Customer';
-                            const avatarUrl = getImageUrl(review.customer_profile?.profile_picture || review.customer_detail?.profile_picture || review.customer?.profile_picture);
+                             const avatarUrl = getImageUrl(
+                               review.customer_profile?.profile_picture ||
+                               review.customer_detail?.profile_picture ||
+                               review.customer?.profile_picture ||
+                               review.reviewer_profile?.profile_picture ||
+                               review.reviewer_detail?.profile_picture ||
+                               review.reviewer?.profile_picture ||
+                               review.user_profile?.profile_picture ||
+                               review.user_detail?.profile_picture ||
+                               review.user?.profile_picture ||
+                               review.customer_profile?.profile_photo ||
+                               review.customer_detail?.profile_photo ||
+                               review.reviewer_detail?.profile_photo ||
+                               review.profile_picture
+                             );
                             const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(customerName)}&background=random&color=fff&bold=true`;
                             const ratingVal = Number(review.rating) || 0;
                             const reviewDate = review.created_at

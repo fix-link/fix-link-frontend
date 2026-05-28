@@ -24,6 +24,8 @@ const CustomerNavbar = () => {
   // Search State
   const [location, setLocation] = useState("");
   const [locationSubcity, setLocationSubcity] = useState("");
+  const [locationLat, setLocationLat] = useState<number | null>(null);
+  const [locationLng, setLocationLng] = useState<number | null>(null);
   const [service, setService] = useState("All Services");
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -60,6 +62,8 @@ const CustomerNavbar = () => {
     if (service && service !== "All Services") params.append("service", service);
     if (locationSubcity) params.append("location", locationSubcity);
     else if (location) params.append("location", location);
+    if (locationLat !== null && locationLat !== undefined) params.append("lat", String(locationLat));
+    if (locationLng !== null && locationLng !== undefined) params.append("lng", String(locationLng));
     navigate(`/customer/search?${params.toString()}`);
   };
 
@@ -126,10 +130,19 @@ const CustomerNavbar = () => {
           <div className="flex flex-1 items-center px-3 relative h-full group" ref={suggestionRef}>
             <LocationInput
               value={location}
-              onInputChange={setLocation}
+              onInputChange={(val) => {
+                setLocation(val);
+                if (!val) {
+                  setLocationSubcity("");
+                  setLocationLat(null);
+                  setLocationLng(null);
+                }
+              }}
               onSelect={(sel) => {
                 setLocation(formatLocationDisplay(sel));
                 setLocationSubcity(sel.subcity);
+                setLocationLat(sel.lat);
+                setLocationLng(sel.lng);
               }}
               placeholder={t('common.where_need_service')}
               className="w-full h-full bg-transparent border-none focus:ring-0 text-[14px] font-bold text-slate-800 dark:text-slate-200 placeholder:text-slate-400 outline-none pl-8"

@@ -24,6 +24,7 @@ const AccountSettings = () => {
     const [activeTab, setActiveTab] = useState<"personal" | "security">("personal");
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     // Personal Info State
     const [firstName, setFirstName] = useState(user?.first_name || user?.name?.split(' ')[0] || "");
@@ -75,6 +76,7 @@ const AccountSettings = () => {
 
     const handleUpdatePersonal = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSaving(true);
         try {
             await updateUser({
                 first_name: firstName,
@@ -92,6 +94,8 @@ const AccountSettings = () => {
             setTimeout(() => setUpdateSuccess(false), 3000);
         } catch (error) {
             console.error(error);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -342,11 +346,12 @@ const AccountSettings = () => {
                                         <div className="pt-6">
                                             <button
                                                 type="submit"
-                                                className="w-full py-5 bg-primary text-white font-black rounded-3xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all text-lg flex items-center justify-center gap-3 relative overflow-hidden group/btn"
+                                                disabled={isSaving}
+                                                className="w-full py-5 bg-primary text-white font-black rounded-3xl shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all text-lg flex items-center justify-center gap-3 relative overflow-hidden group/btn disabled:opacity-70 disabled:cursor-not-allowed"
                                             >
                                                 <div className="absolute inset-0 bg-white/10 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-                                                <Save size={22} className="group-hover/btn:rotate-12 transition-transform" />
-                                                {t('common.sync_profile_changes')}
+                                                {isSaving ? <Loader2 className="animate-spin" size={22} /> : <Save size={22} className="group-hover/btn:rotate-12 transition-transform" />}
+                                                {isSaving ? (t('common.saving') || 'Saving...') : t('common.sync_profile_changes')}
                                             </button>
                                         </div>
                                     </form>

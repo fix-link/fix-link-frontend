@@ -144,7 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (user.role === "professional" && !(userData instanceof FormData)) {
                 // Split fields
-                const proFields = ["city", "subcity", "house_number", "location", "gender", "skills", "preferred_payout_method", "payout_account_number", "availability", "service_categories"];
+                const proFields = ["city", "subcity", "house_number", "location", "gender", "skills", "preferred_payout_method", "payout_account_number", "availability", "service_categories", "lat", "lng"];
                 const proData: Record<string, any> = {};
                 const userDataToUpdate: Partial<User> = {};
                 

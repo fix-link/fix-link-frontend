@@ -20,6 +20,8 @@ const SearchResults = () => {
     const queryParams = new URLSearchParams(location.search);
     const serviceQuery = (queryParams.get("service") || "").toLowerCase();
     const locationQuery = (queryParams.get("location") || "").toLowerCase();
+    const latQuery = queryParams.get("lat");
+    const lngQuery = queryParams.get("lng");
     
     const [professionals, setProfessionals] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -36,7 +38,14 @@ const SearchResults = () => {
     useEffect(() => {
         const fetchAndEnrich = async () => {
             try {
-                const [userData, categoriesData] = await Promise.all([getProfessionals(), getServiceCategories()]);
+                const [userData, categoriesData] = await Promise.all([
+                    getProfessionals(
+                        latQuery && lngQuery
+                        ? { lat: Number(latQuery), lng: Number(lngQuery) }
+                        : undefined
+                    ),
+                    getServiceCategories()
+                ]);
 
                 const categoryMap: Record<string, string> = {};
                 if (Array.isArray(categoriesData)) {
@@ -88,9 +97,12 @@ const SearchResults = () => {
                         image: getImageUrl(prof.profile_picture || ud.profile_picture),
                         experience: yoe > 5 ? t('common.senior') : yoe > 2 ? t('common.mid_level') : t('common.junior'),
                         availability: t('common.today'),
-                        languages: Array.isArray(prof.languages || ud.languages)
-                            ? (prof.languages || ud.languages)
-                            : (prof.languages || ud.languages || '').toString().split(',').map((l: string) => l.trim()).filter(Boolean),
+                        languages: (() => {
+                            const raw = prof.languages ?? ud.languages;
+                            if (Array.isArray(raw)) return raw.filter(Boolean);
+                            if (typeof raw === 'string' && raw.trim()) return raw.split(',').map((l: string) => l.trim()).filter(Boolean);
+                            return [];
+                        })(),
                     };
                 });
 

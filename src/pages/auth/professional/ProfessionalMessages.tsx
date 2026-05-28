@@ -50,6 +50,7 @@ const ProfessionalMessages = () => {
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const [showCustomerProfile, setShowCustomerProfile] = useState(false);
     const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState<string | null>(null);
     const moreMenuRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { jobs, notifications, jobsLoading, notificationsLoading, refreshJobs } = useData();
@@ -246,6 +247,7 @@ const ProfessionalMessages = () => {
             console.error("ProfessionalMessages: No activeRequestId found for handleAccept");
             return;
         }
+        setIsUpdatingStatus('accepted');
         try {
             console.log("ProfessionalMessages: ATTEMPTING ACCEPT for ID:", activeRequestId);
             const updated = await updateJobStatus(activeRequestId, 'accepted');
@@ -263,6 +265,8 @@ const ProfessionalMessages = () => {
         } catch (error: any) {
             console.error("ProfessionalMessages: ACCEPT FAILURE:", error);
             alert(t('common.failed_accept', { error: error.message }));
+        } finally {
+            setIsUpdatingStatus(null);
         }
     };
 
@@ -316,6 +320,7 @@ const ProfessionalMessages = () => {
 
     const handleStartJob = async () => {
         if (!activeRequestId) return;
+        setIsUpdatingStatus('in_progress');
         try {
             await updateJobStatus(activeRequestId, 'in_progress');
             const updated = (prev: any[]) => prev.map(r => 
@@ -326,11 +331,14 @@ const ProfessionalMessages = () => {
             await refreshJobs(true);
         } catch (error: any) {
             alert(t('common.failed_start_job', { error: error.message }));
+        } finally {
+            setIsUpdatingStatus(null);
         }
     };
 
     const handleMarkDone = async () => {
         if (!activeRequestId) return;
+        setIsUpdatingStatus('done');
         try {
             await updateJobStatus(activeRequestId, 'done');
             setProfessionalRequests(prev => prev.map(r => 
@@ -342,11 +350,14 @@ const ProfessionalMessages = () => {
             await refreshJobs(true);
         } catch (error: any) {
             alert(t('common.failed_mark_done', { error: error.message }));
+        } finally {
+            setIsUpdatingStatus(null);
         }
     };
 
     const handleDecline = async () => {
         if (!activeRequestId) return;
+        setIsUpdatingStatus('cancelled');
         try {
             await updateJobStatus(activeRequestId, 'cancelled');
             setProfessionalRequests(prev => prev.map(r => 
@@ -358,6 +369,8 @@ const ProfessionalMessages = () => {
             await refreshJobs(true);
         } catch (error: any) {
             alert(t('common.failed_decline', { error: error.message }));
+        } finally {
+            setIsUpdatingStatus(null);
         }
     };
 
@@ -773,19 +786,30 @@ const ProfessionalMessages = () => {
                                                                      activeRequest.status === 'booked' ? t('common.customer_confirmed_start') :
                                                                      activeRequest.status === 'in_progress' ? t('common.working_on_job_mark_done') :
                                                                      t('common.finalizing_job')}
-                                                                </p>
-                                                                <div className="flex flex-col gap-2">
+                                                                </p>                                                                 <div className="flex flex-col gap-2">
                                                                     {activeRequest.status === 'pending' && (
                                                                         <div className="flex gap-2">
-                                                                            <button onClick={handleAccept} className="flex-1 py-3 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">{t('common.accept')}</button>
-                                                                            <button onClick={handleDecline} className="flex-1 py-3 bg-white dark:bg-slate-800 text-slate-500 text-[10px] font-black rounded-xl uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:text-rose-500 transition-all">{t('common.decline')}</button>
+                                                                            <button onClick={handleAccept} disabled={isUpdatingStatus !== null} className="flex-1 py-3 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                                                {isUpdatingStatus === 'accepted' ? <Loader2 size={12} className="animate-spin" /> : null}
+                                                                                {t('common.accept')}
+                                                                            </button>
+                                                                            <button onClick={handleDecline} disabled={isUpdatingStatus !== null} className="flex-1 py-3 bg-white dark:bg-slate-800 text-slate-500 text-[10px] font-black rounded-xl uppercase tracking-widest border border-slate-200 dark:border-slate-700 hover:text-rose-500 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                                                {isUpdatingStatus === 'cancelled' ? <Loader2 size={12} className="animate-spin" /> : null}
+                                                                                {t('common.decline')}
+                                                                            </button>
                                                                         </div>
                                                                     )}
                                                                     {activeRequest.status === 'booked' && (
-                                                                        <button onClick={handleStartJob} className="w-full py-3.5 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all">{t('common.start_job')}</button>
+                                                                        <button onClick={handleStartJob} disabled={isUpdatingStatus !== null} className="w-full py-3.5 bg-primary text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                                            {isUpdatingStatus === 'in_progress' ? <Loader2 size={12} className="animate-spin" /> : null}
+                                                                            {t('common.start_job')}
+                                                                        </button>
                                                                     )}
                                                                     {activeRequest.status === 'in_progress' && (
-                                                                        <button onClick={handleMarkDone} className="w-full py-3.5 bg-emerald-500 text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all">{t('common.finish_job')}</button>
+                                                                        <button onClick={handleMarkDone} disabled={isUpdatingStatus !== null} className="w-full py-3.5 bg-emerald-500 text-white text-[10px] font-black rounded-xl uppercase tracking-widest shadow-xl shadow-emerald-500/30 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                                            {isUpdatingStatus === 'done' ? <Loader2 size={12} className="animate-spin" /> : null}
+                                                                            {t('common.finish_job')}
+                                                                        </button>
                                                                     )}
                                                                 </div>
                                                             </div>
