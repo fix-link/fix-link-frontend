@@ -180,7 +180,10 @@ const ProfessionalMessages = () => {
         (list) => {
             const userId = (user as any)?.user?.id || user?.id;
             const proId = (user as any)?.id;
-            return list.some((m) => !m.is_read && m.sender !== userId && m.sender !== proId);
+            return list.some((m) => {
+                const senderId = (typeof m.sender === 'object' && m.sender !== null) ? m.sender.id : m.sender;
+                return !m.is_read && senderId !== userId && senderId !== proId;
+            });
         }
     );
 
@@ -229,7 +232,12 @@ const ProfessionalMessages = () => {
             setIsSending(true);
             setMessageInput(""); // Optimistic clear
             const newMsg = await sendMessage(conversationId, text);
-            setMessages(prev => [...prev, newMsg]);
+            // Ensure the message always has a timestamp so formatTime never shows --:--
+            const msgWithTs = {
+                ...newMsg,
+                created_at: newMsg?.created_at || newMsg?.sent_at || newMsg?.timestamp || new Date().toISOString(),
+            };
+            setMessages(prev => [...prev, msgWithTs]);
         } catch (error) {
             console.error("ProfessionalMessages: Send failed", error);
             alert(t('common.failed_send_message'));
@@ -378,25 +386,32 @@ const ProfessionalMessages = () => {
         if (!dateInput) return "--:--";
         let dateStr = dateInput;
         if (typeof dateStr === 'object' && !(dateStr instanceof Date)) {
-            // Explicit checks first
-            dateStr = dateStr.created_at || dateStr.createdAt || dateStr.timestamp || dateStr.updated_at || dateStr.updatedAt;
-            // Fallback key scanner
+            // Explicit checks — covers all common backend field names
+            dateStr = dateStr.created_at || dateStr.createdAt
+                   || dateStr.sent_at   || dateStr.sentAt
+                   || dateStr.timestamp || dateStr.time
+                   || dateStr.updated_at || dateStr.updatedAt
+                   || dateStr.datetime;
+            // Broad key scanner fallback
             if (!dateStr) {
                 const keys = Object.keys(dateInput);
-                const dateKey = keys.find(k => k.toLowerCase().includes('time') || k.toLowerCase().includes('date') || k.toLowerCase().includes('created'));
+                const dateKey = keys.find(k => {
+                    const lk = k.toLowerCase();
+                    return lk.includes('time') || lk.includes('date') || lk.includes('created') || lk.includes('sent') || lk === 'at';
+                });
                 if (dateKey) dateStr = dateInput[dateKey];
             }
         }
-        if (!dateStr) return "?:??"; // Indicates no date field was found natively
+        if (!dateStr) return "--:--";
         try {
             if (typeof dateStr === 'string' && dateStr.includes(' ') && !dateStr.includes('T')) {
                 dateStr = dateStr.replace(' ', 'T');
             }
             const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return "INV!"; // Indicates valid field found, but unparseable format
+            if (isNaN(d.getTime())) return "--:--";
             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         } catch {
-            return "ERR";
+            return "--:--";
         }
     };
 
@@ -669,7 +684,8 @@ const ProfessionalMessages = () => {
                                         {messages.map((msg, i) => {
                                             const userId = (user as any)?.user?.id || user?.id;
                                             const proId = (user as any)?.id;
-                                            const isMe = msg.sender === userId || msg.sender === proId || msg.is_me;
+                                            const senderId = (typeof msg.sender === 'object' && msg.sender !== null) ? msg.sender.id : msg.sender;
+                                            const isMe = senderId === userId || senderId === proId || msg.is_me;
                                             return (
                                                 <div key={msg.id || i} className={`flex ${isMe ? 'justify-end' : 'justify-start items-end gap-4'} animate-in fade-in zoom-in slide-in-from-bottom-6 duration-500`}>
                                                     {!isMe && (

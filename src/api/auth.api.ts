@@ -238,7 +238,11 @@ export const registerUser = async (role: Role, formData: Record<string, any>) =>
         fd.append("profile_picture", formData.profilePhoto);
       }
 
-      const response = await api.post(endpoint, fd);
+      // ⚠️ Must clear Content-Type so axios auto-sets multipart/form-data with boundary.
+      // The axios instance defaults to application/json which breaks file uploads.
+      const response = await api.post(endpoint, fd, {
+        headers: { "Content-Type": undefined },
+      });
       return {
         success: true,
         user: response.data.user || response.data,

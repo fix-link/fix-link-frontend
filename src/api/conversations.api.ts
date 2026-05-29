@@ -17,9 +17,16 @@ export interface Message {
   sender: string;
   text?: string;
   body?: string;
-  created_at: string;
-  is_read: boolean;
   content?: string;
+  // Timestamp fields — backend may use any of these
+  created_at?: string;
+  createdAt?: string;
+  sent_at?: string;
+  timestamp?: string;
+  updated_at?: string;
+  updatedAt?: string;
+  is_read: boolean;
+  isRead?: boolean;
   is_me?: boolean;
 }
 
