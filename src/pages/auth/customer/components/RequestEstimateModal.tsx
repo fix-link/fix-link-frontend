@@ -28,12 +28,13 @@ const RequestEstimateModal: React.FC<RequestEstimateModalProps> = ({ isOpen, onC
     const [locationSel, setLocationSel] = useState<{ subcity: string; lat: number; lng: number } | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    if (!isOpen) return null;
-
+    // ⚠️ Must call ALL hooks before any conditional returns (Rules of Hooks)
     const { isLocating, getCurrentLocation } = useGpsLocation((sel) => {
         setLocationSel(sel);
         setLocation(formatLocationDisplay(sel));
     });
+
+    if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

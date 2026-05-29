@@ -378,6 +378,20 @@ export const getUserDetails = async (id: string) => {
     userDetailsCache.set(id, { data: payload, timestamp: Date.now() });
     return payload;
   } catch (error: any) {
+    // If it fails (e.g. 403 Forbidden or 401 Unauthorized because a customer is fetching a professional),
+    // try to fall back to the public professional profile endpoint
+    try {
+      devLog(`getUserDetails: /users/${id}/ failed. Falling back to public professional profile...`);
+      const response = await api.get(`/users/${id}/professional-profile/`);
+      if (response.data) {
+        // Extract the nested base user object if available, otherwise use the whole payload
+        const payload = response.data.user || response.data;
+        userDetailsCache.set(id, { data: payload, timestamp: Date.now() });
+        return payload;
+      }
+    } catch (fallbackError) {
+      console.error("getUserDetails: Fallback to professional-profile failed", fallbackError);
+    }
     throw new Error(parseError(error));
   }
 };
